@@ -1,0 +1,44 @@
+{
+	"itemCapacity":40,//物品容量，数字都能改别的
+	"health":50,//生命值
+	"size":3,//最高16，不然会崩
+	"researchCostMultiplier":0.75,
+	"squareSprite": true,
+	"hasPower": true,//是否需要电
+	"hasLiquids": true,//是否需要液体
+	"hasItems": true,//是否需要物品
+	"drawer":{
+	    "type":"DrawMulti",
+	    "drawers":[
+	        "DrawDefault",
+	        {
+	        "type":"DrawGlowRegion",
+	        "color":"FFFFFF99",
+			"layer": 110,
+			"suffix": "-glow",
+			"glowIntensity":0,
+	        }
+	    ],
+	},
+	"buildCostMultiplier":0.8,//建造速度倍率
+	"craftTime":60,//输出时间间隔
+	"updateEffect": "none",//制造完成时产生的效果
+	"consumes": {
+		"power":3.2,//耗电，游戏里会乘60
+	    "items": {
+			"items": [
+                "USYmolecularSieve/1",
+                "kaolin/5",
+			],
+		},
+	},//制造消耗
+    "outputItem": { "item": "USY", "amount": 5 }
+	"requirements": [
+        "Al/20",
+	    "MonocrystallineSi/5",
+	    "FeSteel/35",
+	    "TiAlloy/15"
+	],
+	"category": "crafting",//建造栏分类
+	"research": "USYHydrothermalReactor",//前置研究
+}

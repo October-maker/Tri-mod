@@ -1,0 +1,78 @@
+{
+    "range":280,
+	"ammoTypes": {
+		"LHEAT":{
+			"speed": 8,
+			"damage": 20,
+			"splashDamageRadius":6,
+			"splashDamage":10,
+			//"lifetime":30,
+			"width": 5,
+			"height": 10,
+			"ammoMultiplier":1,
+			"knockback":10,
+			"sprite":"triangle-205HEAT",
+			"pierce":false,
+			"drag":0.00,
+			"hitSize":12,
+			"pierceArmor":false,
+			"buildingDamageMultiplier":0.2,
+			"fragBullets":1,
+			"fragRandomSpread":0,
+			"fragBullet":{
+			    "type":"LaserBulletType",//激光子弹的type
+			    "sideAngle":175,//子弹侧面倾斜角度
+			    "sideWidth":1,//侧面宽
+			    "sideLength":40,//侧面长
+			    "lifetime":20,
+			    "damage":225,
+			    "drawSize":400,//渲染尺寸，不清楚
+			    "length":45,//激光长度
+			    "pierce":true,
+			    "pierceArmor":true,
+			    "buildingDamageMultiplier":0.2,
+			}//爆炸产生的子弹
+		},//破甲弹
+        "graphite":{
+			"speed": 7.5,
+			"damage": 50,
+			"width": 15,
+			"height": 20,
+			"shootEffect": "shootBig",
+			"ammoMultiplier":4,
+			"knockback":0.3,
+			"frontColor":"A0A0FF",
+			"reloadMultiplier":1.7,
+			"hitSize":4.8,
+        },
+        "thorium":{
+			"hitSize":5,
+			"speed": 8,
+			"damage": 80,
+			"width": 16,
+			"height": 21,
+			"shootEffect": "shootBig",
+			"knockback":0.7,
+			"pierceCap":2,
+			"pierceBuilding":true,
+			"frontColor":"ff8fc6",
+        },
+		"pyratite":{
+			"hitSize":5,
+			"speed": 7,
+			"damage": 70,
+			"width": 16,
+			"height": 21,
+			"shootEffect": "shootBig",
+			"knockback":0.6,
+			"pierceCap":2,
+			"status": "burning",
+			"pierceBuilding":true,
+			"makeFire":true,
+			"frontColor":"ff6630",
+			"ammoMultiplier":3,
+			"splashDamage":20,
+			"splashDamageRadius":25,
+        },
+    }
+}

@@ -1,0 +1,47 @@
+{
+	"itemCapacity":40,//物品容量，数字都能改别的
+	"health":50,//生命值
+	"outputsLiquid":true,//是否输出液体（别跟下面那个具体的弄混了）
+	"size":3,//最高16，不然会崩
+	"squareSprite": true,
+	"researchCostMultiplier":0.75,
+	"hasPower": true,//是否需要电
+	"hasLiquids": true,//是否需要液体
+	"hasItems": true,//是否需要物品
+	"drawer":{
+	    "type":"DrawMulti",
+	    "drawers":[
+            {
+            "type": "DrawRegion",
+            "suffix": "-bottom"
+            },
+            {
+            "type": "drawLiquidTile",
+            "drawLiquid": "H2SO4",
+            "padding": 2.5,
+            },
+			"DrawDefault",
+	    ]
+	},
+	"buildCostMultiplier":0.8,//建造速度倍率
+	"craftTime":45,//输出时间间隔
+	"updateEffect": "none",//制造完成时产生的效果
+	"consumes": {
+		"power":2,//耗电，游戏里会乘60
+		"items": {
+			"items": [
+                "copper/10",
+			]
+        },
+        "liquids":[
+            "H2SO4/0.05"
+        ],
+	},//制造消耗
+	"outputItem": { "item": "Cu", "amount": 8 },
+	"requirements": [
+        "TiAlloy/45",
+        "FeSteel/20",
+	],
+	"category": "crafting",//建造栏分类
+	"research": "TiRollingMill",//前置研究
+}

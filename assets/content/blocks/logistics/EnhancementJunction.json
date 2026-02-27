@@ -1,0 +1,17 @@
+{
+	"type": "Junction",
+	"health":400,
+	"requirements": [
+		"FeSteel/1",
+		"TiAlloy/1"
+	],//"建造所需物品": "？",
+	"category": "distribution",
+	"researchCostMultiplier":0.75,
+	"speed": 0.4,
+	"displayedSpeed":40,
+	"research": "reinforcedConveyorBelt",
+	"insulated":false,//"是否阻挡电力节点自动连接"：
+    "placeableLiquid":true,//"是否能放在液体上"：
+    "displayFlow":true,//点他是否会显示传输速度
+    "absorbLasers":false//是否能阻挡激光
+}

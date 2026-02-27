@@ -1,0 +1,14 @@
+{
+	"type": "PowerNode",//电力节点的type
+	"health": 350,
+	"size": 1,
+	"researchCostMultiplier":0.85,
+	"maxNodes": 35,//最高连接数
+	"laserRange": 50,//连接范围范围
+	"laserScale": 0.5,//电线宽度
+	"research": "power-node-large",
+	"requirements": [
+		"Cu/20",
+	],
+	"category": "power"
+}

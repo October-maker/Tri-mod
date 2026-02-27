@@ -1,0 +1,8 @@
+displayName: "triangle-mod"
+name: "triangle"
+author: "一瓶圣水"
+main: "triangle.triangle"
+description: "三角模组2.x半成品"
+version: 0.2.1
+minGameVersion: 154
+java: true

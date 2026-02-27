@@ -1,0 +1,40 @@
+{
+	"itemCapacity":40,//物品容量，数字都能改别的
+	"health":50,//生命值
+	"size":3,//最高16，不然会崩
+	"hasPower": true,//是否需要电
+	"hasLiquids": false,//是否需要液体
+	"squareSprite": true,
+	"researchCostMultiplier":0.75,
+	"hasItems": true,//是否需要物品
+	"drawer":{
+	    "type":"DrawMulti",
+	    "drawers":[
+	        "DrawDefault",
+	        {
+	        "type":"DrawFlame",
+	        },
+	    ]
+	},
+	"buildCostMultiplier":1.2,//建造速度倍率
+	"craftTime":40,//输出时间间隔
+	"updateEffect": "none",//制造完成时产生的效果
+	"consumes": {
+		"power":0.25,//耗电，游戏里会乘60
+		"liquid": {
+			"liquid": "H2O2",//消耗什么液体
+			"amount": 0.2,//消耗速度，游戏内乘以60
+		},//液体消耗
+		"items": {
+			"items": [
+				{ "item": "spore-pod", "amount": 9 },//需要的材料
+			]
+        },//制造时消耗物品
+	},//制造消耗
+	"outputItem": { "item": "I", "amount": 3 },//输出的物品
+	"requirements": [
+		{ "item": "copper", "amount": 50 }//建造所用物品
+	],
+	"category": "crafting",//建造栏分类
+	"research": "oxygenReductionFurnace",//前置研究
+}

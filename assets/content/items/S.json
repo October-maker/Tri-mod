@@ -1,0 +1,9 @@
+{
+    "explosiveness":0.1,
+    "flammability":0.75,
+    "radioactivity":0,
+    "hardness":1,
+    "charge":0,
+    "cost":1,
+    "research": "Ti"
+}

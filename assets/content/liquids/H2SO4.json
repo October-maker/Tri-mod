@@ -1,0 +1,9 @@
+{
+    "barColor":"FFFF00C8",
+    "flammability":0,
+    "temperature":0.4,
+    "viscosity":0.75,
+    "explosiveness":0.1,
+    "heatCapacity":0.05,
+    "research": "SO3"
+}

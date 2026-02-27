@@ -1,0 +1,51 @@
+{
+    "type": "missile",
+    //类型 导弹
+	"template": "MissileUnitType",
+	//模板:导弹单位类型模板
+	"name":"205TGW",
+	"maxRange": 15,
+	//最大范围
+	"speed":12,
+	//飞行速度
+	"rotateSpeed": 10,
+	//转向速度
+	"lifetime":180,
+	//存在时间
+	"health":100,
+	//生命值
+	"trailLength":12,
+	//拖尾长度
+	"trailColor":"FF9C00",
+	//拖尾颜色
+	"weapons":[
+	    {
+	    //武器
+		"shootCone": 360,
+		//开火圆锥
+		"mirror": false,
+		//镜像
+		"shake": 6,
+		//屏幕抖动
+		"shootOnDeath": true,
+		//开火后自爆
+		"shootSound": "plasmaboom",
+		//开火音效
+		"rotate":false,
+		//是否旋转
+		"bullet":{
+		    //炮弹
+			"type":"LaserBulletType",//激光子弹的type
+			"sideAngle":165,//子弹侧面倾斜角度
+			"sideWidth":1,//侧面宽
+			"sideLength":40,//侧面长
+			"lifetime":20,
+			"damage":165,
+			"drawSize":300,//渲染尺寸，不清楚
+			"length":35,//激光长度
+			"armorMultiplier":0.35,
+			"buildingDamageMultiplier":0.2,
+			}
+		}
+	]
+}

@@ -1,0 +1,9 @@
+{
+    "barColor":"D8B693E0",
+    "flammability":2.2,
+    "temperature":0.5,
+    "viscosity":0.8,
+    "explosiveness":3.5,
+    "heatCapacity":0.1,
+    "research": "oilVGO"
+}

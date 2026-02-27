@@ -1,0 +1,56 @@
+{
+	"itemCapacity":30,//物品容量，数字都能改别的
+	"health":150,//生命值
+	"squareSprite": true,
+	"outputsLiquid":true,//是否输出液体（别跟下面那个具体的弄混了）
+	"size":3,//最高16，不然会崩
+	"researchCostMultiplier":0.75,
+	"hasPower": true,//是否需要电
+	"hasLiquids": true,//是否需要液体
+	"hasItems": true,//是否需要物品
+	"drawer":{
+	    "type":"DrawMulti",
+	    "drawers":[
+	        {
+            "type": "DrawRegion",
+            "suffix": "-bottom"
+            },
+            {
+            "type": "drawLiquidTile",
+            "drawLiquid": "oilArene",
+            "padding": 2.5,
+            },
+	        "DrawDefault",
+			{
+			"type": "DrawGlowRegion",
+			"color": "FFFFFF99",
+			"layer": 110,
+			"suffix": "-glow",
+			"glowIntensity":0,
+			},
+	    ]
+	},
+	"buildCostMultiplier":0.8,//建造速度倍率
+	"craftTime":60,//输出时间间隔
+	"updateEffect": "none",//制造完成时产生的效果
+	"consumes": {
+		"power":1,//耗电，游戏里会乘60
+        "liquids":[
+		    "HNO3/0.2"
+		    "H2SO4/0.4"
+			"oilArene/0.15"
+        ],
+	},//制造消耗
+    "outputItems":[
+		"TNT/4"
+		"scrap/1"
+    ],
+	"requirements": [
+        "Al/50",
+        "MonocrystallineSi/20",
+        "FeSteel/20"
+        "TiAlloy/30"
+	],
+	"category": "crafting",//建造栏分类
+	"research": "oilAromaticHydrocarbonComplex",
+}

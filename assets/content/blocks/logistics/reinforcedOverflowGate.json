@@ -1,0 +1,21 @@
+{
+    "type": "OverflowGate",//溢流门的type
+    "category": "distribution",
+	"health":320,
+    "speed": 1, //速度, 每多少游戏tick运输一个物品
+    "invert": false, //是否反向
+    "hasItems": true, //拥有物品
+    "researchCostMultiplier":0.75,
+    "underBullets": true, //位于子弹下方/非锁定无法被击中
+    "update": false, //方块更新
+    "destructible": true, //可拆卸
+    "instantTransfer": true, //瞬间运载
+    "unloadable": true, //不可装载
+    "canOverdrive": true, //可超速
+    "itemCapacity": 0, //物品容量
+    "requirements": [
+	    "FeSteel/1",
+		"TiAlloy/1"
+    ],
+    "research": "reinforcedConveyorBelt",
+}

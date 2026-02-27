@@ -1,0 +1,12 @@
+{
+    "type": "LiquidJunction",
+    "category": "liquid",
+    "health": 375,
+    "requirements": [
+        "TiAlloy/2",
+        "FeSteel/1"
+    ],
+    "solid": false,
+    "squareSprite": false,
+    "research": "reinforcedCatheter"
+}

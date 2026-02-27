@@ -1,0 +1,9 @@
+{
+    "explosiveness":5,
+    "flammability":3,
+    "radioactivity":0,
+    "hardness":2,
+    "charge":0,
+    "cost":1,
+    "research": "oilArene"
+}

@@ -1,0 +1,9 @@
+{
+    "damage": 4.5,//伤害，帧伤
+    "speedMultiplier": 0.95,//移动速度倍率
+    "effectChance": 1,//触发概率
+    "healthMultiplier": 0.85,//生命值倍率
+    //"effect": {},
+    "alwaysUnlocked": false,
+    "opposites":["wet","freezing"],
+}

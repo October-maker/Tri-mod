@@ -1,0 +1,9 @@
+{
+    "barColor":"D8B693A0",
+    "flammability":2.5,
+    "temperature":0.5,
+    "viscosity":0.75,
+    "explosiveness":3.3,
+    "heatCapacity":0.1,
+    "research": "oilReformate"
+}

@@ -1,0 +1,50 @@
+{
+	"itemCapacity":40,//物品容量，数字都能改别的
+	"health":50,//生命值
+	"outputsLiquid":true,//是否输出液体（别跟下面那个具体的弄混了）
+	"size":5,//最高16，不然会崩
+	"researchCostMultiplier":0.75,
+	"squareSprite": true,
+	"hasPower": true,//是否需要电
+	"hasLiquids": true,//是否需要液体
+	"hasItems": true,//是否需要物品
+	"drawer":{
+	    "type":"DrawMulti",
+	    "drawers":[
+	        "DrawDefault",
+	        {
+	        "type":"DrawGlowRegion",
+	        "color":"FFFFFF99",
+			"layer": 110,
+			"suffix": "-glow",
+			"glowIntensity":0,
+	        }
+	    ]
+	},
+	"buildCostMultiplier":0.8,//建造速度倍率
+	"craftTime":60,//输出时间间隔
+	"updateEffect": "none",//制造完成时产生的效果
+	"consumes": {
+		"power":7.5,//耗电，游戏里会乘60
+	    "items": {
+			"items": [
+                "bauxite/1",
+                "SiSand/4",
+                "NaOH/1",
+			],
+		},
+        "liquids":[
+		    "liquidAmmonia/0.1",
+		    "water/0.4"
+        ],
+	},//制造消耗
+    "outputItem": { "item": "USYmolecularSieve", "amount": 5 }
+	"requirements": [
+        "Al/20",
+	    "MonocrystallineSi/15",
+	    "FeSteel/45",
+	    "TiAlloy/15"
+	],
+	"category": "crafting",//建造栏分类
+	"research": "oilElectricDesaltingTank",//前置研究
+}

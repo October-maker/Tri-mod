@@ -1,0 +1,70 @@
+{
+	"itemCapacity":40,//物品容量，数字都能改别的
+	"health":50,//生命值
+	"maxEfficiency":1,
+	"squareSprite": true,
+	"outputsLiquid":true,//是否输出液体（别跟下面那个具体的弄混了）
+	"size":3,//最高16，不然会崩
+	"researchCostMultiplier":0.75,
+	"heatRequirement":5,//热量需求
+	"hasPower": true,//是否需要电
+	"hasLiquids": true,//是否需要液体
+	"hasItems": true,//是否需要物品
+	"drawer":{
+	    "type":"DrawMulti",
+	    "drawers":[
+			{
+            "type": "DrawRegion",
+            "suffix": "-bottom"
+            },
+            {
+            "type": "drawLiquidTile",
+            "drawLiquid": "hydrochloricAcid",
+            "padding": 2,
+            },
+	        {
+			"type": "DrawRegion",
+			"suffix": "-base",
+	        },
+ 			{
+			"type": "DrawGlowRegion",
+			"color": "FFFFFF99",
+			"layer": 110,
+			"suffix": "-glow",
+			"glowIntensity":0,
+			},
+	    ]
+	},
+	"buildCostMultiplier":0.8,//建造速度倍率
+	"craftTime":60,//输出时间间隔
+	"updateEffect": "none",//制造完成时产生的效果
+	"consumes": {
+		"power":1.5,//耗电，游戏里会乘60
+        "liquids":[
+		    "water/0.2",
+		    "hydrochloricAcid/0.2",
+        ],
+        "items": {
+			"items": [
+				"sand/20"
+			]
+        },
+	},//制造消耗
+    "outputItem": { "item": "SiSand", "amount": 15 },
+	"requirements": [
+        "Al/50",
+        "TiAlloy/70",
+        "FeSteel/20"
+	],
+	"category": "crafting",//建造栏分类
+	"research": {
+        "parent": "TiRollingMill",
+        "objectives": [
+            "AcidResistantHeater"
+			{
+            "type": "onSector",
+            "preset": "SiliconValley"
+            }
+        ]
+    },
+}

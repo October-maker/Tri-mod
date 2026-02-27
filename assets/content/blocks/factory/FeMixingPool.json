@@ -1,0 +1,68 @@
+{
+	"itemCapacity":35,
+	"heatOutput":35,
+	"health":130,
+	"outputsLiquid":true,//是否输出液体（别跟下面那个具体的弄混了）
+	"size":4,
+	"squareSprite": true,
+	"researchCostMultiplier":0.75,
+	"hasPower": true,//是否需要电
+	"hasLiquids": true,//是否需要液体
+	"hasItems": true,//是否需要物品
+	"drawer":{
+	    "type":"DrawMulti",
+	    "drawers":[
+	        {
+            "type": "DrawRegion",
+            "suffix": "-bottom"
+            },
+            {
+            "type": "drawLiquidTile",
+            "drawLiquid": "H2SO4",
+            "padding": 3,
+            },
+            {
+            "type": "DrawBubbles", // 绘制气泡效果，通常用于液体表面。
+            "color": "FFFF00C8", // 气泡的颜色，以十六进制颜色代码表示。
+            "sides": 14, // 气泡的边数
+            "recurrence": 3, // 气泡的生成频率。
+            "spread": 6, // 气泡的扩散范围。
+            "radius": 2, // 气泡的半径。
+            "amount": 20 // 气泡的数量。
+            },
+	        "DrawDefault",
+	        "DrawHeatOutput",
+	    ]
+	},
+	"buildCostMultiplier":0.8,//建造速度倍率
+	"craftTime":60,//输出时间间隔
+	"updateEffect": "none",//制造完成时产生的效果
+	"consumes": {
+		"power":1,//耗电，游戏里会乘60
+		"items": {
+			"items": [
+				"FeSteel/15",
+			]
+        },
+        "liquids":[
+            "H2SO4/0.4"
+            "water/0.3"
+        ],
+	},//制造消耗
+	"outputItems":[
+	    { "item": "FeSO4", "amount": 15 }
+	    { "item": "scrap", "amount": 1 }
+	],
+    "outputLiquid": { "liquid": "hydrogen", "amount": 0.2 }
+	"requirements": [
+		"FeSteel/50",
+		"Al/30",
+	],
+	"category": "crafting",//建造栏分类
+	"research": {
+		"parent": "FeBlastFurnace",
+		"objectives": [
+            "SAbsorptionTower"
+		]
+	},
+}

@@ -1,0 +1,19 @@
+{
+	"type": "MassDriver",//质量驱动器的type
+	"size": 5,
+	"hasItems": true,
+	"itemCapacity": 40,//单次发射的资源量
+	"researchCostMultiplier":0.75,
+	"reload": 30,//发射间隔
+	"range": 880,//范围
+	"consumes": {
+		"power": 3.2
+	},
+	"requirements": [
+	    "FeSteel/80",
+		"TiAlloy/120",
+		"MonocrystallineSi/30"
+	],
+	"research": "ReinforcedUnloader",
+	"category": "distribution"
+}

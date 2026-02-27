@@ -1,0 +1,13 @@
+{
+    "planet": "serpulo",
+    "sector": 153,
+    "captureWave": 20,
+    "difficulty": 4,
+    "alwaysUnlocked": false,
+	"research": {
+        "parent": "DeepCanyon",
+        "objectives": [
+            "TiRollingMill"
+        ]
+    },
+}

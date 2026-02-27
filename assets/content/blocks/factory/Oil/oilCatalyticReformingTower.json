@@ -1,0 +1,51 @@
+{
+	"itemCapacity":40,//物品容量，数字都能改别的
+	"health":50,//生命值
+	"outputsLiquid":true,//是否输出液体（别跟下面那个具体的弄混了）
+    "rotate":true,
+	"size":3,//最高16，不然会崩
+	"researchCostMultiplier":0.75,
+	"liquidOutputDirections":[1,3],
+	"squareSprite": true,
+	"hasPower": true,//是否需要电
+	"hasLiquids": true,//是否需要液体
+	"hasItems": true,//是否需要物品
+	"drawer":{
+	    "type":"DrawMulti",
+	    "drawers":[
+			{
+	        "type":"DrawRegion",
+	        "suffix":"-base",
+			}
+			{
+			"type": "DrawGlowRegion",
+			"color": "FFFFFF99",
+			"layer": 110,
+			"suffix": "-glow",
+			"glowIntensity":0,
+			},
+	    ]
+	},
+	"buildCostMultiplier":0.8,//建造速度倍率
+	"craftTime":30,//输出时间间隔
+	"updateEffect": "none",//制造完成时产生的效果
+	"consumes": {
+		"power":7.2,//耗电，游戏里会乘60
+		"liquids": [
+		    { "liquid": "oilNaphtha", "amount": 0.16 },
+		]
+	},//制造消耗
+    "outputLiquids":[
+		{ "liquid": "oilReformate", "amount": 0.15 },
+		{ "liquid": "hydrogen", "amount": 0.07 },
+    ],
+	"requirements": [
+        "Al/15",
+	    "MonocrystallineSi/15",
+	    "FeSteel/50",
+	    "TiAlloy/15",
+	    "Pt/5",
+	],
+	"category": "crafting",//建造栏分类
+	"research": "oilHydrocrackingTower",//前置研究
+}

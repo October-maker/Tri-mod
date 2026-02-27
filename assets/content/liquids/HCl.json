@@ -1,0 +1,10 @@
+{
+    "barColor":"A2FF00A0",
+    "flammability":0,
+    "temperature":0.4,
+    "viscosity":0.1,
+    "gas":true,
+    "explosiveness":0.6,
+    "heatCapacity":0.05,
+    "research": "hydrochloricAcid"
+}

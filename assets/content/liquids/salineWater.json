@@ -1,0 +1,9 @@
+{
+    "barColor":"97BFD0",
+    "flammability":0,
+    "temperature":0.5,
+    "viscosity":0.5,
+    "explosiveness":0.4,
+    "heatCapacity":0.05,
+    "research": "water"
+}

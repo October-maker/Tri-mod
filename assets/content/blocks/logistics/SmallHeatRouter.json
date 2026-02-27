@@ -1,0 +1,39 @@
+{
+    "type":"HeatConductor",
+    "researchCostMultiplier":2,
+    "category": "distribution",
+    "size":2,
+    "health":350,
+    "splitHeat":true,
+    "rotate":true,
+    "regionRotated1":1,
+	"drawer":{
+	    "type":"DrawMulti",
+	    "drawers":[
+	        "DrawDefault",
+	        "DrawHeatOutput",
+	        {
+            "type":"DrawHeatInput",
+            "suffix":"-heat",
+            },
+	    ],
+	},
+	"requirements":[
+	    "TiAlloy/10",
+	    "graphite/50",
+	],
+	"research":"SmallHeatConductor",
+}
+/*
+        heatRouter = new HeatConductor("heat-router"){{
+            requirements(Category.crafting, with(Items.tungsten, 15, Items.graphite, 10));
+
+            researchCostMultiplier = 10f;
+
+            group = BlockGroup.heat;
+            size = 3;
+            drawer = new DrawMulti(new DrawDefault(), new DrawHeatOutput(-1, false), new DrawHeatOutput(), new DrawHeatOutput(1, false), new DrawHeatInput("-heat"));
+            regionRotated1 = 1;
+            splitHeat = true;
+        }};
+/*

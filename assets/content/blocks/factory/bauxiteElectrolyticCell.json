@@ -1,0 +1,40 @@
+{
+	"itemCapacity":40,//物品容量，数字都能改别的
+	"health":150,//生命值
+	"outputsLiquid":true,//是否输出液体（别跟下面那个具体的弄混了）
+	"size":3,//最高16，不然会崩
+	"squareSprite": true,
+	"researchCostMultiplier":0.75,
+	"hasPower": true,//是否需要电
+	"hasLiquids": true,//是否需要液体
+	"hasItems": true,//是否需要物品
+	"drawer":{
+	    "type":"DrawMulti",
+	    "drawers":[
+	        {
+            "type": "DrawRegion",
+            "suffix": "-bottom"
+            },
+            "DrawArcSmelt",//散射效果
+	        "DrawDefault",
+	    ]
+	},
+	"buildCostMultiplier":0.8,//建造速度倍率
+	"craftTime":45,//输出时间间隔
+	"updateEffect": "none",//制造完成时产生的效果
+	"consumes": {
+		"power":8,//耗电，游戏里会乘60
+		"items": {
+			"items": [
+				{ "item": "bauxite", "amount": 15 },//需要的材料
+			]
+        },
+	},//制造消耗
+	"outputLiquid": { "liquid": "ozone", "amount": 0.6 },//输出的液体
+	"outputItem": { "item": "Al", "amount": 8 },
+	"requirements": [
+		{ "item": "Ti", "amount": 30 }//建造所用物品
+	],
+	"category": "crafting",//建造栏分类
+	"research": "IodinationPurificationFurnace",//前置研究
+}

@@ -1,0 +1,25 @@
+{
+	"type": "Drill", // 指定方块的类型为Drill，即钻头
+	"size": 2, // 定义方块的尺寸
+	"health": 120, // 定义方块的血量
+	"tier": 3, // 定义钻头的挖矿等级
+	"rotateSpeed": 8,// 定义旋转速度
+	//"hardnessDrillMultiplier": 0.334,     随挖矿等级的提升开采效率衰减的程度，越小越轻微，
+	"drillTime": 20, // 定义钻一个矿的时间
+	"liquidBoostIntensity":1.2, // 定义液体加速的倍率
+	"canOverdrive": true, // 定义是否允许超频
+	"warmupSpeed": 0.02, // 定义预热速度
+	"drillEffect": "mineBig", // 定义钻头工作时的特效
+	"researchCostMultiplier":0.75,
+	"updateEffect": "mineBig", // 定义方块更新时的特效
+	"rotateSpeed": 1, // 定义钻头旋转的速度
+	"drawMineItem": true, // 定义是否显示正在挖掘的矿石
+	"itemCapacity": 20, // 定义方块存储物品的容量
+	"requirements": [ // 定义建造这个方块所需的材料和数量
+        { "item": "FeSteel", "amount":20},
+        { "item": "Ti", "amount":14}, // 需要64个纯钛板（模组物品）
+        { "item": "graphite", "amount":10} // 需要50个石墨
+    ],
+	"category": "production", // 定义方块所属的分类
+	"research": "laser-drill" // 定义研究这个方块所需的科技
+}

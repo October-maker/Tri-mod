@@ -1,0 +1,15 @@
+{
+    "planet": "serpulo",
+    "sector": 178,
+    "difficulty": 3,
+    "alwaysUnlocked": false,
+    "research": {
+        "parent": "Hotspot-SaltwaterSpring",
+        "objectives": [
+            {
+            "type": "sectorComplete",
+            "preset": "SiliconValley"
+            }
+        ]
+    },
+}

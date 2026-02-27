@@ -1,0 +1,38 @@
+{
+	"itemCapacity":20,//物品容量，数字都能改别的
+	"health":150,//生命值
+	"outputsLiquid":true,//是否输出液体（别跟下面那个具体的弄混了）
+	"squareSprite": true,
+	"size":3,//最高16，不然会崩
+	"hasPower": true,//是否需要电
+	"hasLiquids": true,//是否需要液体
+	"researchCostMultiplier":0.75,
+	"drawer":{
+	    "type":"DrawMulti",
+	    "drawers":[
+	        "DrawDefault",
+	        {
+	        "type":"DrawFlame",
+	        },
+	    ]
+	},
+	"hasItems": true,//是否需要物品
+	"buildCostMultiplier":0.9,//建造速度倍率
+	"craftTime":60,//输出时间间隔
+	"updateEffect": "none",//制造完成时产生的效果
+	"consumes": {
+		"power":2,//耗电，游戏里会乘60
+		"liquids": [
+		    { "liquid": "water", "amount": 0.8 },//消耗的液体，每秒消耗0.8＊60单位的水
+		    { "liquid": "ozone", "amount": 0.2 },
+		    { "liquid": "hydrogen", "amount": 0.2 },
+		]
+	},//制造消耗
+	"outputLiquid": { "liquid": "H2O2", "amount": 1 },//输出的液体
+	"requirements": [
+		{ "item": "copper", "amount": 30 }//建造所用物品
+		{ "item": "lead", "amount": 40 }
+	],
+	"category": "crafting",//建造栏分类
+	"research": "electrolyticCell",//前置研究
+}

@@ -1,0 +1,9 @@
+{
+    "barColor":"40D0EDFF",
+    "flammability":0,//燃烧性
+    "temperature":0.4,//温度
+    "viscosity":0.1,//挥发难度
+    "explosiveness":0.6,//爆炸性
+    "heatCapacity":0.05,//比热容
+    "research": "titanium"
+}

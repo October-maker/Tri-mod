@@ -1,0 +1,40 @@
+{
+	"itemCapacity":30,
+	"health":120,
+	"size":4,
+	"hasPower": true,
+	"researchCostMultiplier":0.75,
+	"squareSprite": true,
+	"hasLiquids": false,
+	"hasItems": true,
+	"buildCostMultiplier":1.2,
+	"drawer":{
+	    "type":"DrawMulti",
+	    "drawers":[
+	        "DrawDefault",
+	        {
+	        "type":"DrawFlame",
+	        },
+	    ]
+	},
+	"craftTime":40,
+	"updateEffect": "none",
+	"consumes": {
+		"power":1.75,
+		"items": {
+			"items": [
+				{ "item": "Ti", "amount": 10 },
+				{ "item": "Al", "amount": 6 },
+				{ "item": "V", "amount": 4 },
+			]
+        },
+	},
+	"outputItem": { "item": "TiAlloy", "amount": 18 },
+	"requirements": [
+		"FeSteel/25",
+		"Ti/35",
+		"Al/20"
+	],
+	"category": "crafting",
+	"research": "VacuumAluminothermicGenerator",
+}

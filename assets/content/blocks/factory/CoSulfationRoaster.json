@@ -1,0 +1,56 @@
+{
+	"itemCapacity":40,//物品容量，数字都能改别的
+	"health":120,//生命值
+	"outputsLiquid":true,//是否输出液体（别跟下面那个具体的弄混了）
+	"size":5,//最高16，不然会崩
+	"researchCostMultiplier":0.75,
+	"squareSprite": true,
+	"hasPower": true,//是否需要电
+	"hasLiquids": true,//是否需要液体
+	"hasItems": true,//是否需要物品
+	"drawer":{
+	    "type":"DrawMulti",
+	    "drawers":[
+	        {
+            "type": "DrawRegion",
+            "suffix": "-bottom"
+            },
+            {
+            "type": "drawLiquidTile",
+            "drawLiquid": "H2SO4",
+            "padding": 4,
+            },
+	        "DrawDefault",
+	    ]
+	},
+	"buildCostMultiplier":0.8,//建造速度倍率
+	"craftTime":60,//输出时间间隔
+	"updateEffect": "none",//制造完成时产生的效果
+	"consumes": {
+		"power":7.5,//耗电，游戏里会乘60
+		"items": {
+			"items": [
+				"NaOH/4"
+				"copperCo/16"
+			]
+        },
+		"liquids": [
+			"water/0.4",
+			"ozone/0.3",
+			"H2SO4/0.4",
+		]
+	},//制造消耗
+	"outputItems":[
+	    "scrap/1",
+	    "Cu/8",
+	    "CoPrecipitation/6"
+	],
+	"requirements": [
+		"Cu/25",
+		"TiAlloy/45",
+		"FeSteel/65",
+		"MonocrystallineSi/12"
+	],
+	"category": "crafting",//建造栏分类
+	"research": "alkalineElectrolyzer",//前置研究
+}

@@ -1,0 +1,15 @@
+{
+    "type": "LiquidRouter",
+    "category": "liquid",
+    "health": 420,
+    "requirements": [ 
+        "TiAlloy/1",
+        "FeSteel/1" ,
+        "metaglass/5" 
+    ],
+    "liquidCapacity": 24,
+    "liquidPadding": 1.2,
+    "solid": false,
+    "squareSprite": false,
+    "research": "reinforcedCatheter"
+}

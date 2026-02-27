@@ -1,0 +1,16 @@
+{
+    "planet": "serpulo",
+    "sector": 163,
+    "captureWave": 46,
+    "difficulty": 2,
+    "alwaysUnlocked": false,
+    "research": {
+        "parent": "stainedMountains",
+        "objectives": [
+            {
+            "type": "sectorComplete",
+            "preset": "DeepCanyon"
+            }
+        ]
+    },
+}

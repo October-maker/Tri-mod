@@ -1,0 +1,121 @@
+{
+	"type": "ItemTurret",//种类
+	"health": 730,//血量
+	"size": 3,//大小
+	"reload": 3,//装填时间
+	"range": 400,//攻击范围 8/格
+	"recoil":0,//后坐力大小
+	"minWarmup": 0.99,//预热时间
+	"shootWarmupSpeed":0.8,
+	"shootY": 18,
+	"targetAir": true,//是否对空
+	"ammoUseEffect":"none",
+    "targetGround": true,//是否对地
+	"shoot":{
+	    "type":"shootPattern",
+	    "shots":1,//发射子弹数
+	    "shotDelay":0.0,//两颗子弹的发射间隔
+	    "firstShotDelay":0,
+	},
+	"consumes": {
+        "power": 1,
+    },
+	"inaccuracy": 1,//误差 1=1度
+	"rotateSpeed": 10,//旋转速度
+	"shake":0.1,//射击摇动
+	"maxAmmo":60,//弹夹容量
+	"ammoPerShot":1,//射击一次消耗子弹
+	"ammoTypes": {
+		"TiAlloy":{
+			"speed": 10,
+			"damage": 55,
+			"lifetime":40,
+			"width": 3,
+			"height": 10,
+			"ammoMultiplier":1,
+			"knockback":0.1,
+			"sprite":"bullet",
+			"pierce":false,
+			/*"shootEffect": "None",*/
+			"drag":0.00,
+			"hitSize":10,
+			"pierceArmor":true,
+			"buildingDamageMultiplier":0.05,
+		},//穿甲弹
+    },
+	"requirements": [
+		"TiAlloy/125",
+		"FeSteel/85",
+		"MonocrystallineSi/75"
+	],//建造需求物品
+	"category": "turret",
+	"research": "railgun",
+	"researchCost":[
+		"TiAlloy/225",
+		"FeSteel/175",
+		"MonocrystallineSi/75"
+	],
+    "drawer": {
+        "type": "DrawMulti",
+        "drawers": [
+            {
+                "type": "DrawTurret",//绘制炮塔部件
+                /*"basePrefix": "",底座贴图*/
+                "parts": [
+                    {
+                    "type": "RegionPart",
+                    "suffix": "-head",
+                    "x": 0,
+                    "y": 0,
+                    "progress": "recoil",
+                    "moveX": 1,
+                    "moveY": 0,
+                    "heatColor": "FF590020"//过热颜色
+                    },
+                    {
+                    "type": "RegionPart",
+                    "suffix": "-head",
+                    "x": -1,
+                    "y": 0,
+                    "progress": "recoil",
+                    "moveX": 1,
+                    "moveY": 0,
+                    "heatColor": "FF590020"//过热颜色
+                    },
+                    {
+                    "type": "RegionPart",
+                    "suffix": "-head",
+                    "x": 1,
+                    "y": 0,
+                    "progress": "recoil",
+                    "moveX": -1,
+                    "moveY": 0,
+                    "heatColor": "FF590020"//过热颜色
+                    },
+                    {
+                    "type": "RegionPart",
+                    "suffix": "-head",
+                    "x": 0,
+                    "y": 0,
+                    "progress": "recoil",
+                    "moveX": -1,
+                    "moveY": 0,
+                    "heatColor": "FF590020"//过热颜色
+                    },
+                    {
+                    "type": "RegionPart",//定义为可移动组件
+                    "mirror": false,//不对称绘制
+                    "x": 0,//待机时相对于旋转中心的位置
+                    "y": 0,//与上一接口组成坐标定位
+                    "suffix": "-body",//使用贴图的后缀
+                    "moveX": 0,//开火时横向移动
+                    "moveY": 0,//开火时纵向移动
+                    "moveRot": 0,//开火时旋转
+                    "heatProgress": "recoil",
+                    "heatColor": "FF5900"//过热颜色
+                    },
+                ]
+            }
+        ]
+    },
+}

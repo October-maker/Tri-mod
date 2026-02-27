@@ -1,0 +1,43 @@
+{
+	"itemCapacity":20,//物品容量，数字都能改别的
+	"health":270,//生命值
+	"outputsLiquid":true,//是否输出液体（别跟下面那个具体的弄混了）
+	"squareSprite": true,
+	"size":3,//最高16，不然会崩
+	"hasPower": true,//是否需要电
+	"hasLiquids": true,//是否需要液体
+	"researchCostMultiplier":0.75,
+	"drawer":{
+	    "type":"DrawMulti",
+	    "drawers":[
+	        "DrawDefault",
+			{
+			"type": "DrawGlowRegion",
+			"color": "FFFFFF99",
+			"layer": 110,
+			"suffix": "-glow",
+			"glowIntensity":0,
+			},
+	    ]
+	},
+	"hasItems": true,//是否需要物品
+	"buildCostMultiplier":0.9,//建造速度倍率
+	"craftTime":60,//输出时间间隔
+	"updateEffect": "none",//制造完成时产生的效果
+	"consumes": {
+		"power":4,//耗电，游戏里会乘60
+		"liquids": [
+		    { "liquid": "nitrogen", "amount": 0.2 },
+		    { "liquid": "hydrogen", "amount": 0.6 },
+		]
+	},//制造消耗
+	"outputLiquid": { "liquid": "liquidAmmonia", "amount": 1 },//输出的液体
+	"requirements": [
+        "Al/20",
+	    "MonocrystallineSi/10",
+	    "FeSteel/30",
+	    "Fe2O3/10"
+	],
+	"category": "crafting",//建造栏分类
+	"research": "NCollector",//前置研究
+}

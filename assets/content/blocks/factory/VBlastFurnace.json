@@ -1,0 +1,49 @@
+{
+	"itemCapacity":40,//物品容量，数字都能改别的
+	"health":120,//生命值
+	"outputsLiquid":true,//是否输出液体（别跟下面那个具体的弄混了）
+	"size":4,//最高16，不然会崩
+	"researchCostMultiplier":0.75,
+	"squareSprite": true,
+	"hasPower": true,//是否需要电
+	"hasLiquids": true,//是否需要液体
+	"hasItems": true,//是否需要物品
+	"drawer":{
+	    "type":"DrawMulti",
+	    "drawers":[
+	        {
+            "type": "DrawRegion",
+            "suffix": "-bottom"
+            },
+            {
+            "type": "drawLiquidTile",
+            "drawLiquid": "VBearingHotMetal",
+            "padding": 3,
+            },
+            {
+	        "type":"DrawFlame",
+	        },
+	        "DrawDefault",
+	    ]
+	},
+	"buildCostMultiplier":0.8,//建造速度倍率
+	"craftTime":25,//输出时间间隔
+	"updateEffect": "none",//制造完成时产生的效果
+	"consumes": {
+		"power":0.5,//耗电，游戏里会乘60
+		"items": {
+			"items": [
+				{ "item": "VTiFe", "amount": 15 },//需要的材料
+				{ "item": "coal", "amount": 8 },
+			]
+        },
+	},//制造消耗
+	"outputLiquid": { "liquid": "VBearingHotMetal", "amount": 1.2 },//输出的液体
+	"outputItem": { "item": "scrap", "amount": 1 },
+	"requirements": [
+		{ "item": "Al", "amount": 50 }
+		{ "item": "Ti", "amount": 30 }//建造所用物品
+	],
+	"category": "crafting",//建造栏分类
+	"research": "bauxiteElectrolyticCell",//前置研究
+}

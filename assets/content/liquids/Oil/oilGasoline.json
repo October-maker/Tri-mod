@@ -1,0 +1,9 @@
+{
+    "barColor":"D89A59F0",
+    "flammability":3.5,
+    "temperature":0.5,
+    "viscosity":0.8,
+    "explosiveness":2.5,
+    "heatCapacity":0.1,
+    "research": "oilMixedGas"
+}

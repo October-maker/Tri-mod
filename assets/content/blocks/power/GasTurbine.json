@@ -1,0 +1,71 @@
+{
+    "type": "ConsumeGenerator", // 定义该实体类型为消耗型发电机
+    "category": "power", // 分类为电力类建筑
+    "size": 5, // 实体占用的网格大小
+    "health": 280, // 生命值
+    "requirements": [ // 建造该建筑所需的资源清单
+      "TiAlloy/50",
+      "Al/30",
+      "MonocrystallineSi/30",
+      "FeSteel/40",
+    ],
+    "warmupSpeed":0.005,
+    "powerProduction": 200,
+    "itemDuration": 30, // 生成物品的持续时间
+    "consumes": { // 运行时消耗的资源
+      "liquids": [
+        { "liquid": "oilKerosene", "amount": 0.24 }
+      ]
+    },
+    "drawer": { // 图形绘制配置
+      "type": "DrawMulti", // 使用多图层绘制技术
+      "drawers": [ // 绘制图层配置
+          "DrawDefault", // 默认绘制模式
+        ]
+    },
+	"research": {
+        "parent": "DieselGeneratorSet",
+        "objectives": [
+            "oilSecondaryAtmosphericDistillationTower"
+        ]
+    },
+    "drawer":{
+	    "type":"DrawMulti",
+	    "drawers":[
+			{
+				"type":"DrawRegion",
+				"suffix":"-bottom",
+			}
+			{
+				"type":"DrawRegion",
+				"suffix":"-rotator1",
+				"spinSprite":true,
+				"rotateSpeed":10,
+			}
+            {
+			"type": "DrawRegion",
+			"suffix": "-base",
+	        },
+            {
+				"type":"DrawRegion",
+				"suffix":"-rotator2",
+				"spinSprite":true,
+				"rotateSpeed":-10,
+			}
+            {
+				"type":"DrawRegion",
+				"suffix":"-rotator3",
+				"spinSprite":true,
+				"rotateSpeed":-15,
+			}
+			"DrawDefault"
+			{
+			"type": "DrawGlowRegion",
+			"color": "FFFFFF99",
+			"layer": 110,
+			"suffix": "-glow",
+			"glowIntensity":0,
+			},
+	    ]
+	},
+}

@@ -1,0 +1,48 @@
+{
+    "type": "LandingPad",
+    "itemCapacity": 2000,
+    "size": 5,
+    "hasPower": true,
+    "consumes": {
+        "power": 3
+    },
+    "liquidCapacity": 0,
+    "hasLiquids": false,
+    "buildVisibility": "shown",
+    "shownPlanets": [ "serpulo" ],
+    "arrivalDuration": 120,
+    "cooldownTime": 60,
+    "consumeLiquidAmount": 0,
+    "coolingEffectChance": 0.2,
+    /*"coolingEffect": {
+                    "type": "WaveEffect",
+                    "lightColor": "90dbff",
+                    "colorTo": "90dbff",
+                    "sizeTo": 28,
+                    "strokeFrom": 6,
+                    "lifetime": 7
+                  },*/
+    "landEffect": {
+        "type": "SoundEffect",
+        "effect": "podLandShockwave",
+        "sound": "none"
+    },
+    "squareSprite": false,
+    "landSound": "padLandAdvanced",
+    "landSoundVolume": 0.5,
+    "category": "effect",
+    "research": {
+        "parent": "SerTriLaunchPad",
+        /*"objectives": [
+            {
+            "type": "SectorComplete",
+            "preset": "gobi"
+            }
+        ]*/
+    },
+    "requirements": [
+        "FeSteel/55",
+        "TiAlloy/90",
+        "Cu/20"
+    ],
+}

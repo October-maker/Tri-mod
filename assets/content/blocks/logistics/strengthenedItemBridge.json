@@ -1,0 +1,16 @@
+{
+    "type": "itemBridge", // 定义了这是一个物品桥接器
+    "category": "distribution", // 将这个构建分类到"distribution"，即物流类别。
+    "size": 1, // 指定了这个物品桥接器的基础大小为1格。
+    "health": 350, // 定义了物品桥接器的血量为60。
+    "requirements": [ 
+        "FeSteel/1",
+		"TiAlloy/1"
+    ], // 列出了建造这个物品桥接器所需的资源
+    "hasPower": false, // 表明这个物品桥接器不需要电力来运作。
+    "transportTime": 3, // 定义了物品通过这个桥接器的传输时间为3单位时间。
+    "researchCostMultiplier":0.75,
+    "range": 6, // 定义了物品桥接器的运输范围为6格。
+    "squareSprite": false, // 填伪为自动将传送带贴图向内延伸半格，填真为仅显示贴图
+    "research": "reinforcedConveyorBelt",
+}

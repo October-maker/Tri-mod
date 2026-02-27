@@ -1,0 +1,412 @@
+{
+	"type": "ItemTurret",//种类
+	"health": 1250,//血量
+	"size": 2,//大小 
+	"reload": 60,//装填时间
+	"range": 640,//攻击范围 8/格
+	"recoil":1,//后坐力大小
+	"minWarmup": 0.99,//最小发射预热
+	"shootWarmupSpeed": 0.25,//预热速度
+	"targetAir": true,//是否对空
+	"ammoUseEffect":"none",
+    "targetGround": true,//是否对地
+	"shoot":{
+	    "type":"shootPattern",
+	    "shots":1,//发射子弹数
+	    "shotDelay":0.0,//两颗子弹的发射间隔
+	    "firstShotDelay":0,
+	},
+	"consumes": {
+        "power": 4,
+    },
+	"inaccuracy": 0,//误差 1=1度 
+	"rotateSpeed": 6,//旋转速度 
+	"shake":2.0,//射击摇动 
+	"maxAmmo":60,//弹夹容量
+	"ammoPerShot":1,//射击一次消耗子弹
+	"ammoTypes": {
+		"TiAlloy":{
+			"speed": 35,
+			"damage": 480,
+			"lifetime":20,
+			"width": 5, 
+			"height": 10,
+			"ammoMultiplier":3,
+			"knockback":18,
+			"sprite":"triangle-205AP",
+			"pierce":false,
+			/*"shootEffect": "None",*/
+			"drag":0.00,
+			"hitSize":10,
+			"armorMultiplier":0.15,
+			"buildingDamageMultiplier":0.05,
+			"fragRandomSpread":90,//散射范围
+			"fragBullets":3,//产生子弹药数量
+			"fragBullet": {
+				"type": "BulletType",
+				"damage": 20,
+				"speed": 14,
+				"collides":true,
+				"lifetime": 6,
+				"hitEffect": "flakExplosion",//爆炸效果
+				"buildingDamageMultiplier":0.01,
+			}
+		},//穿甲弹
+		"FeSteel":{
+			"speed": 35,
+			"damage": 340,
+			"lifetime":20,
+			"width": 5, 
+			"height": 10,
+			"ammoMultiplier":3,
+			"knockback":20,
+			"sprite":"triangle-205AP",
+			/*"shootEffect": "None",*/
+			"pierce":false,
+			"drag":0.00,
+			"hitSize":12,
+			"armorMultiplier":0.35,
+			"buildingDamageMultiplier":0.3,
+		},//穿甲弹
+		"SSteel":{
+			"speed": 40,
+			"damage": 640,
+			"lifetime":20,
+			"width": 5, 
+			"height": 10,
+			"ammoMultiplier":3,
+			"knockback":20,
+			"sprite":"triangle-205AP",
+			/*"shootEffect": "None",*/
+			"pierce":false,
+			"drag":0.00,
+			"hitSize":12,
+			"armorMultiplier":0.15,
+			"buildingDamageMultiplier":0.3,
+			"fragRandomSpread":90,//散射范围
+			"fragBullets":4,//产生子弹药数量
+			"fragBullet": {
+				"type": "BulletType",
+				"damage": 20,
+				"speed": 14,
+				"collides":true,
+				"lifetime": 6,
+				"hitEffect": "flakExplosion",//爆炸效果
+				"buildingDamageMultiplier":0.01,
+			}
+		},//穿甲弹
+		"WBullet":{
+			"speed": 50,
+			"damage": 1280,
+			"lifetime":15,
+			"width": 5, 
+			"height": 10,
+			"ammoMultiplier":1,
+			"knockback":20,
+			"sprite":"triangle-205AP",
+			/*"shootEffect": "None",*/
+			"pierce":true,
+			"drag":0.00,
+			"hitSize":12,
+			"pierceArmor":true,
+			"buildingDamageMultiplier":0.01,
+		},//轨道炮类特供钨弹
+		"TNT":{
+			"speed": 18,
+			"damage": 20,
+			"splashDamageRadius":60,//范围伤害范围8/格
+			"splashDamage":210,//范围伤害值
+			"lifetime":40,
+			"width": 5,
+			"height": 10,
+			"ammoMultiplier":3,
+			"knockback":10,
+			"sprite":"triangle-205HE",
+			"pierce":false,
+			"drag":0.00,
+			"hitSize":12,
+			"pierceArmor":false,
+			"buildingDamageMultiplier":1,
+			"hitEffect": {           // 子弹击中目标时触发的视觉效果
+				"type": "MultiEffect",  // 效果类型为多重效果
+				"effects": [         // 包含多个子效果
+					{
+                    "type": "ParticleEffect", // 指定效果类型为粒子效果。
+                    "lifetime": 20, // 效果的持续时间。
+                    "cone": 360, // 效果的锥形角度，360表示全方位。
+                    "particles": 24, // 生成的粒子数量。
+                    "line": true, // 是否以线条形式显示粒子。
+                    "baseLength": 3, // 粒子的基础长度。
+                    "length": 4, // 粒子的长度。
+                    "sizeFrom": 20,
+                    "sizeTo": 150,
+                    "strokeFrom": 8, // 粒子起始时的描边宽度。
+                    "strokeTo": 1, // 粒子结束时的描边宽度。
+                    "lenFrom": 2, // 粒子起始时的长度。
+                    "lenTo": 20, // 粒子结束时的长度。
+                    "colorFrom": "FFA0A0", // 粒子起始时的颜色
+                    "colorTo": "FFA0A030" // 粒子结束时的颜色
+					},
+				]
+			}
+		},//高爆弹
+		"LHEAT":{
+			"speed": 20,
+			"damage": 20,
+			"splashDamageRadius":6,
+			"splashDamage":10,
+			"lifetime":35,
+			"width": 5, 
+			"height": 10,
+			"ammoMultiplier":1,
+			"knockback":10,
+			"sprite":"triangle-205HEAT",
+			"pierce":false,
+			"drag":0.00,
+			"hitSize":12,
+			"pierceArmor":false,
+			"buildingDamageMultiplier":0.2,
+			"fragBullets":1,
+			"fragRandomSpread":0,
+			"fragBullet":{
+			    "type":"LaserBulletType",//激光子弹的type
+			    "sideAngle":175,//子弹侧面倾斜角度
+			    "sideWidth":1,//侧面宽
+			    "sideLength":40,//侧面长
+			    "lifetime":20,
+			    "damage":225,
+			    "drawSize":400,//渲染尺寸，不清楚
+			    "length":45,//激光长度
+			    "pierce":true,
+			    "pierceArmor":true,
+			    "buildingDamageMultiplier":0.2,
+			}//爆炸产生的子弹
+		},//破甲弹
+		"LHESH":{
+			"speed": 20,
+			"damage": 20,
+			"splashDamageRadius":6,
+			"splashDamage":10,
+			"lifetime":35,
+			"width": 5, 
+			"height": 10,
+			"ammoMultiplier":1,
+			"knockback":10,
+			"sprite":"triangle-205HESH",
+			"pierce":false,
+			"drag":0.00,
+			"hitSize":12,
+			"pierceArmor":false,
+			"buildingDamageMultiplier":1,
+			"fragRandomSpread":90,//散射范围
+			"fragBullets":6,//产生子弹药数量
+			"fragBullet":{
+			    "collides":false,//不参与碰撞
+			    "speed": 50,
+    			"damage": 0,
+    			"fragRandomSpread":0,
+	    		"lifetime":1,
+	    		"fragBullets":1,
+			    "fragBullet": {
+                    "type": "BulletType",
+                    "damage": 30,
+                    "speed": 14,
+                    "collides":true,
+                    "lifetime": 6,
+                    /*"shootEffect": "shootSmall",（发射效果）*/
+                    "hitEffect": "flakExplosion",//爆炸效果
+                    "buildingDamageMultiplier":2.5,
+                }
+            }    
+		},//碎甲弹
+		"thermite":{
+			"speed": 18,
+			"damage": 20,
+			"splashDamageRadius":36,//范围伤害范围8/格
+			"splashDamage":10,//范围伤害值
+			"lifetime":35,
+			"width": 5, 
+			"height": 10,
+			"ammoMultiplier":3,
+			"knockback":10,
+			"sprite":"triangle-205HE",
+			"pierce":false,
+			"drag":0.00,
+			"hitSize":12,
+			"pierceArmor":false,
+			"buildingDamageMultiplier":0.1,
+			"status":"thermiteReaction",
+			"statusDuration":240,
+			"hitEffect":{
+                "type":"MultiEffect",
+                "effects":[
+                    {
+                    "type": "ParticleEffect", // 指定效果类型为粒子效果。
+                    "lifetime": 20, // 效果的持续时间。
+                    "cone": 360, // 效果的锥形角度，360表示全方位。
+                    "particles": 12, // 生成的粒子数量。
+                    "line": true, // 是否以线条形式显示粒子。
+                    "baseLength": 4, // 粒子的基础长度。
+                    "length": 32, // 粒子的长度。
+                    "strokeFrom": 3, // 粒子起始时的描边宽度。
+                    "strokeTo": 0, // 粒子结束时的描边宽度。
+                    "lenFrom": 12, // 粒子起始时的长度。
+                    "lenTo": 3, // 粒子结束时的长度。
+                    "colorFrom": "FFFFFF", // 粒子起始时的颜色
+                    "colorTo": "FFAC80" // 粒子结束时的颜色
+                    }
+                ]
+            },
+		},//buff弹药
+		"TGW":{
+		    "speed":10,
+		    "lifetime":10,
+		    "ammoMultiplier":1,
+            "spawnUnit": "triangle-205TGW",
+            "sprite":"triangle-205TGW",
+            "instantDisappear": false,
+            "smokeEffect": "shootBigSmoke2"
+		},//单位弹药
+		/*"炮射无人机本体包":{
+		    "speed":10,
+		    "lifetime":20,
+		    "drag":0.03,
+		    "ammoMultiplier":1,
+            "spawnUnit": "三角-炮射无人机",
+            "instantDisappear": true,
+            "smokeEffect": "shootBigSmoke2"
+		}*/
+		/*"炮射导弹":{
+			"speed": 12,
+			"damage": 30,
+			"splashDamageRadius":4,
+			"splashDamage":5,
+			"lifetime":130,
+			"width": 5, 
+			"height": 10,
+			"trailColor":"FFA042",//拖尾颜色
+			"trailLength":15,//拖尾长度
+			"trailWidth":2,//拖尾宽度
+			"ammoMultiplier":1,
+			"knockback":20,
+			"sprite":"三角-205TGW",
+			"pierce":false,
+			"drag":0.00,
+			"homingDelay":10,//追踪延迟，60为一秒
+			"homingRange":400,//追踪距离，8为1格
+			"homingPower":0.5,//追踪强度
+			"hitSize":12,
+			"pierceArmor":true,
+			"buildingDamageMultiplier":0.2,
+			"fragBullets":1,
+			"fragRandomSpread":0
+			"fragBullet":{
+			    "type":"LaserBulletType",//激光子弹的type
+			    "sideAngle":165,//子弹侧面倾斜角度
+			    "sideWidth":1,//侧面宽
+			    "sideLength":40,//侧面长
+			    "lifetime":20,
+			    "damage":425,
+			    "drawSize":300,//渲染尺寸
+			    "length":35,//激光长度
+			    "pierce":true,
+			    "pierceArmor":true,
+			    "buildingDamageMultiplier":0.2,
+			}//爆炸产生的子弹
+		}//拖尾追踪子弹
+		*/
+		"EMPB":{
+		    "speed": 15,
+			"damage": 20,
+			"splashDamageRadius":40,//范围伤害范围8/格
+			"splashDamage":10,//范围伤害值
+			"lifetime":40,
+			"width": 5, 
+			"height": 10,
+			"ammoMultiplier":1,
+			"knockback":20,
+			"sprite":"triangle-205EMP",
+			"pierce":false,
+			"drag":0.00,
+			"lightningColor":"00FBFF",
+			"lightningDamage":10,
+			"lightning":5,
+			"lightningLength":8,
+			"hitSize":12,
+			"pierceArmor":false,
+			"buildingDamageMultiplier":0.1,
+			"status":"EMIncapacitation",
+			"statusDuration":30,//效果持续时间
+			"hitEffect":{
+                "type":"MultiEffect",
+                "effects":[
+                    {
+                    "type": "waveEffect",
+                    "colorFrom": "FFFFFF",
+                    "colorTo": "00FBFF",
+                    "lightColor": "00FBFF",
+                    "sizeFrom": 0,
+                    "sizeTo": 40,
+                    "lightScl": 1.2,//光晕大小
+                    "lightOpacity": 0.8,//光晕透明度
+                    "sides": -1,
+                    "rotation": -1,
+                    "strokeFrom": 10,
+                    "strokeTo": 1.2,
+                    "offsetX": 0.0,
+                    "offsetY": 0.0,
+                    "lifetime": 5
+                    }
+                ]
+            },
+		}
+	},
+	"requirements": [
+		"TiAlloy/125",
+		"Cu/30",
+		"FeSteel/75",
+		"MonocrystallineSi/25"
+	],//建造需求物品 
+	"category": "turret",
+	"research": "railgun",
+	"researchCost":[
+		"TiAlloy/225",
+		"Cu/100",
+		"FeSteel/175",
+		"MonocrystallineSi/75"
+	],
+    "drawer": {
+        "type": "DrawMulti",
+        "drawers": [
+            {
+                "type": "DrawTurret",//绘制炮塔部件
+                /*"basePrefix": "",底座贴图*/
+                "parts": [
+                    {
+                    "type": "RegionPart",
+                    "mirror": false,
+                    "x": 0,
+                    "y": 0,
+                    "suffix": "-head",
+                    "progress": "reload",//令移动与装填进度关联
+                    "moveX": 0,
+                    "moveY": -3,
+                    "moveRot": 0,
+                    },
+                    {
+                    "type": "RegionPart",//定义为可移动组件
+                    "mirror": false,//不对称绘制
+                    "x": 0,//待机时相对于旋转中心的位置
+                    "y": 0,//与上一接口组成坐标定位
+                    "suffix": "-body",//使用贴图的后缀
+                    "moveX": 0,//开火时横向移动
+                    "moveY": 0,//开火时纵向移动
+                    "moveRot": 0,//开火时旋转
+                    "heatProgress": "recoil",
+                    "heatColor": "FF5900"//过热颜色
+                    },
+                ]
+            }
+        ]
+    },
+}

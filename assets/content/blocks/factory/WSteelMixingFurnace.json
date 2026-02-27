@@ -1,0 +1,45 @@
+{
+	"itemCapacity":40,//物品容量，数字都能改别的
+	"health":120,//生命值
+	"outputsLiquid":true,//是否输出液体（别跟下面那个具体的弄混了）
+	"size":5,//最高16，不然会崩
+	"researchCostMultiplier":0.75,
+	"squareSprite": true,
+	"hasPower": true,//是否需要电
+	"hasLiquids": true,//是否需要液体
+	"hasItems": true,//是否需要物品
+	"drawer":{
+	    "type":"DrawMulti",
+	    "drawers":[
+	        {
+            "type": "DrawRegion",
+            "suffix": "-bottom"
+            },
+	        "DrawDefault",
+			{
+			"type":"DrawFlame"
+			}
+	    ]
+	},
+	"buildCostMultiplier":0.8,//建造速度倍率
+	"craftTime":45,//输出时间间隔
+	"updateEffect": "none",//制造完成时产生的效果
+	"consumes": {
+		"power":4,//耗电，游戏里会乘60
+		"items": {
+			"items": [
+				"WC/10",
+				"Co/4"
+			]
+        },
+	},//制造消耗
+    "outputItem":{ "item": "WSteel", "amount": 10 },
+	"requirements": [
+		"Cu/20",
+        "TiAlloy/45",
+		"FeSteel/25",
+		"MonocrystallineSi/18"
+	],
+	"category": "crafting",//建造栏分类
+	"research": "WCarbideFurnace",//前置研究
+}

@@ -1,0 +1,42 @@
+{
+    "type": "LaunchPad",
+    "launchSound": "padLaunchAdvanced",
+    "launchSoundPitchRand": 0,
+    "launchTime": 600,
+    "hasLiquids": false,
+    "itemCapacity": 2500,
+    "health":100,
+    "liquidCapacity":120,
+    "shownPlanets": [ "serpulo" ],
+    "size": 5,
+    "category": "effect",
+    "hasPower": true,
+    "acceptMultipleItems": true,
+    "consumes": {
+        "power": 2,
+        "liquids": [
+            "H2O2/0.2",
+            "oilKerosene/0.2"
+        ]
+    },
+    /*"launchEffect": {
+        "type": "MultiEffect",
+        "effects": [
+            "launchPod",
+            {
+                "type": "SeqEffect",
+                "effects": [
+                ]
+            }
+        ]
+    },*/
+    "research": {
+        "parent": "router",
+    },
+    "requirements": [
+        "FeSteel/55",
+        "MonocrystallineSi/20",
+        "TiAlloy/90",
+        "Cu/20"
+    ],
+}

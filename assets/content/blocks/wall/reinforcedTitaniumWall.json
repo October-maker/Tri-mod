@@ -1,0 +1,13 @@
+{
+    "type": "Wall",
+    "health": 1850,
+    "researchCostMultiplier":0.25,
+    "size": 2, 
+    "armor": 10,
+    "requirements": [
+        { "item": "Ti", "amount":64},
+        { "item": "titanium", "amount":72},
+    ],
+    "category": "defense",
+    "research": "titanium-wall"
+}

@@ -1,0 +1,9 @@
+{
+    "barColor":"FF8000",
+    "flammability":0,
+    "temperature":1.2,
+    "viscosity":0.9,
+    "explosiveness":0.3,
+    "heatCapacity":0.05,
+    "research": "H2O2"
+}

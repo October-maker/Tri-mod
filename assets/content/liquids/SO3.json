@@ -1,0 +1,9 @@
+{
+    "barColor":"FFFF00",
+    "flammability":0,
+    "temperature":0.4,
+    "viscosity":0.7,
+    "explosiveness":0.05,
+    "heatCapacity":0.05,
+    "research": "VBearingHotMetal"
+}

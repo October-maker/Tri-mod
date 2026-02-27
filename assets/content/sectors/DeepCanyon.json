@@ -1,0 +1,16 @@
+{
+    "planet": "serpulo",
+    "sector": 152,
+    "captureWave": 30,
+    "difficulty": 1,
+    "alwaysUnlocked": false,
+    "research": {
+        "parent": "biomassFacility",
+        "objectives": [
+            {
+            "type": "sectorComplete",
+            "preset": "biomassFacility"
+            }
+        ]
+    },
+}

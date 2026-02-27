@@ -1,0 +1,9 @@
+{
+    "color":"00A6FF",
+    "speedMultiplier": 0.1,//移动速度倍率
+    "effectChance": 1,//触发概率
+    "reloadMultiplier":0.25,//装填速度倍率
+    //"effect":"Fx.electrified",
+    "effectChance":0.1,
+    "alwaysUnlocked": false,
+}

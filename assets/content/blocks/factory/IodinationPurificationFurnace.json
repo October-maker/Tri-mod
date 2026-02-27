@@ -1,0 +1,41 @@
+{
+	"itemCapacity":70,//物品容量，数字都能改别的
+	"health":150,//生命值
+	"size":5,//最高16，不然会崩
+	"squareSprite": true,
+	"researchCostMultiplier":0.75,
+	"hasPower": true,//是否需要电
+	"hasLiquids": false,//是否需要液体
+	"hasItems": true,//是否需要物品
+	"craftTime":60,//输出时间间隔
+	"buildCostMultiplier":1.5,//建造速度倍率
+	"updateEffect": "none",//制造完成时产生的效果
+	"consumes": {
+		"power":5,//耗电，游戏里会乘60
+		"items": {
+			"items": [
+				{ "item": "titanium", "amount": 15 },//需要的材料，一次制造消耗30个钛
+			]
+        },//制造时消耗物品
+	},//制造消耗
+	"drawer":{
+	    "type":"DrawMulti",//叠加
+	    "drawers":[
+	        "DrawDefault",//绘制本体贴图
+	        {
+	        "type":"DrawFlame",
+	        },
+	        {
+            "type":"DrawFade",//用于调整火光特效数据的type
+            "scale":20,//闪烁速度
+            }
+	    ]
+	},
+	"outputItem": { "item": "Ti", "amount": 13 },//输出的物品
+	"requirements": [
+		{ "item": "I", "amount": 45 }//建造所用物品
+		{ "item": "titanium", "amount": 65 }
+	],
+	"category": "crafting",//建造栏分类
+	"research": "IExtractor",//前置研究
+}

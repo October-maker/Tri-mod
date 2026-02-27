@@ -1,0 +1,13 @@
+{
+    "type": "Wall",
+    "health": 4850,
+    "researchCostMultiplier":0.25,
+    "size": 2, 
+    "armor": 540,
+    "requirements": [
+        { "item": "FeSteel", "amount":64},
+        { "item": "TiAlloy", "amount":72},
+    ],
+    "category": "defense",
+    "research": "reinforcedTitaniumWall"
+}

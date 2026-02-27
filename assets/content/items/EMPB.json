@@ -1,0 +1,9 @@
+{
+    "explosiveness":0.2,
+    "flammability":0.1,
+    "radioactivity":0,
+    "hardness":0,
+    "charge":3,
+    "cost":2,
+    "research":"thermite",
+}

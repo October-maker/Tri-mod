@@ -1,0 +1,52 @@
+{
+	"itemCapacity":40,//物品容量，数字都能改别的
+	"health":20,//生命值
+	"outputsLiquid":true,//是否输出液体（别跟下面那个具体的弄混了）
+    "rotate":true,
+	"size":5,//最高16，不然会崩
+	"researchCostMultiplier":0.75,
+	"liquidOutputDirections":[1,2,3],
+	"squareSprite": true,
+	"hasPower": true,//是否需要电
+	"hasLiquids": true,//是否需要液体
+	"hasItems": true,//是否需要物品
+	"drawer":{
+	    "type":"DrawMulti",
+	    "drawers":[
+			{
+	        "type":"DrawRegion",
+	        "suffix":"-base",
+			}
+			{
+			"type": "DrawGlowRegion",
+			"color": "FFFFFF99",
+			"layer": 110,
+			"suffix": "-glow",
+			"glowIntensity":0,
+			},
+	    ]
+	},
+	"buildCostMultiplier":0.8,//建造速度倍率
+	"craftTime":30,//输出时间间隔
+	"updateEffect": "none",//制造完成时产生的效果
+	"consumes": {
+		"power":9,//耗电，游戏里会乘60
+		"liquids": [
+		    { "liquid": "oilVacuumResidue", "amount": 0.3 },
+		]
+	},//制造消耗
+    "outputLiquids":[
+		{ "liquid": "oilGasoline", "amount": 0.1 },
+		{ "liquid": "oilWax", "amount": 0.1 },
+		{ "liquid": "oilDiesel", "amount": 0.1 },
+    ],
+    "outputItem": { "item": "scrap", "amount": 1 },
+	"requirements": [
+        "Al/20",
+	    "MonocrystallineSi/28",
+	    "FeSteel/40",
+	    "TiAlloy/15",
+	],
+	"category": "crafting",//建造栏分类
+	"research": "oilVacuumDistillationColumn",//前置研究
+}

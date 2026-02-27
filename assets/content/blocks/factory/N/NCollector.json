@@ -1,0 +1,47 @@
+{
+	"itemCapacity":20,//物品容量，数字都能改别的
+	"health":150,//生命值
+	"size":3,//最高16，不然会崩
+	"hasPower": true,//是否需要电
+	"hasLiquids": false,//是否需要液体
+	"squareSprite": true,
+	"researchCostMultiplier":0.75,
+	"hasItems": true,//是否需要物品
+	"drawer":{
+	    "type":"DrawMulti",
+	    "drawers":[
+			{
+				"type":"DrawRegion",
+				"suffix":"-bottom",
+			}
+			{
+				"type":"DrawRegion",
+				"suffix":"-rotator",
+				"spinSprite":true,
+				"rotateSpeed":-12,
+			}
+			"DrawDefault"
+			{
+			"type": "DrawGlowRegion",
+			"color": "FFFFFF99",
+			"layer": 110,
+			"suffix": "-glow",
+			"glowIntensity":0,
+			},
+	    ]
+	},
+	"buildCostMultiplier":1.2,//建造速度倍率
+	"craftTime":60,//输出时间间隔
+	"updateEffect": "none",//制造完成时产生的效果
+	"consumes": {
+		"power":1//耗电，游戏里会乘60
+	},//制造消耗
+    "outputLiquid":{ "liquid": "nitrogen", "amount": 0.4 },
+	"requirements": [
+	    "Al/20",
+	    "MonocrystallineSi/10",
+	    "FeSteel/30",
+	],
+	"category": "crafting",//建造栏分类
+	"research": "IodinationPurificationFurnace",//前置研究
+}

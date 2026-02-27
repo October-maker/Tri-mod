@@ -1,0 +1,9 @@
+{
+    "explosiveness":2,
+    "flammability":1.5,
+    "radioactivity":0,
+    "hardness":1,
+    "charge":0,
+    "cost":2,
+    "research": "Al"
+}

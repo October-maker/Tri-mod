@@ -1,0 +1,9 @@
+{
+    "barColor":"F0F0A0",
+    "flammability":0,
+    "temperature":0.5,
+    "viscosity":0.1,
+    "explosiveness":0.6,
+    "heatCapacity":0.05,
+    "research": "NO2"
+}

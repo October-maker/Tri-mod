@@ -1,0 +1,13 @@
+{
+    "type": "Floor", // 定义方块的类型为 Floor（地板）
+    "speedMultiplier": 0.8, // 单位在该地板上行走的速度倍率，0.8 表示速度降低 20%
+    "variants": 0, // 方块的变种数量，0 表示没有变种
+    "cacheLayer": "water", // 缓存层的名称，这里指定为“water”（水）
+    "albedo": 0.6, // 地板的反照率（反射率）越大反照越强
+    "shallow": true, // 是否为浅水区域，true 表示是浅水区域
+    "isLiquid": true, // 是否为液体，true 表示该地板是液体
+    "liquidDrop": "salineWater", // 该地板的液体产出
+    "liquidMultiplier": 0.8, // 液体产量的倍率
+    "placeableOn": true, // 是否可以在该地板上放置方块，true 表示可以
+    "supportsOverlay": true // 是否支持覆盖层（如其他方块或特效），true 表示支持
+}

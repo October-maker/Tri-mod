@@ -1,0 +1,9 @@
+{
+    "barColor":"D8B693A0",
+    "flammability":3.2,
+    "temperature":0.5,
+    "viscosity":0.9,
+    "explosiveness":1.2,
+    "heatCapacity":0.1,
+    "research": "oilVacuumResidue"
+}

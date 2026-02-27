@@ -1,0 +1,10 @@
+{
+    "barColor":"000000",
+    "flammability":5.2,
+    "temperature":0.8,
+    "gas":true,
+    "viscosity":0.1,
+    "explosiveness":7.8,
+    "heatCapacity":0.1,
+    "research": "oilCrude"
+}

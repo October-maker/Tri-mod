@@ -1,0 +1,17 @@
+{
+    "type": "LiquidBridge",
+    "category": "liquid",
+    "health": 360,
+    "requirements": [ 
+        "TiAlloy/5",
+        "FeSteel/5"
+    ],
+    "liquidCapacity": 30,
+    "range": 7,
+    "hasPower": false,
+    "arrowSpacing": 6,
+    "moveArrows": false,
+    "squareSprite": false,
+    "research": "reinforcedCatheter",
+    "buildCostMultiplier": 0.1
+}

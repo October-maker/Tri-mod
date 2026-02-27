@@ -1,0 +1,7 @@
+{
+    "type": "Floor", // 定义方块的类型为 Floor（地板）
+    "variants": 3, // 方块的变种数量
+    "itemDrop": "sand", // 该地板的液体产出
+    "placeableOn": true, // 是否可以在该地板上放置方块，true 表示可以
+    "supportsOverlay": true // 是否支持覆盖层（如其他方块或特效），true 表示支持
+}

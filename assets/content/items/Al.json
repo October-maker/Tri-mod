@@ -1,0 +1,9 @@
+{
+    "explosiveness":0.3,
+    "flammability":1.2,
+    "radioactivity":0,
+    "hardness":2,
+    "charge":0,
+    "cost":0.8,
+    "research": "bauxite"
+}

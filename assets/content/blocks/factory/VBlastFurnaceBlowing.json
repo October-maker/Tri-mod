@@ -1,0 +1,53 @@
+{
+	"itemCapacity":80,//物品容量，数字都能改别的
+	"health":150,//生命值
+	"outputsLiquid":true,//是否输出液体（别跟下面那个具体的弄混了）
+	"size":5,//最高16，不然会崩
+	"researchCostMultiplier":0.75,
+	"hasPower": true,//是否需要电
+	"hasLiquids": true,//是否需要液体
+	"hasItems": true,//是否需要物品
+	"squareSprite": true,//是否将物流元件向内延伸
+	"drawer":{
+	    "type":"DrawMulti",
+	    "drawers":[
+	        {
+            "type": "DrawRegion",
+            "suffix": "-bottom"
+            },
+            {
+            "type": "drawLiquidTile",
+            "drawLiquid": "VBearingHotMetal",
+            "padding": 4,
+            },
+            {
+	        "type":"DrawFlame",
+	        },
+	        "DrawDefault",
+	    ]
+	},
+	"buildCostMultiplier":0.8,//建造速度倍率
+	"craftTime":30,//输出时间间隔
+	"updateEffect": "none",//制造完成时产生的效果
+	"consumes": {
+		"power":3.2,//耗电，游戏里会乘60
+		"liquids": [
+		    { "liquid": "VBearingHotMetal", "amount": 1.2 },
+		],
+		"items": {
+			"items": [
+				{ "item": "coal", "amount": 3 },
+			]
+        },
+	},//制造消耗
+	"outputItems":[
+	    { "item": "V2O5", "amount": 12 }
+	    { "item": "FeSteel", "amount": 14 }
+	],
+	"requirements": [
+		{ "item": "Al", "amount": 40 }
+		{ "item": "Ti", "amount": 80 }//建造所用物品
+	],
+	"category": "crafting",//建造栏分类
+	"research": "VBlastFurnace",//前置研究
+}

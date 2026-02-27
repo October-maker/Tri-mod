@@ -1,0 +1,25 @@
+{
+    "type":"HeatConductor",
+    "researchCostMultiplier":1.5,
+    "category": "distribution",
+    "size":2,
+    "health":430,
+    "rotate":true,
+    "regionRotated1":1,
+	"drawer":{
+	    "type":"DrawMulti",
+	    "drawers":[
+	        "DrawDefault",
+	        "DrawHeatOutput",
+	        {
+            "type":"DrawHeatInput",
+            "suffix":"-heat",
+            },
+	    ],
+	},
+	"requirements":[
+	    "TiAlloy/20",
+	    "graphite/40",
+	],
+	"research":"reinforcedConveyorBelt",
+}

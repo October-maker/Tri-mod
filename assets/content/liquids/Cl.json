@@ -1,0 +1,10 @@
+{
+    "barColor":"A0F000FF",
+    "flammability":0,
+    "temperature":0.5,
+    "gas":true,
+    "viscosity":0.1,
+    "explosiveness":0,
+    "heatCapacity":0.05,//比热容
+    "research": "salineWater"
+}

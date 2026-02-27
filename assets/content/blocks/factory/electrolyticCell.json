@@ -1,0 +1,70 @@
+{
+    "liquidOutputDirections":[1,3],
+    "researchCostMultiplier":1.2,
+    "rotate":true,
+    "size":3,
+    "regionRotated1":3,
+    "squareSprite": true,
+    "health":100,
+    "outputsLiquid":true,
+    "hasPower":true,
+    "hasLiquids":true,
+    "craftTime":60,
+    "buildCostMultiplier":0.5,
+    "consumes":{
+        "power":4.4,
+        "liquids":[
+            "water/0.6",
+        ],
+    },
+    "outputLiquids":[
+		{ "liquid": "ozone", "amount": 0.3 },
+		{ "liquid": "hydrogen", "amount": 0.2 },
+    ],
+    "category": "crafting",
+    "research": {
+        "parent": "cultivator",
+        /*"objectives": [
+            {
+            "type": "onSector",
+            "preset": "深邃峡谷"
+            }
+        ]*/
+    },
+    "requirements":[
+        "copper/50",
+        "lead/20",
+    ]
+    "drawer": {
+        "type": "DrawMulti", // 使用多重绘图组件来渲染方块或实体。
+        "drawers": [
+            {
+            "type": "DrawRegion", // 绘制基础区域，通常用于背景或底部贴图。
+            "suffix": "-bottom" // 贴图的后缀，用于指定特定的图像资源。
+            },
+            {
+            "type": "DrawLiquidTile", // 绘制液体效果，通常用于显示方块中的液体。
+            "drawLiquid": "water"// 液体类型，这里指定为水。
+            "padding": 2,//渲染液体范围
+            },
+            {
+            "type": "DrawBubbles", // 绘制气泡效果，通常用于液体表面。
+            "color": "7693e3", // 气泡的颜色，以十六进制颜色代码表示。
+            "sides": 10, // 气泡的边数，可能影响气泡的形状。
+            "recurrence": 3, // 气泡的生成频率。
+            "spread": 6, // 气泡的扩散范围。
+            "radius": 1.5, // 气泡的半径。
+            "amount": 20 // 气泡的数量。
+            },
+            "DrawRegion", // 再次绘制一个区域，可能用于覆盖或添加额外的视觉效果。
+            "DrawLiquidOutputs", // 绘制液体输出效果，通常用于显示液体的流动方向。
+            {
+            "type": "DrawGlowRegion", // 绘制发光区域效果。
+            "alpha": 0.7, // 发光效果的透明度。
+            "color": "c4bdf3", // 发光颜色，以十六进制颜色代码表示。
+            "glowIntensity": 0.3, // 发光强度。
+            "glowScale": 6, // 发光范围或缩放比例。
+            },
+        ],
+    },
+}

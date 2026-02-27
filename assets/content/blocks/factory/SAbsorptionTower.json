@@ -1,0 +1,51 @@
+{
+	"itemCapacity":40,//物品容量，数字都能改别的
+	"health":150,//生命值
+	"outputsLiquid":true,//是否输出液体（别跟下面那个具体的弄混了）
+	"size":4,//最高16，不然会崩
+	"researchCostMultiplier":0.75,
+	"squareSprite": true,
+	"hasPower": true,//是否需要电
+	"hasLiquids": true,//是否需要液体
+	"hasItems": true,//是否需要物品
+	"drawer":{
+	    "type":"DrawMulti",
+	    "drawers":[
+	        {
+            "type": "DrawRegion",
+            "suffix": "-bottom"
+            },
+            {
+            "type": "drawLiquidTile",
+            "drawLiquid": "water",
+            "padding": 3,
+            },
+            {
+            "type": "drawRegion", 
+            "suffix": "-rotator", 
+            "spinSprite": true, 
+            "rotateSpeed":8
+            },
+	        "DrawDefault",
+	        "DrawHeatOutput",
+	    ]
+	},
+	"buildCostMultiplier":0.8,//建造速度倍率
+	"updateEffect": "none",//制造完成时产生的效果
+	"heatOutput":20,//产热量
+	"consumes": {
+		"power":1,//耗电，游戏里会乘60
+        "liquids":[
+            "SO3/0.4"
+            "water/0.5"
+        ],
+	},//制造消耗
+	"outputLiquid": { "liquid": "H2SO4", "amount": 0.6 },//输出的液体
+	"requirements": [
+		"FeSteel/50",
+        "TiAlloy/30",
+		"Al/30",
+	],
+	"category": "crafting",//建造栏分类
+	"research": "SCombustionVessel",//前置研究
+}

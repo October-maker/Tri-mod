@@ -1,0 +1,42 @@
+{
+	"health":50,//生命值
+	"outputsLiquid":true,//是否输出液体（别跟下面那个具体的弄混了）
+	"squareSprite": true,
+	"size":1,//最高16，不然会崩
+	"hasPower": true,//是否需要电
+	"hasLiquids": true,//是否需要液体
+	"researchCostMultiplier":0.75,
+	"drawer":{
+	    "type":"DrawMulti",
+	    "drawers":[
+	        {
+            "type": "DrawRegion",
+            "suffix": "-bottom"
+            },
+            {
+            "type": "drawLiquidTile",
+            "drawLiquid": "hydrochloricAcid",
+            "padding": 0.5,
+            },
+	        "DrawDefault",
+	        "DrawFlame"
+	    ]
+	},
+	"hasItems": true,//是否需要物品
+	"buildCostMultiplier":0.4,//建造速度倍率
+	"craftTime":60,//输出时间间隔
+	"updateEffect": "none",//制造完成时产生的效果
+	"consumes": {
+		"power":0.3,//耗电，游戏里会乘60
+		"liquids": [
+		    "hydrochloricAcid/1"
+		]
+	},//制造消耗
+	"outputLiquid": { "liquid": "HCl", "amount": 1 },//输出的液体
+	"requirements": [
+        "Al/20",
+        "TiAlloy/10"
+	],
+	"category": "crafting",//建造栏分类
+	"research": "AcidReactionKettle",//前置研究
+}

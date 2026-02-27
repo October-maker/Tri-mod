@@ -1,0 +1,22 @@
+{
+    "size": 3,
+    "health": 700,//血量，字面意思
+    "buildCostMultiplier":0.5,
+    "armor":15,
+    "itemCapacity": 2000,//物品容量，注：是全物品都加
+    "unitCapModifier":10,//单位上限，增加工厂可以制造的单位上限
+    "unitType":"gamma",//核心的单位，玩家操纵的那种
+    "requirements": [
+        "TiAlloy/300",
+        "Al/100",
+        "MonocrystallineSi/100"
+    ],//建造所需物品
+    "category": "effect",//游戏界面分类
+    "research": "core-foundation",//科技树前一项
+    "researchCostMultiplier":0.95,
+    "researchCost": [
+        "TiAlloy/500",
+        "Al/500",
+        "MonocrystallineSi/500"
+    ]
+}

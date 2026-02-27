@@ -1,0 +1,132 @@
+{
+    "type": "ConsumeGenerator", // 定义该实体类型为消耗型发电机
+    "category": "power", // 分类为电力类建筑
+    "size": 5, // 实体占用的网格大小
+    "health": 280, // 生命值
+    "requirements": [ // 建造该建筑所需的资源清单
+      "TiAlloy/30",
+      "MonocrystallineSi/30",
+      "FeSteel/40",
+    ],
+    "warmupSpeed":0.05,
+    "powerProduction": 50,
+    "itemDuration": 30, // 生成物品的持续时间
+    "consumes": { // 运行时消耗的资源
+      "liquids": [
+        { "liquid": "oilDiesel", "amount": 0.2 }
+      ]
+    },
+    "drawer": { // 图形绘制配置
+      "type": "DrawMulti", // 使用多图层绘制技术
+      "drawers": [ // 绘制图层配置
+            "DrawDefault", // 默认绘制模式
+            {
+            // 绘制主活塞（左侧）
+            "type": "DrawPistons",
+            "suffix": "-piston",
+            // 活塞初始旋转角度偏移
+            "angleOffset": 45,
+            // 活塞运动幅度（sin函数振幅）
+            "sinMag": 4,
+            // 活塞运动缩放比例
+            "sinScl": 15,
+            "sides":4,
+            "sideOffset":70,
+            }
+            {
+			"type": "DrawGlowRegion",
+			"color": "FFFFFF99",
+			"layer": 110,
+			"suffix": "-glow",
+			"glowIntensity":0,
+			},
+        ]
+    },
+	"research": {
+        "parent": "steam-generator",
+        "objectives": [
+            "oilPrimaryAtmosphericDistillationTower"
+        ]
+    },
+}
+/**
+ * 继承自DrawBlock的自定义绘制类，用于绘制活塞（piston）的视觉效果
+public class DrawPistons extends DrawBlock {
+    **
+     * 正弦波的振幅值，控制活塞运动时的位移幅度
+     * 值越大，活塞运动的伸缩范围越大
+     *
+    public float sinMag = 4.0F;
+
+    **
+     * 正弦波的缩放因子，控制运动速度
+     * 值越大，活塞运动越快
+     *
+    public float sinScl = 6.0F;
+
+    **
+     * 正弦波的垂直偏移量，控制活塞的起始位置
+     * 值越大，活塞初始位置越随机
+     *
+    public float sinOffset = 50.0F;
+
+    **
+     * 侧面绘制的横向偏移量
+     * 用于调整活塞侧面的水平位置
+     *
+    public float sideOffset = 0.0F;
+
+    **
+     * 长度方向的偏移量
+     * 控制活塞主体的长度起始位置
+     * 负值表示向左偏移
+     *
+    public float lenOffset = -1.0F;
+
+    **
+     * 水平方向的偏移量
+     * 调整活塞在水平轴上的位置
+     *
+    public float horiOffset = 0.0F;
+
+    **
+     * 角度偏移量
+     * 控制活塞的旋转角度
+     *
+    public float angleOffset = 0.0F;
+
+    **
+     * 绘制的边数，影响活塞的形状
+     * 通常用于创建多边形效果
+     *
+    public int sides = 4;
+
+    **
+     * 纹理后缀，用于生成不同的纹理名称
+     * 例如："base-piston" 会组合成 "base-piston-piston"
+     *
+    public String suffix = "-piston";
+
+    **
+     * 主纹理区域，用于绘制活塞主体
+     *
+    public TextureRegion region1;
+
+    **
+     * 侧面纹理区域，用于绘制活塞的侧面部分
+     *
+    public TextureRegion region2;
+
+    **
+     * 特殊纹理区域（可能用于顶部或其他部分）
+     * 具体用途需结合实际绘制逻辑确定
+     *
+    public TextureRegion regiont;
+
+    **
+     * 图标纹理区域，用于显示在物品栏中的图标
+     *
+    public TextureRegion iconRegion;
+}
+```
+*/

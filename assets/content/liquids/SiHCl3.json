@@ -1,0 +1,9 @@
+{
+    "barColor":"FFFF80D2",
+    "flammability":0,
+    "temperature":0.5,
+    "viscosity":0.2,
+    "explosiveness":1.2,
+    "heatCapacity":0.1,
+    "research": "HCl"
+}

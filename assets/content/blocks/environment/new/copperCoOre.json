@@ -1,0 +1,8 @@
+{
+    "type": "oreBlock", // 定义了实体的类型为 "oreBlock"，即矿石方块。
+    "playerUnmineable": false, // 玩家能直接挖掘这个矿石方块。
+    "itemDrop": "copperCo", // 这个矿石方块被挖掘时会掉落什么。
+    "variants": 3, // 这个矿石方块有3种变体或外观。
+    "mapColor": "F0F0F0", // 在地图上这个矿石方块的颜色，以十六进制颜色代码表示。
+    "useColor": true, // 使用指定的颜色作为地图上的显示颜色。
+}

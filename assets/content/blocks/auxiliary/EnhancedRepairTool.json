@@ -1,0 +1,49 @@
+{
+    "type": "RegenProjector", // 定义实体的类型为"RegenProjector"，既修复器
+    "health": 325, // 实体的血量。
+    "armor":20,
+    "baseColor": "8CA9E8", // 实体的基础颜色，以十六进制表示。
+    "size": 2, // 实体的尺寸或占用的格子数。
+    "range":56 , // 实体的作用范围。
+    "healPercent": 0.094, // 实体的治疗效果或修复百分比。
+    "hasLiquids": true, // 表明实体具有液体存储或处理能力。
+    "hasItems": true, // 表明实体具有物品存储或处理能力。
+    "itemCapacity": 10, // 实体的物品容量。
+    "canOverdrive": true, // 表明实体能进入超频模式。
+    "researchCostMultiplier":0.7,
+    "consumes": { // 实体消耗的资源定义。
+        "power": 0.17, // 实体消耗的电能。
+        "items": { // 实体消耗的物品定义。
+            "items": [ // 具体消耗的物品列表。
+                "silicon/2"
+            ],
+            "optional": true, // 表明这种物品消耗是可选的。
+            "booster": true // 表明这种物品消耗可以加速实体的效果。
+        },
+    },
+    "drawer": {
+        "type": "DrawMulti", // 指定渲染器的类型为 "DrawMulti"，表示将使用多个绘图组件来渲染实体。
+        "drawers": [ // 开始定义一系列的绘图组件。
+            {
+            "type": "DrawRegion", // 使用 "DrawRegion" 组件来绘制区域。
+            "suffix": "-bottom" // 指定一个后缀 "-bottom"，
+            },
+            {
+            "type": "DrawGlowRegion", // 使用 "DrawGlowRegion" 组件来添加发光效果。
+            "color": "66CCFF" // 指定发光的颜色，以十六进制表示。
+            },
+            {
+            "type": "DrawPulseShape", // 使用 "DrawPulseShape" 组件来绘制脉动形状。
+            "color": "9EDFFF" // 指定脉动形状的颜色，以十六进制表示。
+            },
+        ] // 结束绘图组件的定义。
+    }, // 结束 "drawer" 对象的定义。
+    "requirements": [ // 建造或使用这个实体所需的资源列表。
+        "silicon/25", // 需要硅，数量为25。
+        "graphite/12" // 需要石墨，数量为12。
+        "FeSteel/20"
+        "Al/10"
+    ],
+    "category": "effect", // 实体的分类
+    "research": "mend-projector" // 实体需要的研究或科技
+}

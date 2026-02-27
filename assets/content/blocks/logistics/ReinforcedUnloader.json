@@ -1,0 +1,15 @@
+{
+    "type": "Unloader",//卸载器的type
+	"health": 450,
+	"size": 1,
+	"researchCostMultiplier":0.75,
+	"speed": 3,//卸载速度
+	"update": "true",//方块是否更新
+	"hasItems": "true",//是否装载物品
+	"requirements": [
+	    "FeSteel/8",
+		"TiAlloy/5"
+	],
+	"category": "effect",
+	"research": "reinforcedConveyorBelt"
+}

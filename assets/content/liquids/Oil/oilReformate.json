@@ -1,0 +1,9 @@
+{
+    "barColor":"FF9A59E0",
+    "flammability":4.5,
+    "temperature":0.7
+    "viscosity":0.7,
+    "explosiveness":5.2,
+    "heatCapacity":0.1,
+    "research": "oilNaphtha"
+}

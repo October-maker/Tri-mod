@@ -1,0 +1,42 @@
+{
+	"itemCapacity":100,
+	"health":150,
+	"size":4,
+	"squareSprite": true,
+	"hasPower": true,
+	"researchCostMultiplier":0.75,
+	"drawer":{
+	    "type":"DrawMulti",
+	    "drawers":[
+	        "DrawDefault",
+	        {
+	        "type":"DrawFlame",
+	        },
+	    ]
+	},
+	"hasLiquids": false,
+	"hasItems": true,
+	"buildCostMultiplier":1.2,
+	"craftTime":45,
+	"updateEffect": "none",
+	"consumes": {
+		"power":0.25,
+		"items": {
+			"items": [
+				{ "item": "Al", "amount": 13 },
+				{ "item": "V2O5", "amount": 10 },
+			]
+        },
+	},
+	"outputItems":[
+	    { "item": "V", "amount": 16 }
+	    { "item": "bauxite", "amount": 4 }
+	],
+	"requirements": [
+		{ "item": "Ti", "amount": 30 }//建造所用物品
+		{ "item": "Al", "amount": 20 }
+		{ "item": "FeSteel", "amount": 50 }
+	],
+	"category": "crafting",//建造栏分类
+	"research": "VBlastFurnaceBlowing",//前置研究
+}

@@ -1,0 +1,22 @@
+{
+    "damage": 6,//伤害，帧伤
+    "speedMultiplier": 0.8,//移动速度倍率
+    "effectChance": 1,//触发概率
+    "healthMultiplier": 0.9,//生命值倍率
+    "effect": {
+        "type": "ParticleEffect", // 指定效果类型为粒子效果。
+        "lifetime": 10, // 效果的持续时间。
+        "cone": 360, // 效果的锥形角度，360表示全方位。
+        "particles": 1, // 生成的粒子数量。
+        "line": true, // 是否以线条形式显示粒子。
+        "baseLength": 1, // 粒子的基础长度。
+        "length": 8, // 粒子的长度。
+        "strokeFrom": 1, // 粒子起始时的描边宽度。
+        "strokeTo": 0, // 粒子结束时的描边宽度。
+        "lenFrom": 8, // 粒子起始时的长度。
+        "lenTo": 0.1, // 粒子结束时的长度。
+        "colorFrom": "FFFFFF", // 粒子起始时的颜色
+        "colorTo": "FFAC80" // 粒子结束时的颜色
+    },
+    "alwaysUnlocked": false,
+}

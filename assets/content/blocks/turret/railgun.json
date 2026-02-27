@@ -1,0 +1,203 @@
+{
+	"type": "ItemTurret",//种类
+	"health": 320,//血量
+	"size": 1,//大小
+	"reload": 60,//装填时间
+	"range": 320,//攻击范围 8/格 
+	"recoil":1,//后坐力大小
+	"minWarmup": 0.99,//最小发射预热
+	"shootWarmupSpeed": 0.25,//预热速度
+	"targetAir": true,//是否对空
+	"ammoUseEffect":"none",
+    "targetGround": true,//是否对地
+	"shoot":{
+	    "type":"shootPattern",
+	    "shots":1,//发射子弹数
+	    "shotDelay":0.0,//两颗子弹的发射间隔
+	    "firstShotDelay":0,
+	},
+	"consumes": {
+        "power": 1,
+    },
+	"inaccuracy": 0,//误差 1=1度 
+	"rotateSpeed": 6,//旋转速度 
+	"shake":0.5,//射击摇动
+	"maxAmmo":10,//弹夹容量
+	"ammoPerShot":1,//射击一次消耗子弹
+	"ammoTypes": {
+        "copper": {
+			"speed": 13,//子弹飞行速度
+			"damage": 110,//伤害
+			"lifetime":24,//子弹存在时间/帧
+			"width": 2,//子弹贴图宽
+			"height": 4,//同上，长
+			"ammoMultiplier":5,//一个物品补充多少子弹 
+			"knockback":1,//击退力
+			"sprite":"triangle-205AP",//子弹贴图
+			"pierce":false,//是否穿透单位
+			"drag":0.00,//子弹每帧减速
+			"hitSize":12,//子弹碰撞箱大小
+			/*"shootEffect": "None", 射击效果 */
+			"pierceArmor":false,//是否穿甲
+            "buildingDamageMultiplier":0.1,//对建筑伤害
+		},//穿甲弹
+		"Al": {
+			"speed": 10,//子弹飞行速度
+			"damage": 90,//伤害
+			"lifetime":30,//子弹存在时间/帧
+			"width": 2,//子弹贴图宽
+			"height": 4,//同上，长
+			"ammoMultiplier":5,//一个物品补充多少子弹
+			"knockback":1,//击退力
+			"sprite":"triangle-205AP",//子弹贴图
+			"pierce":false,//是否穿透单位
+			"drag":0.00,//子弹每帧减速
+			"hitSize":12,//子弹碰撞箱大小
+			/*"shootEffect": "None", 射击效果 */
+			"pierceArmor":false,//是否穿甲
+            "buildingDamageMultiplier":0.1,//对建筑伤害
+		},//穿甲弹
+		"lead": {
+			"speed": 10,//子弹飞行速度
+			"damage": 60,//伤害
+			"lifetime":30,//子弹存在时间/帧
+			"width": 2,//子弹贴图宽
+			"height": 4,//同上，长
+			"ammoMultiplier":5,//一个物品补充多少子弹
+			"knockback":1,//击退力
+			"sprite":"triangle-205AP",//子弹贴图
+			"pierce":false,//是否穿透单位
+			"drag":0.00,//子弹每帧减速
+			"hitSize":12,//子弹碰撞箱大小
+			/*"shootEffect": "None", 射击效果 */
+			"pierceArmor":false,//是否穿甲
+            "buildingDamageMultiplier":0.1,//对建筑伤害
+		},//穿甲弹
+		"silicon": {
+			"speed": 10,//子弹飞行速度
+			"damage": 95,//伤害
+			"lifetime":30,//子弹存在时间/帧
+			"width": 2,//子弹贴图宽
+			"height": 4,//同上，长
+			"ammoMultiplier":5,//一个物品补充多少子弹
+			"knockback":1,//击退力
+			"sprite":"triangle-205AP",//子弹贴图
+			"pierce":false,//是否穿透单位
+			"drag":0.00,//子弹每帧减速
+			"hitSize":12,//子弹碰撞箱大小
+			/*"shootEffect": "None", 射击效果 */
+			"pierceArmor":false,//是否穿甲
+            "buildingDamageMultiplier":0.1,//对建筑伤害
+		},//穿甲弹
+		"graphite":{
+			"speed": 15,
+			"damage": 105,
+			"lifetime":24,
+			"width": 2,
+			"height": 4,
+			"ammoMultiplier":3,
+			"knockback":2,
+			"sprite":"triangle-205AP",
+			/*"shootEffect": "None",*/
+			"pierce":false,
+			"drag":0.00,
+			"hitSize":12,
+			"pierceArmor":false,
+			"buildingDamageMultiplier":0.3,
+		},//穿甲弹
+		"Ti":{
+			"speed": 12,
+			"damage": 125,
+			"lifetime":24,
+			"width": 2,
+			"height": 4,
+			"ammoMultiplier":3,
+			"knockback":1,
+			"sprite":"triangle-205AP",
+			"pierce":false,
+			/*"shootEffect": "None",*/
+			"drag":0.00,
+			"hitSize":10,
+			"pierceArmor":false,
+			"buildingDamageMultiplier":0.05,
+		},//次口径穿甲弹
+		"titanium":{
+			"speed": 15,
+			"damage": 150,
+			"lifetime":24,
+			"width": 2,
+			"height": 4,
+			"ammoMultiplier":3,
+			"knockback":1,
+			"sprite":"triangle-205AP",
+			"pierce":false,
+			/*"shootEffect": "None",*/
+			"drag":0.00,
+			"hitSize":10,
+			//"pierceArmor":true,
+			"armorMultiplier":1.2,//将命中目标的装甲视为原来的多少
+			"buildingDamageMultiplier":0.05,
+		},//次口径穿甲弹
+		"FeSteel":{
+			"speed": 15,
+			"damage": 200,
+			"lifetime":24,
+			"width": 2,
+			"height": 4,
+			"ammoMultiplier":3,
+			"knockback":2,
+			"sprite":"triangle-205AP",
+			/*"shootEffect": "None",*/
+			"pierce":false,
+			"drag":0.00,
+			"hitSize":12,
+			//"pierceArmor":true,
+			"armorMultiplier":0.55,//如果填小于1的值会显示为无视多少（0.45）的装甲
+			"buildingDamageMultiplier":0.3,
+		},//穿甲弹
+	},
+	"requirements": [
+		"FeSteel/50",
+	    "copper/20",
+	],//建造需求物品 
+	"category": "turret",
+	"research": "hail",
+	"researchCost":[
+	    "FeSteel/100",
+	    "copper/50",
+	],
+    "drawer": {
+        "type": "DrawMulti",
+        "drawers": [
+            {
+                "type": "DrawTurret",//绘制炮塔部件
+                /*"basePrefix": "",底座贴图*/
+                "parts": [
+                    {
+                    "type": "RegionPart",//定义为可移动组件
+                    "mirror": false,//不对称绘制
+                    "x": 0,//待机时相对于旋转中心的位置
+                    "y": 0,//与上一接口组成坐标定位
+                    "suffix": "-body",//使用贴图的后缀
+                    "moveX": 0,//开火时横向移动
+                    "moveY": 0,//开火时纵向移动
+                    "moveRot": 0,//开火时旋转
+                    "heatProgress": "recoil",
+                    "heatColor": "FF5900"//过热颜色
+                    },
+                    {
+                    "type": "RegionPart",
+                    "mirror": false,
+                    "x": 0,
+                    "y": 0,
+                    "suffix": "-head",
+                    "progress": "reload",//令移动与装填进度关联
+                    "moveX": 0,
+                    "moveY": -2,
+                    "moveRot": 0,
+                    },
+                ]
+            }
+        ]
+    },
+}

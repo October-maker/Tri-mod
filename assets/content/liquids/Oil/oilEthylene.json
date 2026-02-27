@@ -1,0 +1,10 @@
+{
+    "barColor":"000000E0",
+    "flammability":4,
+    "temperature":0.5,
+    "viscosity":0.8,
+    "explosiveness":6,
+    "heatCapacity":0.1,
+    "gas":true,
+    "research": "oilWax"
+}

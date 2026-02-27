@@ -1,0 +1,15 @@
+{
+	"type": "BuildTurret",
+	"health": 320,
+	"size": 2,
+	"range": 400,
+	"buildSpeed": 0.75,
+	"canOverdrive": true,
+	"researchCostMultiplier":0.75,//研究消耗的材料的倍率
+	"requirements": [
+	    {"item": "FeSteel", "amount": 150 }
+	    {"item": "TiAlloy", "amount": 50 }
+	],
+	"category": "effect",
+	"research": "EnhancedRepairTool"
+}

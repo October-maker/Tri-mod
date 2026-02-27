@@ -1,0 +1,53 @@
+{
+	"itemCapacity":40,//物品容量，数字都能改别的
+	"health":150,//生命值
+	"outputsLiquid":true,//是否输出液体（别跟下面那个具体的弄混了）
+	"size":2,//最高16，不然会崩
+	"researchCostMultiplier":0.75,
+	"squareSprite": true,
+	"hasPower": true,//是否需要电
+	"hasLiquids": true,//是否需要液体
+	"hasItems": true,//是否需要物品
+	"drawer":{
+	    "type":"DrawMulti",
+	    "drawers":[
+	        {
+            "type": "DrawRegion",
+            "suffix": "-bottom"
+            },
+            {
+            "type": "drawLiquidTile",
+            "drawLiquid": "oil",
+            "padding": 1,
+            },
+            "DrawDefault",
+			{
+			"type": "DrawGlowRegion", // 使用 "DrawGlowRegion" 组件来添加发光效果。
+			"color": "FFFFFF20", // 指定发光的颜色，以十六进制表示。
+			"layer": 110,
+			"suffix": "-glow",
+			"glowIntensity":0,
+			},
+	    ]
+	},
+	"buildCostMultiplier":0.8,//建造速度倍率
+	"craftTime":30,//输出时间间隔
+	"updateEffect": "none",//制造完成时产生的效果
+	"consumes": {
+		"power":4,//耗电，游戏里会乘60
+		"liquids": [
+		    { "liquid": "oil", "amount": 0.7 },
+		    { "liquid": "water", "amount": 0.4 },
+		]
+	},//制造消耗
+	"outputLiquid": { "liquid": "oilCrude", "amount": 0.5 },//输出的液体
+	"outputItem": { "item": "scrap", "amount": 1 },
+	"requirements": [
+        "Al/15",
+	    "MonocrystallineSi/5",
+	    "FeSteel/20",
+	    "TiAlloy/15"
+	],
+	"category": "crafting",//建造栏分类
+	"research": "IodinationPurificationFurnace",//前置研究
+}

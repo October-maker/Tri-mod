@@ -1,0 +1,42 @@
+{
+	"itemCapacity":20,//物品容量，数字都能改别的
+	"health":350,//生命值
+	"outputsLiquid":true,//是否输出液体（别跟下面那个具体的弄混了）
+	"squareSprite": true,
+	"size":3,//最高16，不然会崩
+	"hasPower": true,//是否需要电
+	"hasLiquids": true,//是否需要液体
+	"researchCostMultiplier":0.75,
+	"drawer":{
+	    "type":"DrawMulti",
+	    "drawers":[
+	        "DrawDefault",
+			{
+			"type": "DrawGlowRegion",
+			"color": "FFFFFF99",
+			"layer": 110,
+			"suffix": "-glow",
+			"glowIntensity":0,
+			},
+	    ]
+	},
+	"hasItems": true,//是否需要物品
+	"buildCostMultiplier":0.9,//建造速度倍率
+	"craftTime":60,//输出时间间隔
+	"updateEffect": "none",//制造完成时产生的效果
+	"consumes": {
+		"power":1,//耗电，游戏里会乘60
+		"liquids": [
+		    { "liquid": "NO2", "amount": 0.5 },
+		    { "liquid": "water", "amount": 0.3 },
+		]
+	},//制造消耗
+	"outputLiquid": { "liquid": "HNO3", "amount": 0.8 },//输出的液体
+	"requirements": [
+        "Al/20",
+	    "MonocrystallineSi/10",
+	    "FeSteel/20",
+	],
+	"category": "crafting",//建造栏分类
+	"research": "NOxidationPlantGroup",//前置研究
+}
