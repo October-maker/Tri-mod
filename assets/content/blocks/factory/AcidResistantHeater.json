@@ -1,5 +1,6 @@
 {
 	"health":50,//生命值
+	"liquidCapacity": 120,
 	"outputsLiquid":true,//是否输出液体（别跟下面那个具体的弄混了）
 	"squareSprite": true,
 	"size":1,//最高16，不然会崩
