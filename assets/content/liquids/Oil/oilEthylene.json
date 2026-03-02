@@ -6,5 +6,6 @@
     "explosiveness":6,
     "heatCapacity":0.1,
     "gas":true,
+    "databaseTag":"fromOil",
     "research": "oilWax"
 }

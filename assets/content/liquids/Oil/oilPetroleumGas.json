@@ -6,5 +6,6 @@
     "viscosity":0.1,
     "explosiveness":2.5,
     "heatCapacity":0.1,
+    "databaseTag":"fromOil",
     "research": "oilMixedGas"
 }

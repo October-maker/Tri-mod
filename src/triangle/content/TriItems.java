@@ -43,9 +43,9 @@ public class TriItems {
         TNT = new Item("TNT",Color.valueOf("FF0000")){{}};
         NaCl = new Item("NaCl",Color.valueOf("FFFFFF")){{}};
         Cu = new Item("Cu",Color.valueOf("FF8E38")){{}};
-        Co = new Item("Co",Color.valueOf("A0A0A0")){{}};
+        Co = new Item("Co",Color.valueOf("29b2ff")){{}};
         Cr = new Item("Cr",Color.valueOf("A0A0A0")){{}};
-        copperCo = new Item("copperCo",Color.valueOf("303030")){{}};
+        copperCo = new Item("copperCo",Color.valueOf("F0F0F0")){{}};
         NaOH = new Item("NaOH",Color.valueOf("F0F0F0")){{}};
         Ni = new Item("Ni",Color.valueOf("A0A0A0")){{}};
         NiOre = new Item("NiOre",Color.valueOf("F0C0A0")){{}};

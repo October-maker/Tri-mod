@@ -5,5 +5,6 @@
     "viscosity":0.75,
     "explosiveness":3.3,
     "heatCapacity":0.1,
+    "databaseTag":"fromOil",
     "research": "oilReformate"
 }
