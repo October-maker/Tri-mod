@@ -48,4 +48,5 @@
 	],
 	"category": "crafting",//建造栏分类
 	"research": "oilPrimaryAtmosphericDistillationTower",//前置研究
+	"databaseTag":"Oil",
 }

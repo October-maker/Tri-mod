@@ -40,4 +40,5 @@
 	],
 	"category": "crafting",//建造栏分类
 	"research": "NOxidationPlantGroup",//前置研究
+	"databaseTag":"N",
 }

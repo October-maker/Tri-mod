@@ -42,4 +42,5 @@
 	],
 	"category": "crafting",//建造栏分类
 	"research": "USYHydrothermalReactor",//前置研究
+	"databaseTag":"Oil",
 }

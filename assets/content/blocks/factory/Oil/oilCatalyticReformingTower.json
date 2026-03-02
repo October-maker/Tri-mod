@@ -49,4 +49,5 @@
 	],
 	"category": "crafting",//建造栏分类
 	"research": "oilHydrocrackingTower",//前置研究
+	"databaseTag":"Oil",
 }

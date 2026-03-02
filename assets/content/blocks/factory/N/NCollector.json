@@ -45,4 +45,5 @@
 	],
 	"category": "crafting",//建造栏分类
 	"research": "IodinationPurificationFurnace",//前置研究
+	"databaseTag":"N",
 }

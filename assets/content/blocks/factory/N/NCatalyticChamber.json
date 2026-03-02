@@ -41,4 +41,5 @@
 	],
 	"category": "crafting",//建造栏分类
 	"research": "NCollector",//前置研究
+	"databaseTag":"N",
 }

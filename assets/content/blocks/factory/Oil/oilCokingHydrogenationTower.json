@@ -50,4 +50,5 @@
 	],
 	"category": "crafting",//建造栏分类
 	"research": "oilVacuumDistillationColumn",//前置研究
+	"databaseTag":"Oil",
 }
