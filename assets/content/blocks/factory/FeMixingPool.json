@@ -1,5 +1,6 @@
 {
-	"itemCapacity":35,
+	"itemCapacity":55,
+	"liquidCapacity": 80,
 	"heatOutput":35,
 	"health":130,
 	"outputsLiquid":true,//是否输出液体（别跟下面那个具体的弄混了）

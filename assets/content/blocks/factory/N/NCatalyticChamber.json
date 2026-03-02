@@ -1,5 +1,6 @@
 {
 	"itemCapacity":20,//物品容量，数字都能改别的
+	"liquidCapacity": 80,
 	"health":270,//生命值
 	"outputsLiquid":true,//是否输出液体（别跟下面那个具体的弄混了）
 	"squareSprite": true,
@@ -27,8 +28,8 @@
 	"consumes": {
 		"power":4,//耗电，游戏里会乘60
 		"liquids": [
-		    { "liquid": "nitrogen", "amount": 0.2 },
-		    { "liquid": "hydrogen", "amount": 0.6 },
+		    { "liquid": "nitrogen", "amount": 0.4 },
+		    { "liquid": "hydrogen", "amount": 1.2 },
 		]
 	},//制造消耗
 	"outputLiquid": { "liquid": "liquidAmmonia", "amount": 1 },//输出的液体

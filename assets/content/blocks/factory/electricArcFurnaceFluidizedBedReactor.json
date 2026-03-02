@@ -1,5 +1,7 @@
 {
 	"itemCapacity":80,//物品容量，数字都能改别的
+	"liquidCapacity": 120,
+	"liquidCapacity": 150,
 	"health":150,//生命值
 	"squareSprite": true,
 	"maxEfficiency":1,

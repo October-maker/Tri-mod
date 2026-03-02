@@ -1,5 +1,6 @@
 {
 	"itemCapacity":40,//物品容量，数字都能改别的
+	"liquidCapacity": 80,
 	"health":150,//生命值
 	"outputsLiquid":true,//是否输出液体（别跟下面那个具体的弄混了）
 	"size":4,//最高16，不然会崩
@@ -32,6 +33,7 @@
 	},
 	"buildCostMultiplier":0.8,//建造速度倍率
 	"updateEffect": "none",//制造完成时产生的效果
+	"craftTime":60,//输出时间间隔
 	"heatOutput":20,//产热量
 	"consumes": {
 		"power":1,//耗电，游戏里会乘60

@@ -17,20 +17,20 @@
 	"hasLiquids": false,
 	"hasItems": true,
 	"buildCostMultiplier":1.2,
-	"craftTime":45,
+	"craftTime":60,
 	"updateEffect": "none",
 	"consumes": {
 		"power":0.25,
 		"items": {
 			"items": [
-				{ "item": "Al", "amount": 13 },
-				{ "item": "V2O5", "amount": 10 },
+				{ "item": "Al", "amount": 16 },
+				{ "item": "V2O5", "amount": 12 },
 			]
         },
 	},
 	"outputItems":[
-	    { "item": "V", "amount": 16 }
-	    { "item": "bauxite", "amount": 4 }
+	    { "item": "V", "amount": 20 }
+	    { "item": "bauxite", "amount": 6 }
 	],
 	"requirements": [
 		{ "item": "Ti", "amount": 30 }//建造所用物品

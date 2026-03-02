@@ -1,5 +1,6 @@
 {
 	"itemCapacity":40,//物品容量，数字都能改别的
+	"liquidCapacity": 120,
 	"health":120,//生命值
 	"outputsLiquid":true,//是否输出液体（别跟下面那个具体的弄混了）
 	"size":5,//最高16，不然会崩
@@ -25,19 +26,19 @@
 	    ]
 	},
 	"buildCostMultiplier":0.8,//建造速度倍率
-	"craftTime":30,//输出时间间隔
+	"craftTime":60,//输出时间间隔
 	"updateEffect": "none",//制造完成时产生的效果
 	"consumes": {
 		"power":4,//耗电，游戏里会乘60
 		"liquids": [
-			"salineWater/0.3"
+			"salineWater/0.6"
 		]
 	},//制造消耗
 	"outputLiquids":[
-		"Cl/0.15",
-		"hydrogen/0.2"
+		"Cl/0.3",
+		"hydrogen/0.4"
     ],
-	"outputItem": { "item": "NaOH", "amount": 5 },
+	"outputItem": { "item": "NaOH", "amount": 10 },
 	"requirements": [
 		"Cu/35",
 		"TiAlloy/45",

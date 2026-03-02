@@ -4,6 +4,7 @@
 	"outputsLiquid":true,//是否输出液体（别跟下面那个具体的弄混了）
 	"size":3,//最高16，不然会崩
 	"squareSprite": true,
+	"liquidCapacity": 80,
 	"researchCostMultiplier":0.75,
 	"hasPower": true,//是否需要电
 	"hasLiquids": true,//是否需要液体
@@ -31,7 +32,7 @@
 	    ]
 	},
 	"buildCostMultiplier":0.8,//建造速度倍率
-	"craftTime":45,//输出时间间隔
+	"craftTime":60,//输出时间间隔
 	"consumes": {
 		"power":1,//耗电，游戏里会乘60
         "liquids":[
@@ -39,7 +40,7 @@
             "salineWater/0.8"
         ],
 	},//制造消耗
-	"outputLiquid": { "liquid": "hydrochloricAcid", "amount": 0.6 },//输出的液体
+	"outputLiquid": { "liquid": "hydrochloricAcid", "amount": 0.8 },//输出的液体
 	"outputItem": { "item": "NaHSO4", "amount": 3 },
 	"updateEffect": "none",//制造完成时产生的效果
 	"requirements": [

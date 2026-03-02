@@ -1,5 +1,6 @@
 {
 	"itemCapacity":30,//物品容量，数字都能改别的
+	"liquidCapacity": 80,
 	"health":150,//生命值
 	"squareSprite": true,
 	"outputsLiquid":true,//是否输出液体（别跟下面那个具体的弄混了）

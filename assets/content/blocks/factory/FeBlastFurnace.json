@@ -25,7 +25,7 @@
 	    ]
 	},
 	"buildCostMultiplier":0.8,//建造速度倍率
-	"craftTime":45,//输出时间间隔
+	"craftTime":60,//输出时间间隔
 	"updateEffect": "none",//制造完成时产生的效果
 	"consumes": {
 		"power":2,//耗电，游戏里会乘60

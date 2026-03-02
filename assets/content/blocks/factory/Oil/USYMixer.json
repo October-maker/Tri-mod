@@ -1,5 +1,6 @@
 {
 	"itemCapacity":40,//物品容量，数字都能改别的
+"liquidCapacity": 120,
 	"health":50,//生命值
 	"size":3,//最高16，不然会崩
 	"researchCostMultiplier":0.75,

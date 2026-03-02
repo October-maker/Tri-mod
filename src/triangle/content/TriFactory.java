@@ -109,8 +109,7 @@ public class TriFactory {
                         inputItem.add(new ItemStack(TriItems.Ni,1));
                         outputItem.add(new ItemStack(TriItems.WBullet,3));
                         craftTime = 60f;
-                        powerUse = 60f;
-                    }}
+                        powerUse = 60f;                    }}
 //                    new Recipe() {{
 //                        inputItem.add(new ItemStack(Items.thorium, 2));
 //                        inputLiquid.add(new LiquidStack(TriLiquids.H2O2,0.2f));

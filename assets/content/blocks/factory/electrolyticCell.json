@@ -3,6 +3,7 @@
     "researchCostMultiplier":1.2,
     "rotate":true,
     "size":3,
+    "liquidCapacity": 80,
     "regionRotated1":3,
     "squareSprite": true,
     "health":100,
@@ -34,7 +35,7 @@
     "requirements":[
         "copper/50",
         "lead/20",
-    ]
+    ],
     "drawer": {
         "type": "DrawMulti", // 使用多重绘图组件来渲染方块或实体。
         "drawers": [

@@ -1,6 +1,7 @@
 {
 	"itemCapacity":20,//物品容量，数字都能改别的
-	"health":350,//生命值
+	"liquidCapacity": 80,
+	"health":50,//生命值
 	"outputsLiquid":true,//是否输出液体（别跟下面那个具体的弄混了）
 	"squareSprite": true,
 	"size":3,//最高16，不然会崩

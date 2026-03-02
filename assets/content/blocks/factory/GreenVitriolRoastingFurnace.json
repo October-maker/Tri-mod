@@ -1,5 +1,6 @@
 {
-	"itemCapacity":40,
+	"itemCapacity":60,
+	"liquidCapacity": 40,
 	"health":130,
 	"outputsLiquid":true,//是否输出液体（别跟下面那个具体的弄混了）
 	"size":4,
@@ -30,18 +31,18 @@
 	    ]
 	},
 	"buildCostMultiplier":0.8,//建造速度倍率
-	"craftTime":30,//输出时间间隔
+	"craftTime":60,//输出时间间隔
 	"updateEffect": "none",//制造完成时产生的效果
 	"consumes": {
 		"power":1,//耗电，游戏里会乘60
 		"items": {
 			"items": [
-				"FeSO4/15",
+				"FeSO4/30",
 			]
         },
 	},//制造消耗
-    "outputItem":{ "item": "Fe2O3", "amount": 10 },
-    "outputLiquid": { "liquid": "water", "amount": 0.2 },
+    "outputItem":{ "item": "Fe2O3", "amount": 20 },
+    "outputLiquid": { "liquid": "water", "amount": 0.4 },
 	"requirements": [
 		"FeSteel/50",
 		"Al/30",

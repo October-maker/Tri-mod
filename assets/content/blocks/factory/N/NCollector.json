@@ -1,5 +1,6 @@
 {
 	"itemCapacity":20,//物品容量，数字都能改别的
+	"liquidCapacity": 80,
 	"health":150,//生命值
 	"size":3,//最高16，不然会崩
 	"hasPower": true,//是否需要电

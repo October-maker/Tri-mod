@@ -24,17 +24,17 @@
 	    ]
 	},
 	"buildCostMultiplier":0.8,//建造速度倍率
-	"craftTime":25,//输出时间间隔
+	"craftTime":60,//输出时间间隔
 	"updateEffect": "none",//制造完成时产生的效果
 	"consumes": {
 		"power":3.5,//耗电，游戏里会乘60
 		"items": {
 			"items": [
-				"NiOre/8"
+				"NiOre/16"
 			]
         },
 	},//制造消耗
-	"outputItem": { "item": "Ni", "amount": 6 },
+	"outputItem": { "item": "Ni", "amount": 12 },
 	"requirements": [
 		"Cu/25",
 		"TiAlloy/15",
