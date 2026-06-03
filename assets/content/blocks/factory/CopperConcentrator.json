@@ -10,10 +10,6 @@
 	"drawer":{
 	    "type":"DrawMulti",
 	    "drawers":[
-	        {
-            "type": "DrawRegion",
-            "suffix": "-bottom"
-            },
 	        "DrawDefault",
 			{
 			"type":"DrawFlame"
@@ -40,5 +36,5 @@
 		"FeSteel/25"
 	],
 	"category": "crafting",//建造栏分类
-	"research": "NickelDiaphragmElectrolyzer",//前置研究
+	"research": "CuElectrolyticRefiningPool",//前置研究
 }
