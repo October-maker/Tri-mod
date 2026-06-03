@@ -20,7 +20,7 @@ public class TriLiquids {
         NO2 = new Liquid("NO2",Color.valueOf("A03333E0")){{}};
         HNO3 = new Liquid("HNO3",Color.valueOf("F0F0A0")){{}};
         aquaRegia = new Liquid("aquaRegia",Color.valueOf("B7472BA0")){{}};
-        Cl = new Liquid("Cl",Color.valueOf("80A00090")){{}};
+        Cl = new Liquid("Cl",Color.valueOf("D7FFC590")){{}};
         //oil
         oilCrude = new Liquid("oilCrude",Color.valueOf("000000A0")){{}};
         oilHeavy = new Liquid("oilHeavy",Color.valueOf("000000A0")){{}};

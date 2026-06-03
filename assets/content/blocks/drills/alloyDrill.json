@@ -3,6 +3,10 @@
 	"size": 3, // 定义方块的尺寸
 	"health": 420, // 定义方块的血量
 	"tier": 5, // 定义钻头的挖矿等级
+	"hasPower": true,//是否需要电
+	"consumes": {
+		"power":1,
+	},
 	"hardnessDrillMultiplier": 0.03, //随挖矿等级的提升开采效率衰减的程度，越小越轻微，
 	"drillTime": 20, // 定义钻一个矿的时间
 	"liquidBoostIntensity":1.2, // 定义液体加速的倍率
