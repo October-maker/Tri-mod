@@ -28,7 +28,7 @@ public class TriWeather {
             attrs.set(Attribute.light, -0.15f);
             status = StatusEffects.freezing;
             opacityMultiplier = 0.5f;
-            force = 4.8f;
+            force = 8.8f;
             sound = Sounds.wind;
             soundVol = 1.2f;
             duration = 10f * Time.toMinutes;

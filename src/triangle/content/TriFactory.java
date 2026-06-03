@@ -2,8 +2,10 @@ package triangle.content;
 
 import arc.graphics.Color;
 import mindustry.content.Items;
+import mindustry.content.Liquids;
 import mindustry.type.Category;
 import mindustry.type.ItemStack;
+import mindustry.type.LiquidStack;
 import mindustry.world.blocks.heat.HeatProducer;
 import mindustry.world.blocks.production.GenericCrafter;
 import mindustry.world.blocks.production.HeatCrafter;
@@ -26,8 +28,8 @@ public class TriFactory {
     //oil
     public static GenericCrafter oilElectricDesaltingTank,oilPrimaryAtmosphericDistillationTower,oilSecondaryAtmosphericDistillationTower,oilVacuumDistillationColumn,
             oilCatalyticCrackingTower,USYHydrothermalReactor,USYMixer,oilHydrocrackingTower,oilCatalyticReformingTower,oilAromaticHydrocarbonComplex,oilCokingHydrogenationTower,oilSteamCrackingTower;
-    //bullet
-    public static MultiRecipeFactory BulletFactory;
+    //special
+    public static MultiRecipeFactory BulletFactory,liquidFillingMachine,liquidPourer;
     public static void load(){
         oxygenReductionFurnace = new GenericCrafter("oxygenReductionFurnace"){{}};
         electrolyticCell = new GenericCrafter("electrolyticCell"){{}};
@@ -79,7 +81,6 @@ public class TriFactory {
         oilAromaticHydrocarbonComplex = new GenericCrafter("oilAromaticHydrocarbonComplex"){{}};
         oilCokingHydrogenationTower = new GenericCrafter("oilCokingHydrogenationTower"){{}};
         oilSteamCrackingTower = new GenericCrafter("oilSteamCrackingTower"){{}};
-        //bullet
         BulletFactory = new MultiRecipeFactory("BulletFactory"){{
             size = 4;
             health = 20;
@@ -109,13 +110,61 @@ public class TriFactory {
                         inputItem.add(new ItemStack(TriItems.Ni,1));
                         outputItem.add(new ItemStack(TriItems.WBullet,3));
                         craftTime = 60f;
-                        powerUse = 60f;                    }}
+                        powerUse = 60f;
+                    }}
 //                    new Recipe() {{
 //                        inputItem.add(new ItemStack(Items.thorium, 2));
 //                        inputLiquid.add(new LiquidStack(TriLiquids.H2O2,0.2f));
 //                        outputItem.add(new ItemStack(Items.plastanium, 1));
 //                        craftTime = 120f;
 //                    }}
+            );
+        }};
+        liquidFillingMachine = new MultiRecipeFactory("liquidFillingMachine"){{
+            size = 3;
+            health = 50;
+            itemCapacity = 20;
+            liquidCapacity = 120;
+            requirements(Category.crafting, with(TriItems.Cu,10,TriItems.TiAlloy,10,TriItems.FeSteel,20,Items.metaglass,10));
+            drawer = new DrawMulti(new DrawDefault());
+            recipes.add(
+                    new Recipe() {{
+                        inputItem.add(new ItemStack(Items.metaglass, 2));
+                        inputLiquid.add(new LiquidStack(Liquids.water, 0.2f));
+                        outputItem.add(new ItemStack(TriItems.barrel, 5));
+                        craftTime = 60f;
+                        powerUse = 12f;
+                    }},//water
+                new Recipe() {{
+                    inputItem.add(new ItemStack(Items.metaglass, 5));
+                    inputLiquid.add(new LiquidStack(Liquids.oil, 0.2f));
+                    outputItem.add(new ItemStack(Items.copper,1));
+                    craftTime = 60f;
+                    powerUse = 12f;
+                }}
+            );
+        }};
+        liquidPourer = new MultiRecipeFactory("liquidPourer"){{
+            size = 3;
+            health = 50;
+            itemCapacity = 20;
+            liquidCapacity = 120;
+            requirements(Category.crafting, with(TriItems.Cu,10,TriItems.TiAlloy,10,TriItems.FeSteel,15,Items.metaglass,15));
+            drawer = new DrawMulti(new DrawDefault());
+            recipes.add(
+                    new Recipe() {{
+                        inputItem.add(new ItemStack(TriItems.barrel, 5));
+                        outputLiquid.add(new LiquidStack(Liquids.water, 0.2f));
+                        craftTime = 60f;
+                        powerUse = 7f;
+                    }},//water
+                    new Recipe() {{
+                        inputItem.add(new ItemStack(Items.metaglass, 5));
+                        inputLiquid.add(new LiquidStack(Liquids.water, 0.2f));
+                        outputItem.add(new ItemStack(Items.copper,1));
+                        craftTime = 60f;
+                        powerUse = 12f;
+                    }}
             );
         }};
     }
