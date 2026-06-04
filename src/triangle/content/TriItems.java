@@ -9,7 +9,7 @@ public class TriItems {
     //bullet
     public static Item LHESH,LHEAT,thermite,BHE,BHEAT,BHESH,TGW,EMPB,WBullet;
     //pail
-    public static Item barrel;
+    public static Item barrel,saltwaterBucket;
     public static void load(){
         I = new Item("I" , Color.valueOf("380066")){{}};
         Ti = new Item("Ti",Color.valueOf("0073FF")){{}};
@@ -55,5 +55,6 @@ public class TriItems {
         WC = new Item("WC",Color.valueOf("9F9F9F")){{}};
 
         barrel = new Item("barrel",Color.valueOf("FFFFFF")){{}};
+        saltwaterBucket = new Item("saltwaterBucket",Color.valueOf("FFFFFF")){{}};
     };
 }

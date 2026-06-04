@@ -136,9 +136,9 @@ public class TriFactory {
                         powerUse = 12f;
                     }},//water
                 new Recipe() {{
-                    inputItem.add(new ItemStack(Items.metaglass, 5));
-                    inputLiquid.add(new LiquidStack(Liquids.oil, 0.2f));
-                    outputItem.add(new ItemStack(Items.copper,1));
+                    inputItem.add(new ItemStack(Items.metaglass, 2));
+                    inputLiquid.add(new LiquidStack(TriLiquids.salineWater, 0.2f));
+                    outputItem.add(new ItemStack(TriItems.saltwaterBucket, 5));
                     craftTime = 60f;
                     powerUse = 12f;
                 }}
@@ -159,11 +159,10 @@ public class TriFactory {
                         powerUse = 7f;
                     }},//water
                     new Recipe() {{
-                        inputItem.add(new ItemStack(Items.metaglass, 5));
-                        inputLiquid.add(new LiquidStack(Liquids.water, 0.2f));
-                        outputItem.add(new ItemStack(Items.copper,1));
+                        inputItem.add(new ItemStack(TriItems.saltwaterBucket, 5));
+                        outputLiquid.add(new LiquidStack(TriLiquids.salineWater, 0.2f));
                         craftTime = 60f;
-                        powerUse = 12f;
+                        powerUse = 7f;
                     }}
             );
         }};
