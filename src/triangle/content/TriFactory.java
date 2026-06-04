@@ -11,6 +11,7 @@ import mindustry.world.blocks.production.GenericCrafter;
 import mindustry.world.blocks.production.HeatCrafter;
 import mindustry.world.draw.DrawDefault;
 import mindustry.world.draw.DrawFlame;
+import mindustry.world.draw.DrawGlowRegion;
 import mindustry.world.draw.DrawMulti;
 import triangle.black.MultiRecipeFactory;
 import triangle.black.Recipe;
@@ -126,7 +127,14 @@ public class TriFactory {
             itemCapacity = 20;
             liquidCapacity = 120;
             requirements(Category.crafting, with(TriItems.Cu,10,TriItems.TiAlloy,10,TriItems.FeSteel,20,Items.metaglass,10));
-            drawer = new DrawMulti(new DrawDefault());
+            drawer = new DrawMulti(
+                    new DrawDefault(),
+                    new DrawGlowRegion(){{
+                        suffix = "-glow";
+                        color = Color.valueOf("FFFFFF99");
+                        layer = 110;
+                    }}
+            );
             recipes.add(
                     new Recipe() {{
                         inputItem.add(new ItemStack(Items.metaglass, 2));
@@ -150,7 +158,14 @@ public class TriFactory {
             itemCapacity = 20;
             liquidCapacity = 120;
             requirements(Category.crafting, with(TriItems.Cu,10,TriItems.TiAlloy,10,TriItems.FeSteel,15,Items.metaglass,15));
-            drawer = new DrawMulti(new DrawDefault());
+            drawer = new DrawMulti(
+                    new DrawDefault(),
+                    new DrawGlowRegion(){{
+                        suffix = "-glow";
+                        color = Color.valueOf("FFFFFF99");
+                        layer = 110;
+                    }}
+            );
             recipes.add(
                     new Recipe() {{
                         inputItem.add(new ItemStack(TriItems.barrel, 5));

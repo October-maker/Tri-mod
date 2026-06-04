@@ -8,8 +8,11 @@ import static mindustry.content.TechTree.nodeRoot;
 
 public class SerTriTechTree {
     public static void load(){
-        TechTree.TechNode root = nodeRoot("SerTriTechTree", Planets.serpulo, () -> {
-        	node(TriFactory.BulletFactory, ItemStack.with(), () -> {});
+        TechTree.TechNode root = nodeRoot("SerTriTechTree", TriItems.SerTri, () -> {
+        	node(TriFactory.BulletFactory, ItemStack.with(), () -> {
+                node(TriFactory.liquidFillingMachine, ItemStack.with(), () -> {});
+                node(TriFactory.liquidPourer, ItemStack.with(), () -> {});
+            });
             node(TriTurret.solubilize, ItemStack.with(), () -> {});
         });
 

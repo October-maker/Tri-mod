@@ -8,8 +8,10 @@ public class TriItems {
     public static Item I,Ti,chip4004,S,VTiFe,NaHSO4,bauxite,Al,Fe2O3,FeSteel,SSteel,FeSO4,V2O5,V,TiAlloy,WSteel,SiSand,MonocrystallineSi,Pt,kaolin,USYmolecularSieve,USY,TNT,NaCl,Cu,Co,Cr,copperCo,NaOH,Ni,NiOre,CoPrecipitation,WC;
     //bullet
     public static Item LHESH,LHEAT,thermite,BHE,BHEAT,BHESH,TGW,EMPB,WBullet;
-    //pail
+    //bucket
     public static Item barrel,saltwaterBucket;
+    //node
+    public  static Item SerTri;
     public static void load(){
         I = new Item("I" , Color.valueOf("380066")){{}};
         Ti = new Item("Ti",Color.valueOf("0073FF")){{}};
@@ -53,8 +55,10 @@ public class TriItems {
         NiOre = new Item("NiOre",Color.valueOf("F0C0A0")){{}};
         CoPrecipitation = new Item("CoPrecipitation",Color.valueOf("9F9F9F")){{}};
         WC = new Item("WC",Color.valueOf("9F9F9F")){{}};
-
+        //bucket
         barrel = new Item("barrel",Color.valueOf("FFFFFF")){{}};
         saltwaterBucket = new Item("saltwaterBucket",Color.valueOf("FFFFFF")){{}};
+        //node
+        SerTri = new Item("SerTri",Color.valueOf("7d4dff")){{}};
     };
 }
