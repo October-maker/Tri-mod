@@ -5,8 +5,8 @@
     "size": 2, 
     "armor": 10,
     "requirements": [
-        { "item": "Ti", "amount":64},
-        { "item": "titanium", "amount":72},
+        { "item": "Ti", "amount":48},
+        { "item": "titanium", "amount":12},
     ],
     "category": "defense",
     "research": "titanium-wall"

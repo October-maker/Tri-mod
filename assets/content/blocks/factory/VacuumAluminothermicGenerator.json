@@ -29,8 +29,8 @@
         },
 	},
 	"outputItems":[
-	    { "item": "V", "amount": 20 }
-	    { "item": "bauxite", "amount": 6 }
+	    { "item": "V", "amount": 8 }
+	    { "item": "bauxite", "amount": 20 }
 	],
 	"requirements": [
 		{ "item": "Ti", "amount": 30 }//建造所用物品

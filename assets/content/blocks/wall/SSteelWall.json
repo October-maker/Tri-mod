@@ -1,0 +1,15 @@
+{
+    "type": "Wall",
+    "health": 6810,
+    "researchCostMultiplier":0.25,
+    "size": 3,
+    "armor": 740,
+    "requirements": [
+        "FeSteel/24",
+        "TiAlloy/32",
+        "SSteel/64",
+        "Ni/12"
+    ],
+    "category": "defense",
+    "research": "hardTitaniumWall"
+}

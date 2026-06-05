@@ -21,7 +21,8 @@ import static mindustry.type.ItemStack.with;
 public class TriFactory {
     public static GenericCrafter
             electrolyticCell,oxygenReductionFurnace,IExtractor,IodinationPurificationFurnace,bauxiteElectrolyticCell,VBlastFurnace,VBlastFurnaceBlowing,VacuumAluminothermicGenerator,CoSulfationRoaster,WSteelMixingFurnace,WCarbideFurnace,
-            FeBlastFurnace,TiRollingMill,SCombustionVessel,AcidReactionKettle,AcidResistantHeater,saltDistillationFurnace,SaltMixingPool,CuElectrolyticRefiningPool,NickelDiaphragmElectrolyzer,alkalineElectrolyzer,CopperConcentrator,CoElectrolyticCell;
+            FeBlastFurnace,TiRollingMill,SCombustionVessel,AcidReactionKettle,AcidResistantHeater,saltDistillationFurnace,SaltMixingPool,CuElectrolyticRefiningPool,NickelDiaphragmElectrolyzer,alkalineElectrolyzer,CopperConcentrator,CoElectrolyticCell,
+            CrThermiteReactionChamber,armoredSinteringFurnace;
     public static HeatProducer SAbsorptionTower,FeMixingPool;
     public static HeatCrafter GreenVitriolRoastingFurnace,electricArcFurnaceFluidizedBedReactor,SiReductionFurnace,sandRefiningPool;
     //N
@@ -69,6 +70,8 @@ public class TriFactory {
         CoElectrolyticCell = new GenericCrafter("CoElectrolyticCell"){{}};
         WCarbideFurnace = new GenericCrafter("WCarbideFurnace"){{}};
         WSteelMixingFurnace = new GenericCrafter("WSteelMixingFurnace"){{}};
+        CrThermiteReactionChamber = new GenericCrafter("CrThermiteReactionChamber"){{}};
+        armoredSinteringFurnace = new GenericCrafter("armoredSinteringFurnace"){{}};
         //oil
         oilElectricDesaltingTank = new GenericCrafter("oilElectricDesaltingTank"){{}};
         oilPrimaryAtmosphericDistillationTower = new GenericCrafter("oilPrimaryAtmosphericDistillationTower"){{}};
@@ -82,6 +85,7 @@ public class TriFactory {
         oilAromaticHydrocarbonComplex = new GenericCrafter("oilAromaticHydrocarbonComplex"){{}};
         oilCokingHydrogenationTower = new GenericCrafter("oilCokingHydrogenationTower"){{}};
         oilSteamCrackingTower = new GenericCrafter("oilSteamCrackingTower"){{}};
+        //special
         BulletFactory = new MultiRecipeFactory("BulletFactory"){{
             size = 4;
             health = 20;

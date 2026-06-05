@@ -32,17 +32,15 @@ public class triangle extends Mod{
     }
 
     public triangle(){
-        //listen for game load event
         Events.on(ClientLoadEvent.class, e -> {
-            //show dialog upon startup
             String remind = Core.bundle.get("remind");
             String open = Core.bundle.get("began");
             String stop = Core.bundle.get("end");
             String word = Core.bundle.get("login");
-            String get = Core.bundle.get("ok");
+            String get = Core.bundle.get("Iknow");
+            //读取bundle里面的字符串
             Time.runTask(1f, () -> {
                 BaseDialog dialog = new BaseDialog("Triangle");
-                //mod sprites are prefixed with the mod name (this mod is called 'example-java-mod' in its config)
                 dialog.cont.image(Core.atlas.find("logo")).pad(20f).row();
                 dialog.cont.add(open +"\n" + word + "\n" + remind + "\n" + stop).growX().wrap().width(720).maxWidth(730).pad(4).row();
                 dialog.cont.button(get, dialog::hide).size(100f, 50f);

@@ -1,0 +1,46 @@
+{
+	"itemCapacity":80,
+	"health":50,
+	"size":4,
+	"squareSprite": true,
+	"researchCostMultiplier":0.75,
+	"hasPower": true,
+	"hasItems": true,
+	"drawer":{
+	    "type":"DrawMulti",
+	    "drawers":[
+	        {
+            "type": "DrawRegion",
+            "suffix": "-bottom"
+            },
+            "DrawArcSmelt",
+	        "DrawDefault",
+	    ]
+	},
+	"buildCostMultiplier":0.6,
+	"craftTime":60,
+	"updateEffect": "none",
+	"consumes": {
+		"power":2,
+		"items": {
+			"items": [
+				"chromite/18",
+				"Al/12",
+				"S/4"
+			]
+        },
+	},
+	"outputItems":[
+		"Cr/7",
+		"bauxite/20"
+		"Fe2O3/5"
+	],
+	"requirements": [
+		"Cu/15",
+		"FeSteel/35",
+		"TiAlloy/8",
+		"MonocrystallineSi/10"
+	],
+	"category": "crafting",
+	"research": "TiRollingMill",
+}

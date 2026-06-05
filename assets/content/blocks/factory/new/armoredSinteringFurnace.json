@@ -1,0 +1,40 @@
+{
+	"itemCapacity":40,
+	"health":60,
+	"size":3,
+	"squareSprite": true,
+	"researchCostMultiplier":0.75,
+	"hasPower": true,
+	"hasItems": true,
+	"drawer":{
+	    "type":"DrawMulti",
+	    "drawers":[
+	        "DrawDefault",
+	        {
+			"type":"DrawFlame"
+			}
+	    ]
+	},
+	"buildCostMultiplier":1,
+	"craftTime":60,
+	"updateEffect": "none",
+	"consumes": {
+		"power":2,
+		"items": {
+			"items": [
+				"Cr/2",
+				"FeSteel/10"
+			]
+        },
+	},
+	"outputItems":[
+		"SSteel/10",
+	],
+	"requirements": [
+		"Cu/5",
+		"FeSteel/30",
+		"MonocrystallineSi/5"
+	],
+	"category": "crafting",
+	"research": "CrThermiteReactionChamber",
+}
