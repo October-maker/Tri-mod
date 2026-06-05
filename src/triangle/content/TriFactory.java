@@ -128,7 +128,7 @@ public class TriFactory {
         liquidFillingMachine = new MultiRecipeFactory("liquidFillingMachine"){{
             size = 3;
             health = 50;
-            itemCapacity = 20;
+            itemCapacity = 40;
             liquidCapacity = 120;
             requirements(Category.crafting, with(TriItems.Cu,10,TriItems.TiAlloy,10,TriItems.FeSteel,20,Items.metaglass,10));
             drawer = new DrawMulti(
@@ -142,14 +142,14 @@ public class TriFactory {
             recipes.add(
                     new Recipe() {{
                         inputItem.add(new ItemStack(Items.metaglass, 2));
-                        inputLiquid.add(new LiquidStack(Liquids.water, 0.2f));
+                        inputLiquid.add(new LiquidStack(Liquids.water, 1));
                         outputItem.add(new ItemStack(TriItems.barrel, 5));
                         craftTime = 60f;
                         powerUse = 12f;
                     }},//water
                 new Recipe() {{
                     inputItem.add(new ItemStack(Items.metaglass, 2));
-                    inputLiquid.add(new LiquidStack(TriLiquids.salineWater, 0.2f));
+                    inputLiquid.add(new LiquidStack(TriLiquids.salineWater, 1));
                     outputItem.add(new ItemStack(TriItems.saltwaterBucket, 5));
                     craftTime = 60f;
                     powerUse = 12f;
@@ -159,7 +159,7 @@ public class TriFactory {
         liquidPourer = new MultiRecipeFactory("liquidPourer"){{
             size = 3;
             health = 50;
-            itemCapacity = 20;
+            itemCapacity = 40;
             liquidCapacity = 120;
             requirements(Category.crafting, with(TriItems.Cu,10,TriItems.TiAlloy,10,TriItems.FeSteel,15,Items.metaglass,15));
             drawer = new DrawMulti(
@@ -173,13 +173,13 @@ public class TriFactory {
             recipes.add(
                     new Recipe() {{
                         inputItem.add(new ItemStack(TriItems.barrel, 5));
-                        outputLiquid.add(new LiquidStack(Liquids.water, 0.2f));
+                        outputLiquid.add(new LiquidStack(Liquids.water, 1));
                         craftTime = 60f;
                         powerUse = 7f;
                     }},//water
                     new Recipe() {{
                         inputItem.add(new ItemStack(TriItems.saltwaterBucket, 5));
-                        outputLiquid.add(new LiquidStack(TriLiquids.salineWater, 0.2f));
+                        outputLiquid.add(new LiquidStack(TriLiquids.salineWater, 1));
                         craftTime = 60f;
                         powerUse = 7f;
                     }}
