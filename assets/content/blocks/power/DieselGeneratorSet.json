@@ -9,7 +9,7 @@
       "FeSteel/40",
     ],
     "warmupSpeed":0.05,
-    "powerProduction": 30,
+    "powerProduction": 35,
     "itemDuration": 30, // 生成物品的持续时间
     "consumes": { // 运行时消耗的资源
       "liquids": [
