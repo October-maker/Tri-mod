@@ -5,10 +5,10 @@
     "size": 3,
     "armor": 740,
     "requirements": [
-        "FeSteel/24",
-        "TiAlloy/32",
-        "SSteel/64",
-        "Ni/12"
+        "FeSteel/12",
+        "TiAlloy/16",
+        "SSteel/32",
+        "Ni/6"
     ],
     "category": "defense",
     "research": "hardTitaniumWall"

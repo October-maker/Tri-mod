@@ -5,8 +5,8 @@
     "size": 2, 
     "armor": 540,
     "requirements": [
-        { "item": "FeSteel", "amount":24},
-        { "item": "TiAlloy", "amount":32},
+        { "item": "FeSteel", "amount":12},
+        { "item": "TiAlloy", "amount":16},
     ],
     "category": "defense",
     "research": "reinforcedTitaniumWall"

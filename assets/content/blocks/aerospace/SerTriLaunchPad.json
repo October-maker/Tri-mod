@@ -1,6 +1,6 @@
 {
     "type": "LaunchPad",
-    "launchSound": "padLaunchAdvanced",
+    "launchSound": "padLaunch",
     "launchSoundPitchRand": 0,
     "launchTime": 600,
     "hasLiquids": false,

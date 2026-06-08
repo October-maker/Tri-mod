@@ -28,7 +28,7 @@
         "sound": "none"
     },
     "squareSprite": false,
-    "landSound": "padLandAdvanced",
+    "landSound": "padLand",
     "landSoundVolume": 0.5,
     "category": "effect",
     "research": {

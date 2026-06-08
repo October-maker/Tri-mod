@@ -15,6 +15,13 @@
             },
             "DrawArcSmelt",
 	        "DrawDefault",
+			{
+			"type": "DrawGlowRegion",
+			"color": "FFFFFF99",
+			"layer": 110,
+			"suffix": "-glow",
+			"glowIntensity":0,
+			},
 	    ]
 	},
 	"buildCostMultiplier":0.6,
