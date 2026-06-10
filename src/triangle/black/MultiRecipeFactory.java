@@ -288,6 +288,23 @@ public class MultiRecipeFactory extends GenericCrafter {
 
             Recipe current = getRecipe();
 
+            // 设置当前配方的电力需求
+            if (current != null) {
+                // 直接设置consumePower的值
+                consumePower(currentPowerUse / 60);
+
+                float powerAvailable = power.graph.getBatteryStored() / power.graph.getBatteryCapacity();
+
+                // 计算电力效率
+                if (powerAvailable >= currentPowerUse * edelta()) {
+                    power.status = 1f;
+                } else {
+                    power.status = powerAvailable / (currentPowerUse * edelta());
+                }
+            } else {
+                power.status = 0f;
+            }
+
             // 调用父类更新逻辑
             super.updateTile();
 
