@@ -226,7 +226,7 @@ public class MultiRecipeFactory extends GenericCrafter {
 
                 if (valid) {
                     recipeIndex = i;
-                    currentPowerUse = recipes.get(i).powerUse;
+                    currentPowerUse = recipes.get(i).powerUse / 60;
                     return;
                 }
             }
@@ -288,10 +288,10 @@ public class MultiRecipeFactory extends GenericCrafter {
 
             Recipe current = getRecipe();
 
-            // 设置当前配方的电力需求
+            // 直接设置consumePower的值
+            consumePower(currentPowerUse);
             if (current != null) {
-                // 直接设置consumePower的值
-                consumePower(currentPowerUse / 60);
+                // 设置当前配方的电力需求
 
                 float powerAvailable = power.graph.getBatteryStored() / power.graph.getBatteryCapacity();
 
