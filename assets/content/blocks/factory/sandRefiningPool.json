@@ -63,7 +63,7 @@
         "objectives": [
             "AcidResistantHeater"
 			{
-            "type": "onSector",
+            "type": "SectorComplete",//onSector为着陆区块时解锁
             "preset": "SiliconValley"
             }
         ]

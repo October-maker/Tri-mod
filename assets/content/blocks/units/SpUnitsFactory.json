@@ -1,0 +1,62 @@
+{
+    "type": "UnitFactory",
+    "category": "units",
+    "requirements": [
+        "Cu/80",
+        "FeSteel/30",
+        "SSteel/50",
+        "TiAlloy/20"
+    ],
+    "size": 4,
+    "research": {
+        "parent": "ground-factory",
+        "objectives": [
+            {
+            "type": "SectorComplete",
+            "preset": "HurricaneSaddle"
+            }
+        ]
+    },
+    "plans": [
+    {
+        "unit": "fortress",
+        "time": 1200,
+        "requirements": [ "silicon/130","titanium/80","metaglass/40" ]
+    },
+    {
+        "unit": "quasar",
+        "time": 1200,
+        "requirements": [ "silicon/130","titanium/80","metaglass/40" ]
+    },
+    {
+        "unit": "spiroct",
+        "time": 1200,
+        "requirements": [ "silicon/130","titanium/80","metaglass/40" ]
+    }
+    {
+        "unit": "zenith",
+        "time": 1200,
+        "requirements": [ "silicon/130","titanium/80","metaglass/40" ]
+    }
+    {
+        "unit": "mega",
+        "time": 1200,
+        "requirements": [ "silicon/130","titanium/80","metaglass/40" ]
+    }
+    {
+        "unit": "bryde",
+        "time": 1200,
+        "requirements": [ "silicon/130","titanium/80","metaglass/40" ]
+    }
+    {
+        "unit": "cyerce",
+        "time": 1200,
+        "requirements": [ "silicon/130","titanium/80","metaglass/40" ]
+    }
+    ],
+    "consumes": {
+        "power": 5
+    },
+    "researchCostMultiplier": 0.1,
+    //"shownPlanets": [ "sitrullus","maress","thavina" ]
+}

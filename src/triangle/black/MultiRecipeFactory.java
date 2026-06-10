@@ -150,7 +150,7 @@ public class MultiRecipeFactory extends GenericCrafter {
 
         table.add(stack);
         table.add((content.localizedName + "\n") + "[lightgray]" +
-                        Strings.autoFixed(amount / (timePeriod / 60f), 2) + StatUnit.perSecond.localized())
+                        Strings.autoFixed(amount / (timePeriod / 60f), 2) + StatUnit.perSecond.localized() )//+ Strings.autoFixed(amount / (timePeriod / 60f), 2) + " " + StatUnit.powerSecond.localized() 显示电量消耗
                 .padLeft(2).padRight(5).style(Styles.outlineLabel);
         return table;
     }
@@ -169,7 +169,7 @@ public class MultiRecipeFactory extends GenericCrafter {
     // 4. 建筑实体类
     public class MultiRecipeFactoryBuild extends GenericCrafterBuild {
         public int recipeIndex = -1;
-        public float currentPowerUse = 0f; // 当前配方的电力消耗
+        public float currentPowerUse = 0f;  //当前配方的电力消耗
 
         public Recipe getRecipe() {
             if (recipeIndex < 0 || recipeIndex >= recipes.size) return null;
@@ -212,9 +212,8 @@ public class MultiRecipeFactory extends GenericCrafter {
                     }
                 }
 
-                // 检查电力输入
-                Recipe recipe = recipes.get(i);
-                if (power.graph.getLastPowerProduced() < recipe.powerUse * edelta()) {
+                 //检查电力输入
+                if (power.graph.getLastPowerProduced() < recipes.get(i).powerUse * edelta()) {
                     valid = false;
                 }
 
@@ -224,7 +223,6 @@ public class MultiRecipeFactory extends GenericCrafter {
                         continue; // 如果输出满，则跳过此配方，继续寻找其他配方
                     }
                 }
-
 
                 if (valid) {
                     recipeIndex = i;
@@ -289,21 +287,6 @@ public class MultiRecipeFactory extends GenericCrafter {
             if (!validRecipe()) updateRecipe();
 
             Recipe current = getRecipe();
-
-            // 设置当前配方的电力需求
-            if (current != null) {
-                // 直接设置consumePower的值
-                float powerAvailable = power.graph.getBatteryStored() / power.graph.getBatteryCapacity();
-
-                // 计算电力效率
-                if (powerAvailable >= currentPowerUse * edelta()) {
-                    power.status = 1f;
-                } else {
-                    power.status = powerAvailable / (currentPowerUse * edelta());
-                }
-            } else {
-                power.status = 0f;
-            }
 
             // 调用父类更新逻辑
             super.updateTile();
