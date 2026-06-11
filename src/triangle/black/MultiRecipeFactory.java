@@ -288,23 +288,6 @@ public class MultiRecipeFactory extends GenericCrafter {
 
             Recipe current = getRecipe();
 
-            // 直接设置consumePower的值
-            consumePower(currentPowerUse);
-            if (current != null) {
-                // 设置当前配方的电力需求
-
-                float powerAvailable = power.graph.getBatteryStored() / power.graph.getBatteryCapacity();
-
-                // 计算电力效率
-                if (powerAvailable >= currentPowerUse * edelta()) {
-                    power.status = 1f;
-                } else {
-                    power.status = powerAvailable / (currentPowerUse * edelta());
-                }
-            } else {
-                power.status = 0f;
-            }
-
             // 调用父类更新逻辑
             super.updateTile();
 
@@ -313,6 +296,19 @@ public class MultiRecipeFactory extends GenericCrafter {
             boolean outputFull = !canOutputForRecipe(current);
             if (outputFull) {
                 return; // 如果输出满了，停止生产
+            }
+
+            // 直接设置consumePower的值
+            consumePower(currentPowerUse);
+            // 设置当前配方的电力需求
+
+            float powerAvailable = power.graph.getBatteryStored() / power.graph.getBatteryCapacity();
+
+            // 计算电力效率
+            if (powerAvailable >= currentPowerUse * edelta()) {
+                power.status = 1f;
+            } else {
+                power.status = powerAvailable / (currentPowerUse * edelta());
             }
 
             // 处理液体输出
