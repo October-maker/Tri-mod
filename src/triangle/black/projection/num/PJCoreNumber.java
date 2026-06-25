@@ -1,4 +1,4 @@
-package triangle.black.projection;
+package triangle.black.projection.num;
 
 import arc.Events;
 import mindustry.game.EventType.ResetEvent;
@@ -8,6 +8,7 @@ import mindustry.gen.Building;
 import mindustry.gen.Groups;
 import mindustry.io.SaveFileReader;
 import mindustry.io.SaveVersion;
+import triangle.black.projection.TriPJCore;
 
 import java.io.DataInput;
 import java.io.DataOutput;

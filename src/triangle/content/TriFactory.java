@@ -31,7 +31,7 @@ public class TriFactory {
     public static GenericCrafter oilElectricDesaltingTank,oilPrimaryAtmosphericDistillationTower,oilSecondaryAtmosphericDistillationTower,oilVacuumDistillationColumn,
             oilCatalyticCrackingTower,USYHydrothermalReactor,USYMixer,oilHydrocrackingTower,oilCatalyticReformingTower,oilAromaticHydrocarbonComplex,oilCokingHydrogenationTower,oilSteamCrackingTower;
     //special
-    public static MultiRecipeFactory BulletFactory,liquidFillingMachine,liquidPourer,ComprehensiveProcessingFactory;
+    public static MultiRecipeFactory BulletFactory,liquidFillingMachine,liquidPourer;/*ComprehensiveProcessingFactory*/
     public static void load(){
         oxygenReductionFurnace = new GenericCrafter("oxygenReductionFurnace"){{}};
         electrolyticCell = new GenericCrafter("electrolyticCell"){{}};
@@ -185,61 +185,61 @@ public class TriFactory {
                     }}
             );
         }};
-        ComprehensiveProcessingFactory = new MultiRecipeFactory("ComprehensiveProcessingFactory"){{
-            size = 7;
-            health = 30;
-            itemCapacity = 850;
-            liquidCapacity = 500;
-            requirements(Category.crafting, with(TriItems.Cu,50,TriItems.TiAlloy,80,TriItems.FeSteel,30,TriItems.Ni,45,TriItems.chip4004,25));
-            recipes.add(
-                    new Recipe() {{
-                        inputItem.add(new ItemStack(Items.titanium, 15));
-                        outputItem.add(new ItemStack(TriItems.Ti, 13));
-                        craftTime = 60;
-                        powerUse = 320;
-                    }},//IodinationPurificationFurnace
-                    new Recipe() {{
-                        inputItem.add(new ItemStack(TriItems.bauxite, 20));
-                        outputItem.add(new ItemStack(TriItems.Al, 12));
-                        outputLiquid.add(new LiquidStack(Liquids.ozone, 0.8f));
-                        craftTime = 60;
-                        powerUse = 480;
-                    }},//bauxiteElectrolyticCell
-                    new Recipe() {{
-                        inputItem.add(new ItemStack(TriItems.VTiFe, 15));
-                        inputItem.add(new ItemStack(Items.coal, 8));
-                        outputLiquid.add(new LiquidStack(TriLiquids.VBearingHotMetal, 1.2f));
-                        outputItem.add(new ItemStack(Items.scrap, 1));
-                        craftTime = 60;
-                        powerUse = 60;
-                    }},//VBlastFurnace
-                    new Recipe() {{
-                        inputLiquid.add(new LiquidStack(TriLiquids.VBearingHotMetal, 1.2f));
-                        inputItem.add(new ItemStack(Items.coal, 3));
-                        outputItem.add(new ItemStack(TriItems.V2O5, 12));
-                        outputItem.add(new ItemStack(TriItems.FeSteel, 14));
-                        craftTime = 60;
-                        powerUse = 192;
-                    }}//VBlastFurnaceBlowing
-            );
-            recipes.add(
-                    new Recipe() {{
-                        inputItem.add(new ItemStack(TriItems.Al, 16));
-                        inputItem.add(new ItemStack(TriItems.V2O5, 12));
-                        outputItem.add(new ItemStack(TriItems.V, 8));
-                        outputItem.add(new ItemStack(TriItems.bauxite, 20));
-                        craftTime = 60;
-                        powerUse = 192;
-                    }},//VacuumAluminothermicGenerator
-                    new Recipe() {{
-                        inputItem.add(new ItemStack(TriItems.Ti, 10));
-                        inputItem.add(new ItemStack(TriItems.Al, 6));
-                        inputItem.add(new ItemStack(TriItems.V, 4));
-                        outputItem.add(new ItemStack(TriItems.TiAlloy, 18));
-                        craftTime = 60;
-                        powerUse = 105;
-                    }}//TiRollingMill
-            );
-        }};
+//        ComprehensiveProcessingFactory = new MultiRecipeFactory("ComprehensiveProcessingFactory"){{
+//            size = 7;
+//            health = 30;
+//            itemCapacity = 850;
+//            liquidCapacity = 500;
+//            requirements(Category.crafting, with(TriItems.Cu,50,TriItems.TiAlloy,80,TriItems.FeSteel,30,TriItems.Ni,45,TriItems.chip4004,25));
+//            recipes.add(
+//                    new Recipe() {{
+//                        inputItem.add(new ItemStack(Items.titanium, 15));
+//                        outputItem.add(new ItemStack(TriItems.Ti, 13));
+//                        craftTime = 60;
+//                        powerUse = 320;
+//                    }},//IodinationPurificationFurnace
+//                    new Recipe() {{
+//                        inputItem.add(new ItemStack(TriItems.bauxite, 20));
+//                        outputItem.add(new ItemStack(TriItems.Al, 12));
+//                        outputLiquid.add(new LiquidStack(Liquids.ozone, 0.8f));
+//                        craftTime = 60;
+//                        powerUse = 480;
+//                    }},//bauxiteElectrolyticCell
+//                    new Recipe() {{
+//                        inputItem.add(new ItemStack(TriItems.VTiFe, 15));
+//                        inputItem.add(new ItemStack(Items.coal, 8));
+//                        outputLiquid.add(new LiquidStack(TriLiquids.VBearingHotMetal, 1.2f));
+//                        outputItem.add(new ItemStack(Items.scrap, 1));
+//                        craftTime = 60;
+//                        powerUse = 60;
+//                    }},//VBlastFurnace
+//                    new Recipe() {{
+//                        inputLiquid.add(new LiquidStack(TriLiquids.VBearingHotMetal, 1.2f));
+//                        inputItem.add(new ItemStack(Items.coal, 3));
+//                        outputItem.add(new ItemStack(TriItems.V2O5, 12));
+//                        outputItem.add(new ItemStack(TriItems.FeSteel, 14));
+//                        craftTime = 60;
+//                        powerUse = 192;
+//                    }}//VBlastFurnaceBlowing
+//            );
+//            recipes.add(
+//                    new Recipe() {{
+//                        inputItem.add(new ItemStack(TriItems.Al, 16));
+//                        inputItem.add(new ItemStack(TriItems.V2O5, 12));
+//                        outputItem.add(new ItemStack(TriItems.V, 8));
+//                        outputItem.add(new ItemStack(TriItems.bauxite, 20));
+//                        craftTime = 60;
+//                        powerUse = 192;
+//                    }},//VacuumAluminothermicGenerator
+//                    new Recipe() {{
+//                        inputItem.add(new ItemStack(TriItems.Ti, 10));
+//                        inputItem.add(new ItemStack(TriItems.Al, 6));
+//                        inputItem.add(new ItemStack(TriItems.V, 4));
+//                        outputItem.add(new ItemStack(TriItems.TiAlloy, 18));
+//                        craftTime = 60;
+//                        powerUse = 105;
+//                    }}//TiRollingMill
+//            );
+//        }};
     }
 }
