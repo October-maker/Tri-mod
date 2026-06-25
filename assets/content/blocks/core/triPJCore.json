@@ -1,0 +1,22 @@
+{
+    "size": 3,
+    "health": 700,
+    "buildCostMultiplier": 0.5,
+    "armor": 15,
+    "itemCapacity": 2000,
+    "unitCapModifier": 10,
+    "unitType": "gamma",
+    "requirements": [
+        "TiAlloy/300",
+        "Al/100",
+        "MonocrystallineSi/100"
+    ],
+    "category": "effect",
+    "research": "watchtowerCore",
+    "researchCostMultiplier": 0.95,
+    "researchCost": [
+        "TiAlloy/500",
+        "Al/500",
+        "MonocrystallineSi/500"
+    ]
+}
