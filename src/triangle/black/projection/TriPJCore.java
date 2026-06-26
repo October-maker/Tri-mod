@@ -61,7 +61,6 @@ public class TriPJCore extends CoreBlock {
         }
 
         int timer = 0;
-
         @Override
         public void updateTile() {
             timer++;
