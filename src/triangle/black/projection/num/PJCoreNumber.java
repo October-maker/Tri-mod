@@ -16,7 +16,7 @@ import java.io.IOException;
 
 /** Count of {@link TriPJCore} instances in the current game; persisted via custom save chunk. */
 public class PJCoreNumber implements SaveFileReader.CustomChunk {
-    private static final String CHUNK_NAME = "triangle-pj-number";
+    private static final String CHUNK_NAME = "triangle-pj-core-number";
     private static final short VERSION = 1;
 
     public static final PJCoreNumber instance = new PJCoreNumber();

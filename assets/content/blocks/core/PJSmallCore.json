@@ -1,7 +1,6 @@
 {
     "size": 3,
     "health": 700,
-    "buildCostMultiplier": 0.5,
     "armor": 15,
     "itemCapacity": 2000,
     "unitCapModifier": 10,

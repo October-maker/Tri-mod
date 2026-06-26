@@ -18,6 +18,7 @@ public class TriPJCore extends CoreBlock {
 
     public TriPJCore(String name) {
         super(name);
+        buildCostMultiplier = 0;
     }
 
     @Override
@@ -39,9 +40,9 @@ public class TriPJCore extends CoreBlock {
     public void setBars(){
         super.setBars();
         addBar("PJCore",(TriPJCoreBuild e) -> new Bar(
-                () -> PJCoreNumber.get() + "/" + "8",
+                () -> Core.bundle.get("inBulidPJCore") + PJCoreNumber.get() + "/" + "8",
                 () -> Color.valueOf("FFFFFF"),
-                () -> (float) PJCoreNumber.get() /8
+                () -> (float) PJCoreNumber.get() / 8
         ));
     }
 
@@ -69,16 +70,5 @@ public class TriPJCore extends CoreBlock {
                 timer = 0;
             }
         }
-
-//        public void build(Building build, Table table) {
-//            table.update(() -> {
-//                table.clear();
-//                table.left();
-//
-//                table.table(cont -> {
-//                    cont.add(String.valueOf(PJCoreNumber.get())).padRight(8).left();;
-//                });
-//            });
-//        }
     }
 }
