@@ -8,6 +8,8 @@ import mindustry.ui.Bar;
 import mindustry.world.Block;
 import mindustry.world.Tile;
 import mindustry.world.blocks.storage.CoreBlock;
+import mindustry.world.meta.Stat;
+import triangle.black.projection.num.PJBit;
 import triangle.black.projection.num.PJCoreNumber;
 
 public class TriPJCore extends CoreBlock {
@@ -44,6 +46,11 @@ public class TriPJCore extends CoreBlock {
                 () -> Color.valueOf("FFFFFF"),
                 () -> (float) PJCoreNumber.get() / 8
         ));
+        addBar("PJBit",(TriPJCoreBuild e) -> new Bar(
+                () -> Core.bundle.get("PJBit") + PJBit.get() + "bits",
+                () -> Color.valueOf("FFFFFF"),
+                () -> 1
+        ));
     }
 
     public class TriPJCoreBuild extends CoreBuild {
@@ -51,13 +58,13 @@ public class TriPJCore extends CoreBlock {
         @Override
         public void created() {
             super.created();
-            PJCoreNumber.refresh();
+            PJBit.refresh();
         }
 
         @Override
         public void afterDestroyed() {
             super.afterDestroyed();
-            PJCoreNumber.refresh();
+            PJBit.refresh();
         }
 
         int timer = 0;
@@ -65,7 +72,7 @@ public class TriPJCore extends CoreBlock {
         public void updateTile() {
             timer++;
             if (timer >= 60) {
-                PJCoreNumber.refresh();
+                PJBit.refresh();
                 timer = 0;
             }
         }
