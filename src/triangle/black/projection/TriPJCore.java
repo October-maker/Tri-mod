@@ -1,16 +1,14 @@
 package triangle.black.projection;
 
-import arc.scene.ui.layout.Table;
+import arc.Core;
+import arc.graphics.Color;
 import mindustry.Vars;
 import mindustry.game.Team;
-import mindustry.gen.Building;
+import mindustry.ui.Bar;
 import mindustry.world.Block;
 import mindustry.world.Tile;
 import mindustry.world.blocks.storage.CoreBlock;
-import mindustry.world.meta.Stat;
 import triangle.black.projection.num.PJCoreNumber;
-
-import static arc.util.io.CRC.table;
 
 public class TriPJCore extends CoreBlock {
 
@@ -35,6 +33,16 @@ public class TriPJCore extends CoreBlock {
     @Override
     public boolean canPlaceOn(Tile tile, Team team, int rotation){
         return PJCoreNumber.get() < 8;
+    }
+
+    @Override
+    public void setBars(){
+        super.setBars();
+        addBar("PJCore",(TriPJCoreBuild e) -> new Bar(
+                () -> PJCoreNumber.get() + "/" + "8",
+                () -> Color.valueOf("FFFFFF"),
+                () -> (float) PJCoreNumber.get() /8
+        ));
     }
 
     public class TriPJCoreBuild extends CoreBuild {
