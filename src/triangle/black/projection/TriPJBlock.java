@@ -1,18 +1,21 @@
 package triangle.black.projection;
 
+import mindustry.gen.Building;
 import mindustry.world.Block;
-import triangle.black.projection.num.PJFactoryNumber;
+import triangle.black.projection.num.PJBlockNumber;
 
-public class TriPJFactory extends Block {
+public class TriPJBlock extends Block {
 
     static {
-        PJFactoryNumber.get();
+        PJBlockNumber.get();
     }
 
-    public TriPJFactory(String name){
+    public TriPJBlock(String name){
         super(name);
         buildCostMultiplier = 0;
     }
+
+    public class TriPJBlockBuilding extends Building {}
 
 //    public int FacMaxbuild() {
 //        if (PJCoreNumber.get() < 3) {
@@ -24,16 +27,16 @@ public class TriPJFactory extends Block {
 
 //    @Override
 //    public boolean canPlaceOn(Tile tile, Team team, int rotation) {
-//        return PJFactoryNumber.get() < FacMaxbuild();
+//        return PJBlockNumber.get() < FacMaxbuild();
 //    }
 
 //    @Override
 //    public void setBars() {
 //        super.setBars();
-//        addBar("PJFactory",(TriPJFactory.TriPJFactoryBuild e) -> new Bar(
-//                () -> Core.bundle.get("inBulidPJFactory") + PJFactoryNumber.get() + "/" + FacMaxbuild(),
+//        addBar("PJFactory",(TriPJBlock.TriPJFactoryBuild e) -> new Bar(
+//                () -> Core.bundle.get("inBulidPJFactory") + PJBlockNumber.get() + "/" + FacMaxbuild(),
 //                () -> Color.valueOf("FFFFFF"),
-//                () -> (float) PJFactoryNumber.get() / FacMaxbuild()
+//                () -> (float) PJBlockNumber.get() / FacMaxbuild()
 //        ));
 //    }
 
@@ -42,13 +45,13 @@ public class TriPJFactory extends Block {
 //        @Override
 //        public void created() {
 //            super.created();
-//            PJFactoryNumber.refresh();
+//            PJBlockNumber.refresh();
 //        }
 //
 //        @Override
 //        public void afterDestroyed() {
 //            super.afterDestroyed();
-//            PJFactoryNumber.refresh();
+//            PJBlockNumber.refresh();
 //        }
 //
 //        int timer = 0;
@@ -56,7 +59,7 @@ public class TriPJFactory extends Block {
 //        public void updateTile() {
 //            timer++;
 //            if (timer >= 60) {
-//                PJFactoryNumber.refresh();
+//                PJBlockNumber.refresh();
 //                timer = 0;
 //            }
 //        }
