@@ -9,6 +9,7 @@ import mindustry.world.Block;
 import mindustry.world.Tile;
 import mindustry.world.blocks.storage.CoreBlock;
 import mindustry.world.meta.Stat;
+import triangle.black.projection.communication.PJComNetwork;
 import triangle.black.projection.num.PJBit;
 import triangle.black.projection.num.PJCoreNumber;
 
@@ -71,7 +72,7 @@ public class TriPJCore extends CoreBlock {
         @Override
         public void updateTile() {
             timer++;
-            if (timer >= 60) {
+            if (timer >= PJComNetwork.getUpdateInterval()) {
                 PJBit.refresh();
                 timer = 0;
             }
