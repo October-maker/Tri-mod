@@ -5,12 +5,7 @@ import mindustry.gen.Building;
 import mindustry.gen.Groups;
 import triangle.black.projection.TriPJBlock;
 
-public class PJComNetwork {
-
-    static int updateInterval = 60;
-    public static int getUpdateInterval() {
-        return updateInterval;
-    }
+public class PJNetClear {
 
     public Seq<Building> netClear(Seq<Building> BlockInNet, float x, float y, float range) {
         if(BlockInNet != null) {

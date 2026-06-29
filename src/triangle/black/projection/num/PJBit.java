@@ -16,6 +16,18 @@ public class PJBit implements SaveFileReader.CustomChunk {
     private static final String CHUNK_NAME = "triangle-pj-bit";
     private static final short VERSION = 1;
 
+    static int PJBitProduct = 64;
+
+    static int PJCoreBest = 8;
+    public static int getPJCoreBest() {
+        return PJCoreBest;
+    }
+
+    static int updateInterval = 60;
+    public static int getUpdateInterval() {
+        return updateInterval;
+    }
+
     public static final PJBit instance = new PJBit();
 
     public int value;
@@ -42,7 +54,12 @@ public class PJBit implements SaveFileReader.CustomChunk {
 
     private static int countTriPJBit() {
         PJCoreNumber.refresh();
-        return PJCoreNumber.get() * 64;
+        float PJBitMore = PJBitProduct * PJCoreBest + (PJCoreNumber.get() - PJCoreBest) * PJBitProduct * ((float) PJCoreBest / PJCoreNumber.get());
+        if(PJCoreNumber.get() <= PJCoreBest) {
+            return PJCoreNumber.get() * PJBitProduct;
+        } else {
+            return (int) PJBitMore;
+        }
     }
 
     @Override

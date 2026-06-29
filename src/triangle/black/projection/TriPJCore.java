@@ -8,8 +8,6 @@ import mindustry.ui.Bar;
 import mindustry.world.Block;
 import mindustry.world.Tile;
 import mindustry.world.blocks.storage.CoreBlock;
-import mindustry.world.meta.Stat;
-import triangle.black.projection.communication.PJComNetwork;
 import triangle.black.projection.num.PJBit;
 import triangle.black.projection.num.PJCoreNumber;
 
@@ -36,16 +34,16 @@ public class TriPJCore extends CoreBlock {
 
     @Override
     public boolean canPlaceOn(Tile tile, Team team, int rotation){
-        return PJCoreNumber.get() < 8;
+        return PJCoreNumber.get() < 16;
     }
 
     @Override
     public void setBars(){
         super.setBars();
         addBar("PJCore",(TriPJCoreBuild e) -> new Bar(
-                () -> Core.bundle.get("inBulidPJCore") + PJCoreNumber.get() + "/" + "8",
-                () -> Color.valueOf("FFFFFF"),
-                () -> (float) PJCoreNumber.get() / 8
+                () -> Core.bundle.get("inBulidPJCore") + PJCoreNumber.get() + "/" + PJBit.getPJCoreBest() + "(16)",
+                () -> Color.valueOf(String.valueOf("FFFFFF")),
+                () -> (float) PJCoreNumber.get() / 16
         ));
         addBar("PJBit",(TriPJCoreBuild e) -> new Bar(
                 () -> Core.bundle.get("PJBit") + PJBit.get() + "bits",
@@ -72,7 +70,7 @@ public class TriPJCore extends CoreBlock {
         @Override
         public void updateTile() {
             timer++;
-            if (timer >= PJComNetwork.getUpdateInterval()) {
+            if (timer >= PJBit.getUpdateInterval()) {
                 PJBit.refresh();
                 timer = 0;
             }
