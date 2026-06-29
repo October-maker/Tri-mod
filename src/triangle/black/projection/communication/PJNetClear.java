@@ -3,7 +3,6 @@ package triangle.black.projection.communication;
 import arc.struct.Seq;
 import mindustry.gen.Building;
 import mindustry.gen.Groups;
-import mindustry.world.Build;
 import triangle.black.projection.TriPJBlock;
 
 public class PJNetClear {

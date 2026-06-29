@@ -1,15 +1,23 @@
 package triangle.black.projection;
 
+import arc.Core;
+import arc.graphics.Color;
 import mindustry.gen.Building;
+import mindustry.ui.Bar;
 import mindustry.world.Block;
+import triangle.black.projection.communication.PJComNetwork;
 import triangle.black.projection.communication.PJNetManager;
+import triangle.black.projection.communication.PJNetUpdate;
 import triangle.black.projection.num.PJBit;
+import triangle.black.projection.num.PJCoreNumber;
 
 public class TriPJBlock extends Block {
 
     public TriPJBlock(String name){
         super(name);
         buildCostMultiplier = 0;
+        destructible = true;
+        update = true;
     }
 
     static int bitCost = 2;
@@ -33,6 +41,10 @@ public class TriPJBlock extends Block {
             return PJRange;
         }
 
+        public static float getBitCost() {
+            return bitCost;
+        }
+
         @Override
         public void created() {
             super.created();
@@ -51,6 +63,7 @@ public class TriPJBlock extends Block {
             timer++;
             if (timer >= PJBit.getUpdateInterval()) {
                 PJNetManager.getNetworkFor(this);
+                PJNetUpdate.PJComUpdate(this);
                 timer = 0;
             }
         }

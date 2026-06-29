@@ -33,7 +33,6 @@ public class PJNetManager {
                 TriPJBlock.TriPJBlockBuilding.setNetId(merged.id);
             }
         }
-        TriPJBlock.TriPJBlockBuilding.setNetId(merged.id);
 
         return merged;
     }
@@ -44,10 +43,12 @@ public class PJNetManager {
         Seq<PJComNetwork> toMerge = new Seq<>();
 
         for (Building b : buildings) {
-            PJComNetwork net = networks.get(TriPJBlock.TriPJBlockBuilding.getNetId());
-            if (net != null) {
-                if (main == null) main = net;
-                else if (main != net) toMerge.add(net);
+            if (b instanceof TriPJBlock.TriPJBlockBuilding) {
+                PJComNetwork net = networks.get(TriPJBlock.TriPJBlockBuilding.getNetId());
+                if (net != null) {
+                    if (main == null) main = net;
+                    else if (main != net) toMerge.add(net);
+                }
             }
         }
 
@@ -67,11 +68,13 @@ public class PJNetManager {
 
     // 建筑被破坏时清理网络
     public static void onBuildingDestroyed(Building build) {
-        PJComNetwork net = networks.get(TriPJBlock.TriPJBlockBuilding.getNetId());
-        if (net != null) {
-            net.remove(build);
-            // 网络为空则销毁
-            if (net.nodes.isEmpty()) networks.remove(net.id);
+        if (build instanceof TriPJBlock.TriPJBlockBuilding) {
+            PJComNetwork net = networks.get(TriPJBlock.TriPJBlockBuilding.getNetId());
+            if (net != null) {
+                net.remove(build);
+                // 网络为空则销毁
+                if (net.nodes.isEmpty()) networks.remove(net.id);
+            }
         }
     }
 }
