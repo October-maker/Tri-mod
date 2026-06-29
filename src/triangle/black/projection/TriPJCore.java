@@ -41,7 +41,7 @@ public class TriPJCore extends CoreBlock {
     public void setBars(){
         super.setBars();
         addBar("PJCore",(TriPJCoreBuild e) -> new Bar(
-                () -> Core.bundle.get("inBulidPJCore") + PJCoreNumber.get() + "/" + PJBit.getPJCoreBest() + "(16)",
+                () -> Core.bundle.get("inBulidPJCore") + PJCoreNumber.get() + "/" + "16" + "(" + PJBit.getPJCoreBest() + ")",
                 () -> Color.valueOf(String.valueOf("FFFFFF")),
                 () -> (float) PJCoreNumber.get() / 16
         ));

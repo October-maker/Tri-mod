@@ -7,7 +7,7 @@ import triangle.black.projection.TriPJBlock;
 
 public class PJNetClear {
 
-    public Seq<Building> netClear(Seq<Building> BlockInNet, float x, float y, float range) {
+    public static Seq<Building> netClear(Seq<Building> BlockInNet, float x, float y, float range) {
         if(BlockInNet != null) {
             BlockInNet.clear();
         }
