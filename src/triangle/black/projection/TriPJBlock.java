@@ -2,7 +2,8 @@ package triangle.black.projection;
 
 import mindustry.gen.Building;
 import mindustry.world.Block;
-import triangle.black.projection.communication.PJComNetwork;
+import triangle.black.projection.communication.PJNetManager;
+import triangle.black.projection.num.PJBit;
 
 public class TriPJBlock extends Block {
 
@@ -11,29 +12,47 @@ public class TriPJBlock extends Block {
         buildCostMultiplier = 0;
     }
 
-    int bitCost = 2;
+    static int bitCost = 2;
+    static float PJRange = 32f;
 
-    public class TriPJBlockBuilding extends Building {
+    public static class TriPJBlockBuilding extends Building {
         // 1. 定义网络 ID，默认值为 -1 表示未连接任何网络
-        private int networkId = -1;
+        public static int networkId = -1;
 
         // 2. 提供获取网络 ID 的方法
-        public int getNetworkId() {
-            return this.networkId;
+        public static int getNetId() {
+            return networkId;
         }
 
         // 3. 提供设置网络 ID 的方法
-        public void setNetworkId(int id) {
-            this.networkId = id;
+        public static void setNetId(int id) {
+            networkId = id;
         }
 
-        // 4. 关键：处理建筑被破坏时的清理逻辑
-//        @Override
-//        public void onRemoved() {
-//            super.onRemoved();
-//            // 触发网络管理器，将该建筑从网络中移除
-//            PJComNetwork.PJNetManager.onBuildingDestroyed(this);
-//        }
-    }
+        public static float getPJRange() {
+            return PJRange;
+        }
 
+        @Override
+        public void created() {
+            super.created();
+            PJNetManager.getNetworkFor(this);
+        }
+
+        @Override
+        public void afterDestroyed() {
+            super.afterDestroyed();
+            PJNetManager.onBuildingDestroyed(this);
+        }
+
+        int timer = 0;
+        @Override
+        public void updateTile() {
+            timer++;
+            if (timer >= PJBit.getUpdateInterval()) {
+                PJNetManager.getNetworkFor(this);
+                timer = 0;
+            }
+        }
+    }
 }
