@@ -22,7 +22,6 @@ public class triangle extends Mod{
         TriTurret.load();
         TriWeather.load();
         SerTriTechTree.load();
-        TriPJBlocks.load();
         Vars.renderer.minZoom =0.3f;
         Vars.renderer.maxZoom = 20.0f;
         float MiZ = Vars.renderer.minZoom;
