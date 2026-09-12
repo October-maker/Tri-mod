@@ -110,6 +110,7 @@
 			"hitSize":12,
 			"pierceArmor":true,
 			"buildingDamageMultiplier":0.01,
+			"pierceDamageFactor":1,
 		},//轨道炮类特供钨弹
 		"TNT":{
 			"speed": 18,

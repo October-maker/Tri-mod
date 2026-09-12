@@ -39,7 +39,7 @@
 			/*"shootEffect": "None",*/
 			"drag":0.00,
 			"hitSize":10,
-			"pierceArmor":true,
+			"armorMultiplier":1.5,
 			"buildingDamageMultiplier":0.05,
 		},//穿甲弹
     },
