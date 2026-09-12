@@ -20,7 +20,6 @@ public class GrowingDamageStatusEffect extends StatusEffect {
     // 用于存储每个单位的累积时间
     private static final java.util.Map<Unit, Float> accumulatedTimes = new java.util.HashMap<>();
 
-
     public GrowingDamageStatusEffect(String name) {
         super(name);
     }
@@ -29,18 +28,27 @@ public class GrowingDamageStatusEffect extends StatusEffect {
         // 获取累积的应用时间
         float accumulatedTime = getAccumulatedTime(unit);
 
-        // 计算当前应该应用的伤害值
-        float currentDamage = calculateCurrentDamage(accumulatedTime);
+        // 核心优化：如果已经达到或超过最大时间，直接应用最大伤害并跳过后续累加
+        if (accumulatedTime >= timeToMax) {
+            // 锁死时间，防止浮点数精度导致的无限累加
+            accumulatedTimes.put(unit, timeToMax);
 
-        // 直接应用动态计算出的伤害
-        if (currentDamage > 0) {
-            unit.damageContinuousPierce(currentDamage);
-        } else if (currentDamage < 0) { // 如果是治疗效果
-            unit.heal(-1f * currentDamage * Time.delta);
-        }
+            // 直接造成最大伤害/治疗
+            if (maxDamage > 0) {
+                unit.damageContinuousPierce(maxDamage);
+            } else if (maxDamage < 0) {
+                unit.heal(-1f * maxDamage * Time.delta);
+            }
+        } else {
+            // 未达到上限时，计算伤害
+            float currentDamage = calculateCurrentDamage(accumulatedTime);
+            if (currentDamage > 0) {
+                unit.damageContinuousPierce(currentDamage);
+            } else if (currentDamage < 0) {
+                unit.heal(-1f * currentDamage * Time.delta);
+            }
 
-        // 累积时间增加
-        if (accumulatedTime < timeToMax) {
+            // 累积时间增加
             addAccumulatedTime(unit, Time.delta / 60f);
         }
 
@@ -58,14 +66,14 @@ public class GrowingDamageStatusEffect extends StatusEffect {
         // 根据时间比例线性插值计算当前伤害
         return baseDamage + (maxDamage - baseDamage) * progress;
     }
+
     private float getAccumulatedTime(Unit unit) {
         return accumulatedTimes.getOrDefault(unit, 0f);
     }
 
     private void addAccumulatedTime(Unit unit, float deltaTime) {
-        float currentTime = getAccumulatedTime(unit);
-        float newTime = currentTime + deltaTime;
-        accumulatedTimes.put(unit, newTime);
+        // 使用 Java 8 的 merge 方法，一行代码安全地完成“获取并累加”操作
+        accumulatedTimes.merge(unit, deltaTime, Float::sum);
     }
 
     private void resetAccumulatedTime(Unit unit) {
@@ -74,7 +82,7 @@ public class GrowingDamageStatusEffect extends StatusEffect {
 
     @Override
     public void onRemoved(Unit unit) {
-        // 效果移除时清理累积时间数据
+        // 效果移除时清理累积时间数据，防止内存泄漏
         resetAccumulatedTime(unit);
         super.onRemoved(unit);
     }
@@ -85,20 +93,13 @@ public class GrowingDamageStatusEffect extends StatusEffect {
 
         if (!extend) {
             // 首次应用时，初始化累积时间为0
-            resetAccumulatedTime(unit); // 确保清空旧数据
+            resetAccumulatedTime(unit);
         }
-        // 如果是延长效果，保持现有的累积时间
     }
 
     @Override
     public void setStats() {
-        // 首先调用父类的 setStats 方法以保留原有功能
         super.setStats();
-
-        // 添加我们自定义的统计信息
-        // 使用 Stat.damage 作为类别，然后添加自定义描述
-        stats.add(Stat.damage, baseDamage * 60f + " [lightgray]->[] " + maxDamage * 60f );
+        stats.add(Stat.damage, baseDamage * 60f + " [lightgray]----" + timeToMax + "s--->[] " + maxDamage * 60f + " + " );
     }
 }
-
-
