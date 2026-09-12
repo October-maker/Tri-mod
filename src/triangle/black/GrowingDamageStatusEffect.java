@@ -40,8 +40,9 @@ public class GrowingDamageStatusEffect extends StatusEffect {
         }
 
         // 累积时间增加
-        addAccumulatedTime(unit, Time.delta / 60f); // Time.delta是帧时间，除以60转为秒
-
+        if (accumulatedTime < timeToMax) {
+            addAccumulatedTime(unit, Time.delta / 60f);
+        }
 
         // 处理特效
         if(effect != Fx.none && Mathf.chanceDelta(effectChance)){

@@ -54,7 +54,7 @@
 	    { "item": "FeSO4", "amount": 15 }
 	    { "item": "scrap", "amount": 1 }
 	],
-    "outputLiquid": { "liquid": "hydrogen", "amount": 0.2 }
+    "outputLiquid": { "liquid": "hydrogen", "amount": 0.2 },
 	"requirements": [
 		"FeSteel/50",
 		"Al/30",

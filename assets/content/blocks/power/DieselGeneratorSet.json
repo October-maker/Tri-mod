@@ -2,7 +2,7 @@
     "type": "ConsumeGenerator", // 定义该实体类型为消耗型发电机
     "category": "power", // 分类为电力类建筑
     "size": 5, // 实体占用的网格大小
-    "health": 280, // 生命值
+    "health": 70, // 生命值
     "requirements": [ // 建造该建筑所需的资源清单
       "TiAlloy/30",
       "MonocrystallineSi/30",

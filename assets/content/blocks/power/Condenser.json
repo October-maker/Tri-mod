@@ -1,0 +1,34 @@
+{
+	"liquidCapacity":1080,//物品容量，数字都能改别的
+	"health":120,//生命值
+	"size":9,//最高16，不然会崩
+	"squareSprite": true,
+	"researchCostMultiplier":0.75,
+	"hasPower": true,//是否需要电
+	"hasLiquids": true,//是否需要液体
+	"hasItems": true,//是否需要物品
+	"craftTime":60,//输出时间间隔
+	"buildCostMultiplier":1.5,//建造速度倍率
+	"updateEffect": "none",//制造完成时产生的效果
+	"consumes": {
+		"power":1.2,//耗电，游戏里会乘60
+		"liquids":[
+            "weakSteam/20"
+        ],
+	},//制造消耗
+	"drawer":{
+	    "type":"DrawMulti",//叠加
+	    "drawers":[
+	        "DrawDefault",//绘制本体贴图
+	    ]
+	},
+	"outputLiquid": { "liquid": "water", "amount": 20 },
+	"requirements": [
+		"TiAlloy/150",
+		"Cu/80",
+		"MonocrystallineSi/25",
+		"FeSteel/40",
+	],
+	"category": "crafting",//建造栏分类
+	"research": "TiRollingMill",//前置研究
+}

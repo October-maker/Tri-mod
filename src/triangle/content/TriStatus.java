@@ -17,7 +17,7 @@ public class TriStatus {
             color = Color.valueOf("ffc455");
             baseDamage = 3.2f;
             maxDamage = 24f;
-            timeToMax = 60f;
+            timeToMax = 10f;
             effect = new MultiEffect(Fx.burning,Fx.smoke);
             transitionDamage = 14f;
             speedMultiplier = 0.5f;

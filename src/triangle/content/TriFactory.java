@@ -22,7 +22,7 @@ public class TriFactory {
     public static GenericCrafter
             electrolyticCell,oxygenReductionFurnace,IExtractor,IodinationPurificationFurnace,bauxiteElectrolyticCell,VBlastFurnace,VBlastFurnaceBlowing,VacuumAluminothermicGenerator,CoSulfationRoaster,WSteelMixingFurnace,WCarbideFurnace,
             FeBlastFurnace,TiRollingMill,SCombustionVessel,AcidReactionKettle,AcidResistantHeater,saltDistillationFurnace,SaltMixingPool,CuElectrolyticRefiningPool,NickelDiaphragmElectrolyzer,alkalineElectrolyzer,CopperConcentrator,CoElectrolyticCell,
-            CrThermiteReactionChamber,armoredSinteringFurnace;
+            CrThermiteReactionChamber,armoredSinteringFurnace,Condenser;
     public static HeatProducer SAbsorptionTower,FeMixingPool;
     public static HeatCrafter GreenVitriolRoastingFurnace,electricArcFurnaceFluidizedBedReactor,SiReductionFurnace,sandRefiningPool;
     //N
@@ -72,6 +72,7 @@ public class TriFactory {
         WSteelMixingFurnace = new GenericCrafter("WSteelMixingFurnace"){{}};
         CrThermiteReactionChamber = new GenericCrafter("CrThermiteReactionChamber"){{}};
         armoredSinteringFurnace = new GenericCrafter("armoredSinteringFurnace"){{}};
+        Condenser = new GenericCrafter("Condenser"){{}};
         //oil
         oilElectricDesaltingTank = new GenericCrafter("oilElectricDesaltingTank"){{}};
         oilPrimaryAtmosphericDistillationTower = new GenericCrafter("oilPrimaryAtmosphericDistillationTower"){{}};
@@ -187,10 +188,10 @@ public class TriFactory {
         }};
         boiler = new MultiRecipeFactory("boiler"){{
             size = 5;
-            health = 57;
+            health = 67;
             itemCapacity = 50;
             liquidCapacity = 320;
-            requirements(Category.power , with(TriItems.TiAlloy,25,TriItems.FeSteel,15,TriItems.Cu,50));
+            requirements(Category.power , with(TriItems.TiAlloy,125,TriItems.FeSteel,105,TriItems.Cu,60,TriItems.MonocrystallineSi,30));
             drawer = new DrawMulti(
                     new DrawDefault(),
                     new DrawGlowRegion(){{
@@ -202,29 +203,29 @@ public class TriFactory {
             recipes.add(
                     new Recipe() {{
                         inputLiquid.add(new LiquidStack(TriLiquids.oilGasoline,0.45f));
-                        inputLiquid.add(new LiquidStack(Liquids.water,10));
-                        outputLiquid.add(new LiquidStack(TriLiquids.steam,10));
+                        inputLiquid.add(new LiquidStack(Liquids.water,5.18f));
+                        outputLiquid.add(new LiquidStack(TriLiquids.steam,5.18f));
                         craftTime = 60f;
                         powerUse = 105f;
                     }},
                     new Recipe() {{
                         inputLiquid.add(new LiquidStack(TriLiquids.oilKerosene,0.36f));
-                        inputLiquid.add(new LiquidStack(Liquids.water,10));
-                        outputLiquid.add(new LiquidStack(TriLiquids.steam,10));
+                        inputLiquid.add(new LiquidStack(Liquids.water,4.15f));
+                        outputLiquid.add(new LiquidStack(TriLiquids.steam,4.15f));
                         craftTime = 60f;
                         powerUse = 105f;
                     }},
                     new Recipe() {{
                         inputLiquid.add(new LiquidStack(TriLiquids.oilDiesel,0.4f));
-                        inputLiquid.add(new LiquidStack(Liquids.water,10));
-                        outputLiquid.add(new LiquidStack(TriLiquids.steam,10));
+                        inputLiquid.add(new LiquidStack(Liquids.water,4.92f));
+                        outputLiquid.add(new LiquidStack(TriLiquids.steam,4.92f));
                         craftTime = 60f;
                         powerUse = 105f;
                     }},
                     new Recipe() {{
                         inputLiquid.add(new LiquidStack(TriLiquids.oilHeavy,0.5f));
-                        inputLiquid.add(new LiquidStack(Liquids.water,8));
-                        outputLiquid.add(new LiquidStack(TriLiquids.steam,8));
+                        inputLiquid.add(new LiquidStack(Liquids.water,5.38f));
+                        outputLiquid.add(new LiquidStack(TriLiquids.steam,5.38f));
                         craftTime = 60f;
                         powerUse = 105f;
                     }}

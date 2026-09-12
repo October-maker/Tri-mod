@@ -1,0 +1,37 @@
+{
+    "type": "ConsumeGenerator", // 定义该实体类型为消耗型发电机
+    "category": "power", // 分类为电力类建筑
+    "size": 7, // 实体占用的网格大小
+    "health": 42, // 生命值
+    "requirements": [ // 建造该建筑所需的资源清单
+		"TiAlloy/150",
+		"Cu/80",
+		"MonocrystallineSi/25",
+		"FeSteel/40",
+    ],
+    "warmupSpeed":0.3,
+    "liquidCapacity": 450,
+    "powerProduction": 270,
+    "itemDuration": 30, // 生成物品的持续时间
+    "consumes": { // 运行时消耗的资源
+		"liquids": [
+			{ "liquid": "steam", "amount": 10 }
+		]
+    },
+    "outputLiquid":{ "liquid": "weakSteam", "amount": 8 },
+    "explodeOnFull": true,
+    "explosionRadius": 12,
+    "explosionDamage": 820,
+    "drawer": { // 图形绘制配置
+      "type": "DrawMulti", // 使用多图层绘制技术
+      "drawers": [ // 绘制图层配置
+          "DrawDefault", // 默认绘制模式
+        ]
+    },
+	"research": {
+        "parent": "GasTurbine",
+        "objectives": [
+            "boiler"
+        ]
+    },
+}
