@@ -31,7 +31,7 @@ public class TriFactory {
     public static GenericCrafter oilElectricDesaltingTank,oilPrimaryAtmosphericDistillationTower,oilSecondaryAtmosphericDistillationTower,oilVacuumDistillationColumn,
             oilCatalyticCrackingTower,USYHydrothermalReactor,USYMixer,oilHydrocrackingTower,oilCatalyticReformingTower,oilAromaticHydrocarbonComplex,oilCokingHydrogenationTower,oilSteamCrackingTower;
     //special
-    public static MultiRecipeFactory BulletFactory,liquidFillingMachine,liquidPourer;/*ComprehensiveProcessingFactory*/
+    public static MultiRecipeFactory BulletFactory,liquidFillingMachine,liquidPourer,boiler;/*ComprehensiveProcessingFactory*/
     public static void load(){
         oxygenReductionFurnace = new GenericCrafter("oxygenReductionFurnace"){{}};
         electrolyticCell = new GenericCrafter("electrolyticCell"){{}};
@@ -182,6 +182,51 @@ public class TriFactory {
                         outputLiquid.add(new LiquidStack(TriLiquids.salineWater, 1));
                         craftTime = 60f;
                         powerUse = 7f;
+                    }}
+            );
+        }};
+        boiler = new MultiRecipeFactory("boiler"){{
+            size = 5;
+            health = 57;
+            itemCapacity = 50;
+            liquidCapacity = 320;
+            requirements(Category.power , with(TriItems.TiAlloy,25,TriItems.FeSteel,15,TriItems.Cu,50));
+            drawer = new DrawMulti(
+                    new DrawDefault(),
+                    new DrawGlowRegion(){{
+                        suffix = "-glow";
+                        color = Color.valueOf("FFFFFF99");
+                        layer = 110;
+                    }}
+            );
+            recipes.add(
+                    new Recipe() {{
+                        inputLiquid.add(new LiquidStack(TriLiquids.oilGasoline,0.45f));
+                        inputLiquid.add(new LiquidStack(Liquids.water,10));
+                        outputLiquid.add(new LiquidStack(TriLiquids.steam,10));
+                        craftTime = 60f;
+                        powerUse = 105f;
+                    }},
+                    new Recipe() {{
+                        inputLiquid.add(new LiquidStack(TriLiquids.oilKerosene,0.36f));
+                        inputLiquid.add(new LiquidStack(Liquids.water,10));
+                        outputLiquid.add(new LiquidStack(TriLiquids.steam,10));
+                        craftTime = 60f;
+                        powerUse = 105f;
+                    }},
+                    new Recipe() {{
+                        inputLiquid.add(new LiquidStack(TriLiquids.oilDiesel,0.4f));
+                        inputLiquid.add(new LiquidStack(Liquids.water,10));
+                        outputLiquid.add(new LiquidStack(TriLiquids.steam,10));
+                        craftTime = 60f;
+                        powerUse = 105f;
+                    }},
+                    new Recipe() {{
+                        inputLiquid.add(new LiquidStack(TriLiquids.oilHeavy,0.5f));
+                        inputLiquid.add(new LiquidStack(Liquids.water,8));
+                        outputLiquid.add(new LiquidStack(TriLiquids.steam,8));
+                        craftTime = 60f;
+                        powerUse = 105f;
                     }}
             );
         }};

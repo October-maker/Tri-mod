@@ -4,7 +4,7 @@ import arc.graphics.Color;
 import mindustry.type.Liquid;
 
 public class TriLiquids {
-    public static Liquid salineWater,H2O2,VBearingHotMetal,SO3,H2SO4,hydrochloricAcid,HCl,SiHCl3,NO2,liquidAmmonia,HNO3,aquaRegia,Cl;
+    public static Liquid salineWater,H2O2,VBearingHotMetal,SO3,H2SO4,hydrochloricAcid,HCl,SiHCl3,NO2,liquidAmmonia,HNO3,aquaRegia,Cl,steam;
     //oil
     public  static  Liquid oilCrude,oilHeavy,oilDiesel,oilMixedGas,oilGasoline,oilKerosene,oilPetroleumGas,oilVGO,oilVacuumResidue,oilNaphtha,oilReformate,oilArene,oilWax,oilEthylene;
     public static void load(){
@@ -21,6 +21,7 @@ public class TriLiquids {
         HNO3 = new Liquid("HNO3",Color.valueOf("F0F0A0")){{}};
         aquaRegia = new Liquid("aquaRegia",Color.valueOf("B7472BA0")){{}};
         Cl = new Liquid("Cl",Color.valueOf("D7FFC590")){{}};
+        steam = new Liquid("steam",Color.valueOf("FFFFFF90")){{}};
         //oil
         oilCrude = new Liquid("oilCrude",Color.valueOf("000000A0")){{}};
         oilHeavy = new Liquid("oilHeavy",Color.valueOf("000000A0")){{}};
