@@ -33,6 +33,13 @@ public class MultiRecipeFactory extends GenericCrafter {
         super(name);
         // 注册自定义消费器
         consume(new ConsumeRecipe(MultiRecipeFactoryBuild::getRecipe, MultiRecipeFactoryBuild::getDisplayRecipe));
+        // 注册动态电力消耗器
+        consume(new ConsumePowerRecipe(build -> {
+            if (build instanceof MultiRecipeFactoryBuild mrb) {
+                return mrb.getRecipe();
+            }
+            return null;
+        }));
         hasPower = true;
         consumesPower = true;
     }
@@ -51,7 +58,7 @@ public class MultiRecipeFactory extends GenericCrafter {
             recipe.outputPayload.each(stack -> payloadOutput.add(stack.item));
         });
 
-        consumePower(basePowerUse);
+        // 不再调用 consumePower()，因为已经在构造函数中注册了 ConsumePowerRecipe
 
         // 初始化输出
         if (recipes.isEmpty()) {
@@ -109,7 +116,7 @@ public class MultiRecipeFactory extends GenericCrafter {
                                 recipe.inputLiquid.each(stack -> row.add(display(stack.liquid, stack.amount * 60, 60f)));
                                 recipe.inputPayload.each(stack -> row.add(display(stack.item, stack.amount, recipe.craftTime)));
                                 // 添加电力消耗显示
-                                row.add("[stat]" + Strings.autoFixed(recipe.powerUse, 2) + " [lightgray]" + StatUnit.powerSecond.localized());
+                                row.add("[stat]" + Strings.autoFixed(recipe.powerUse * 60f, 2) + " [lightgray]" + StatUnit.powerSecond.localized());
                             }).growX();
 
                             inner.table(row -> {
@@ -212,11 +219,6 @@ public class MultiRecipeFactory extends GenericCrafter {
                     }
                 }
 
-                 //检查电力输入
-                if (power.graph.getLastPowerProduced() < recipes.get(i).powerUse * edelta()) {
-                    valid = false;
-                }
-
                 // 检查输出容量
                 if (valid) {
                     if (!canOutputForRecipe(recipes.get(i))) {
@@ -296,19 +298,6 @@ public class MultiRecipeFactory extends GenericCrafter {
             boolean outputFull = !canOutputForRecipe(current);
             if (outputFull) {
                 return; // 如果输出满了，停止生产
-            }
-
-            // 直接设置consumePower的值
-            consumePower(currentPowerUse);
-            // 设置当前配方的电力需求
-
-            float powerAvailable = power.graph.getBatteryStored() / power.graph.getBatteryCapacity();
-
-            // 计算电力效率
-            if (powerAvailable >= currentPowerUse * edelta()) {
-                power.status = 1f;
-            } else {
-                power.status = powerAvailable / (currentPowerUse * edelta());
             }
 
             // 处理液体输出

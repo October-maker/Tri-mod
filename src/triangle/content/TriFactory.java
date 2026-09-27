@@ -101,7 +101,7 @@ public class TriFactory {
                         inputItem.add(new ItemStack(TriItems.TNT,1));
                         outputItem.add(new ItemStack(TriItems.LHEAT, 4));
                         craftTime = 15f;
-                        powerUse = 20f;
+                        powerUse = 20f/60f;
                     }},
                     new Recipe() {{
                         inputItem.add(new ItemStack(TriItems.bauxite, 1));
@@ -109,14 +109,14 @@ public class TriFactory {
                         inputItem.add(new ItemStack(TriItems.Fe2O3,3));
                         outputItem.add(new ItemStack(TriItems.thermite, 6));
                         craftTime = 10f;
-                        powerUse = 10f;
+                        powerUse = 10f/60f;
                     }},
                     new Recipe() {{
                         inputItem.add(new ItemStack(TriItems.WSteel,2));
                         inputItem.add(new ItemStack(TriItems.Ni,1));
                         outputItem.add(new ItemStack(TriItems.WBullet,3));
                         craftTime = 60f;
-                        powerUse = 60f;
+                        powerUse = 1f;
                     }}
 //                    new Recipe() {{
 //                        inputItem.add(new ItemStack(Items.thorium, 2));
@@ -146,14 +146,14 @@ public class TriFactory {
                         inputLiquid.add(new LiquidStack(Liquids.water, 1));
                         outputItem.add(new ItemStack(TriItems.barrel, 5));
                         craftTime = 60f;
-                        powerUse = 12f;
+                        powerUse = 12f/60f;
                     }},//water
                 new Recipe() {{
                     inputItem.add(new ItemStack(Items.metaglass, 2));
                     inputLiquid.add(new LiquidStack(TriLiquids.salineWater, 1));
                     outputItem.add(new ItemStack(TriItems.saltwaterBucket, 5));
                     craftTime = 60f;
-                    powerUse = 12f;
+                    powerUse = 12f/60f;
                 }}
             );
         }};
@@ -176,13 +176,13 @@ public class TriFactory {
                         inputItem.add(new ItemStack(TriItems.barrel, 5));
                         outputLiquid.add(new LiquidStack(Liquids.water, 1));
                         craftTime = 60f;
-                        powerUse = 7f;
+                        powerUse = 7f/60f;
                     }},//water
                     new Recipe() {{
                         inputItem.add(new ItemStack(TriItems.saltwaterBucket, 5));
                         outputLiquid.add(new LiquidStack(TriLiquids.salineWater, 1));
                         craftTime = 60f;
-                        powerUse = 7f;
+                        powerUse = 7f/60f;
                     }}
             );
         }};
@@ -206,28 +206,28 @@ public class TriFactory {
                         inputLiquid.add(new LiquidStack(Liquids.water,5.18f));
                         outputLiquid.add(new LiquidStack(TriLiquids.steam,5.18f));
                         craftTime = 60f;
-                        powerUse = 105f;
+                        powerUse = 105f/60f;
                     }},
                     new Recipe() {{
                         inputLiquid.add(new LiquidStack(TriLiquids.oilKerosene,0.36f));
                         inputLiquid.add(new LiquidStack(Liquids.water,4.15f));
                         outputLiquid.add(new LiquidStack(TriLiquids.steam,4.15f));
                         craftTime = 60f;
-                        powerUse = 105f;
+                        powerUse = 105f/60f;
                     }},
                     new Recipe() {{
                         inputLiquid.add(new LiquidStack(TriLiquids.oilDiesel,0.4f));
                         inputLiquid.add(new LiquidStack(Liquids.water,4.92f));
                         outputLiquid.add(new LiquidStack(TriLiquids.steam,4.92f));
                         craftTime = 60f;
-                        powerUse = 105f;
+                        powerUse = 105f/60f;
                     }},
                     new Recipe() {{
                         inputLiquid.add(new LiquidStack(TriLiquids.oilHeavy,0.5f));
                         inputLiquid.add(new LiquidStack(Liquids.water,5.38f));
                         outputLiquid.add(new LiquidStack(TriLiquids.steam,5.38f));
                         craftTime = 60f;
-                        powerUse = 105f;
+                        powerUse = 105f/60f;
                     }}
             );
         }};

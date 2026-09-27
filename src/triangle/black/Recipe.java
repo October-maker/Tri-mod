@@ -27,6 +27,15 @@ public class Recipe {
                 inputLiquid.add(new LiquidStack(liquid, count));
             } else if (objects[i * 2] instanceof UnlockableContent payload && objects[i * 2 + 1] instanceof Integer count) {
                 inputPayload.add(new PayloadStack(payload, count));
+            } else if (objects[i * 2] instanceof String key) {
+                // 支持通过字符串键设置 powerUse 和 craftTime
+                Object val = objects[i * 2 + 1];
+                float value = (val instanceof Number) ? ((Number) val).floatValue() : 0f;
+                if (key.equals("power")) {
+                    powerUse = value;
+                } else if (key.equals("time")) {
+                    craftTime = value;
+                }
             }
         }
     }
