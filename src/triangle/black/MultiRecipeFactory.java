@@ -12,7 +12,9 @@ import mindustry.content.Liquids;
 import mindustry.core.UI;
 import mindustry.ctype.UnlockableContent;
 import mindustry.gen.Icon;
+import mindustry.graphics.Pal;
 import mindustry.type.*;
+import mindustry.ui.Bar;
 import mindustry.ui.Styles;
 import mindustry.world.Block;
 import mindustry.world.blocks.payloads.BuildPayload;
@@ -129,7 +131,11 @@ public class MultiRecipeFactory extends GenericCrafter {
                                 recipe.outputItem.each(stack -> rec.add(display(stack.item, stack.amount, recipe.craftTime)).row());
                                 recipe.outputLiquid.each(stack -> rec.add(display(stack.liquid, stack.amount * 60, 60f)).row());
                                 recipe.outputPayload.each(stack -> rec.add(display(stack.item, stack.amount, recipe.craftTime)).row());
-                            }).growX();
+                            }).growX().row();
+
+                            inner.table(rec -> {
+                                rec.add("----------------------------");
+                            });
                         });
                     }).fillX();
                     cont.row();
