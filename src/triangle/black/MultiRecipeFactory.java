@@ -1,6 +1,7 @@
 package triangle.black;
 
 import arc.scene.ui.Image;
+import arc.scene.ui.ScrollPane;
 import arc.scene.ui.layout.Stack;
 import arc.scene.ui.layout.Table;
 import arc.struct.Seq;
@@ -110,21 +111,24 @@ public class MultiRecipeFactory extends GenericCrafter {
                     cont.table(t -> {
                         t.left().marginLeft(12f).add("[accent][" + (finalI + 1) + "]:[]").width(48f);
                         t.table(inner -> {
-                            inner.table(row -> {
-                                row.left();
-                                recipe.inputItem.each(stack -> row.add(display(stack.item, stack.amount, recipe.craftTime)));
-                                recipe.inputLiquid.each(stack -> row.add(display(stack.liquid, stack.amount * 60, 60f)));
-                                recipe.inputPayload.each(stack -> row.add(display(stack.item, stack.amount, recipe.craftTime)));
-                                // 添加电力消耗显示
-                                row.add("[stat]" + Strings.autoFixed(recipe.powerUse * 60f, 2) + " [lightgray]" + StatUnit.powerSecond.localized());
+                            inner.table(rec -> {
+                                rec.left();
+                                recipe.inputItem.each(stack -> rec.add(display(stack.item, stack.amount, recipe.craftTime)).row());
+                                recipe.inputLiquid.each(stack -> rec.add(display(stack.liquid, stack.amount * 60, 60f)).row());
+                                recipe.inputPayload.each(stack -> rec.add(display(stack.item, stack.amount, recipe.craftTime)).row());
                             }).growX();
 
-                            inner.table(row -> {
-                                row.left();
-                                row.image(Icon.right).size(32f).padLeft(8f).padRight(12f);
-                                recipe.outputItem.each(stack -> row.add(display(stack.item, stack.amount, recipe.craftTime)));
-                                recipe.outputLiquid.each(stack -> row.add(display(stack.liquid, stack.amount * 60, 60f)));
-                                recipe.outputPayload.each(stack -> row.add(display(stack.item, stack.amount, recipe.craftTime)));
+                            inner.table(rec ->{
+                                rec.left();
+                                // 添加电力消耗显示
+                                rec.add("[stat]" + Strings.autoFixed(recipe.powerUse * 60f, 2) + " [lightgray]" + StatUnit.powerSecond.localized()).row();
+                                rec.image(Icon.right).size(32f).padLeft(8f).padRight(12f);
+                            });
+
+                            inner.table(rec -> {
+                                recipe.outputItem.each(stack -> rec.add(display(stack.item, stack.amount, recipe.craftTime)).row());
+                                recipe.outputLiquid.each(stack -> rec.add(display(stack.liquid, stack.amount * 60, 60f)).row());
+                                recipe.outputPayload.each(stack -> rec.add(display(stack.item, stack.amount, recipe.craftTime)).row());
                             }).growX();
                         });
                     }).fillX();
