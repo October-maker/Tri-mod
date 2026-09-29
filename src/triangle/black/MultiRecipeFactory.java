@@ -1,5 +1,7 @@
 package triangle.black;
 
+import arc.Core;
+import arc.math.Mathf;
 import arc.scene.ui.Image;
 import arc.scene.ui.ScrollPane;
 import arc.scene.ui.layout.Stack;
@@ -17,6 +19,7 @@ import mindustry.type.*;
 import mindustry.ui.Bar;
 import mindustry.ui.Styles;
 import mindustry.world.Block;
+import mindustry.world.blocks.heat.HeatConsumer;
 import mindustry.world.blocks.payloads.BuildPayload;
 import mindustry.world.blocks.production.GenericCrafter;
 import mindustry.world.meta.*;
@@ -134,7 +137,7 @@ public class MultiRecipeFactory extends GenericCrafter {
                             }).growX().row();
 
                             inner.table(rec -> {
-                                rec.add("----------------------------");
+                                rec.add("---------");
                             });
                         });
                     }).fillX();
@@ -181,12 +184,29 @@ public class MultiRecipeFactory extends GenericCrafter {
             recipe.inputLiquid.each(stack -> addLiquidBar(stack.liquid));
             recipe.outputLiquid.each(stack -> addLiquidBar(stack.liquid));
         });
+        
+        // 添加热量进度条（仅当有配方启用热量功能时显示）
+        if (recipes.contains(r -> r.heatEnabled)) {
+            addBar("heat", (MultiRecipeFactoryBuild entity) -> {
+                Recipe current = entity.getRecipe();
+                if (current != null && current.heatEnabled && current.heatCos > 0) {
+                    return new Bar(
+                        () -> Core.bundle.format("bar.heatpercent", (int)(entity.heat + 0.01f), (int)(entity.efficiencyScale() * 100 + 0.01f)),
+                        () -> Pal.lightOrange,
+                        () -> entity.heat / current.heatCos
+                    );
+                }
+                return null;
+            });
+        }
     }
 
     // 4. 建筑实体类
-    public class MultiRecipeFactoryBuild extends GenericCrafterBuild {
+    public class MultiRecipeFactoryBuild extends GenericCrafterBuild implements HeatConsumer {
         public int recipeIndex = -1;
         public float currentPowerUse = 0f;  //当前配方的电力消耗
+        public float[] sideHeat = new float[4];
+        public float heat = 0f;
 
         public Recipe getRecipe() {
             if (recipeIndex < 0 || recipeIndex >= recipes.size) return null;
@@ -198,6 +218,39 @@ public class MultiRecipeFactory extends GenericCrafter {
                 return recipes.first();
             }
             return getRecipe();
+        }
+
+        @Override
+        public float heatRequirement() {
+            Recipe recipe = getRecipe();
+            if (recipe != null && recipe.heatEnabled) {
+                return recipe.heatCos;
+            }
+            return 0f;
+        }
+
+        @Override
+        public float[] sideHeat() {
+            return sideHeat;
+        }
+
+        @Override
+        public float efficiencyScale() {
+            Recipe recipe = getRecipe();
+            if (recipe == null || !recipe.heatEnabled || recipe.heatCos <= 0f) {
+                return 1f;
+            }
+            float over = Math.max(heat - recipe.heatCos, 0f);
+            return Math.min(Mathf.clamp(heat / recipe.heatCos) + over / recipe.heatCos, 4f);
+        }
+
+        @Override
+        public float warmupTarget() {
+            Recipe recipe = getRecipe();
+            if (recipe == null || !recipe.heatEnabled || recipe.heatCos <= 0f) {
+                return 0f;
+            }
+            return Mathf.clamp(heat / recipe.heatCos);
         }
 
         // 更新配方 - 寻找可用配方
@@ -300,6 +353,13 @@ public class MultiRecipeFactory extends GenericCrafter {
 
             Recipe current = getRecipe();
 
+            // 计算热量（在配方验证之后，确保使用正确的配方状态）
+            if (current != null && current.heatEnabled) {
+                heat = calculateHeat(sideHeat);
+            } else {
+                heat = 0f;
+            }
+
             // 调用父类更新逻辑
             super.updateTile();
 
@@ -349,6 +409,14 @@ public class MultiRecipeFactory extends GenericCrafter {
             Recipe currentRecipe = getRecipe();
             if (currentRecipe != null && power.status <= 0) {
                 return false;
+            }
+
+            // 检查热量供应（如果配方需要热量）
+            if (currentRecipe != null && currentRecipe.heatEnabled && currentRecipe.heatCos > 0f) {
+                // 只有当热量需求大于0且实际热量不足时才阻止消耗
+                if (heat < currentRecipe.heatCos) {
+                    return false;
+                }
             }
 
             if (!ignoreLiquidFullness) {

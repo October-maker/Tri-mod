@@ -16,6 +16,10 @@ public class Recipe {
     public float craftTime = 60f;
     public int priority = 0;
     public float powerUse = 1.0f;
+    
+    // 热量相关
+    public boolean heatEnabled = false; // 是否启用热量功能
+    public float heatCos = 0f; // 热量需求
 
     //public Recipe() {}
 
@@ -35,6 +39,15 @@ public class Recipe {
                     powerUse = value;
                 } else if (key.equals("time")) {
                     craftTime = value;
+                } else if (key.equals("heat")) {
+                    heatCos = value;
+                    heatEnabled = value > 0;
+                } else if (key.equals("heatEnabled")) {
+                    if (val instanceof Boolean b) {
+                        heatEnabled = b;
+                    } else {
+                        heatEnabled = value > 0;
+                    }
                 }
             }
         }
