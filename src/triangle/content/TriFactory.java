@@ -236,7 +236,7 @@ public class TriFactory {
                         outputLiquid.add(new LiquidStack(TriLiquids.steam,5.0f));
                         heatRequirement = 10f;
                         heatEnabled = true;
-                        heatOutput = 3;
+                        //heatOutput = 3;
                     }}
             );
         }};
