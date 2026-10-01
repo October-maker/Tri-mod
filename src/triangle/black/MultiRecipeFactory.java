@@ -100,38 +100,12 @@ public class MultiRecipeFactory extends GenericCrafter{
     @Override
     public void setStats() {
         super.setStats();
-        // 移除原版 GenericCrafter 及自定义消耗器带来的输入/输出/电力/生产时间/热量容量等统计，
-        // 避免信息面板中与自定义配方表重复显示原版“输出”“输入”数据
         stats.remove(Stat.input);
         stats.remove(Stat.output);
         stats.remove(Stat.productionTime);
         stats.remove(Stat.heatCapacity);
         stats.remove(Stat.powerUse);
-
-        // 添加自定义配方显示（输入、输出、电力、热量消耗与产出均在此表中展示）
         stats.add(Stat.input, displayRecipes());
-
-        // 添加热量统计
-        boolean hasHeatReq = false, hasHeatOut = false;
-        float maxHeatReq = 0, maxHeatOut = 0;
-        for (Recipe recipe : recipes) {
-            if (recipe.heatEnabled) {
-                if (recipe.heatRequirement > 0) {
-                    hasHeatReq = true;
-                    maxHeatReq = Math.max(maxHeatReq, recipe.heatRequirement);
-                }
-                if (recipe.heatOutput > 0) {
-                    hasHeatOut = true;
-                    maxHeatOut = Math.max(maxHeatOut, recipe.heatOutput);
-                }
-            }
-        }
-        if (hasHeatReq) {
-            stats.add(Stat.input, maxHeatReq, StatUnit.heatUnits);
-        }
-        if (hasHeatOut) {
-            stats.add(Stat.output, maxHeatOut, StatUnit.heatUnits);
-        }
     }
 
     // 显示所有配方
