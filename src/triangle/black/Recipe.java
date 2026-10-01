@@ -25,8 +25,7 @@ public class Recipe {
     public boolean heatEnabled = false; // 是否启用热量功能
     public float heatRequirement = 0f; // 热量需求（消耗）
     public float heatOutput = 0f; // 热量产出
-
-    //public Recipe() {}
+    public float recipeMaxEfficiency = 4f;
 
     public Recipe(Object... objects) {
         for (int i = 0; i < objects.length / 2; i++) {
@@ -56,6 +55,8 @@ public class Recipe {
                     stopLowTemperature = (val instanceof Boolean b) ? b : (value > 0);
                 } else if (key.equals("stopUndervoltage")) {
                     stopUndervoltage = (val instanceof Boolean b) ? b : (value > 0);
+                } else if (key.equals("recipeMaxEfficiency")) {
+                    recipeMaxEfficiency = value;
                 }
             }
         }

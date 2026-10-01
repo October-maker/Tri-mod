@@ -234,8 +234,9 @@ public class TriFactory {
                     new Recipe() {{
                         inputLiquid.add(new LiquidStack(Liquids.water,5.0f));
                         outputLiquid.add(new LiquidStack(TriLiquids.steam,5.0f));
-                        heatRequirement = 10f;
+                        heatRequirement = 50f;
                         heatEnabled = true;
+                        recipeMaxEfficiency = 2f;
                         //heatOutput = 3;
                     }}
 //                    new Recipe() {{
