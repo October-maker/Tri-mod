@@ -230,6 +230,15 @@ public class TriFactory {
                         powerUse = 105f/60f;
                     }}
             );
+            recipes.add(
+                    new Recipe() {{
+                        inputLiquid.add(new LiquidStack(TriLiquids.salineWater,5.0f));
+                        outputLiquid.add(new LiquidStack(TriLiquids.steam,5.0f));
+                        heatRequirement = 10f;
+                        heatEnabled = true;
+                        heatOutput = 3;
+                    }}
+            );
         }};
 //        ComprehensiveProcessingFactory = new MultiRecipeFactory("ComprehensiveProcessingFactory"){{
 //            size = 7;
