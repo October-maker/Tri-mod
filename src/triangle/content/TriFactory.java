@@ -232,13 +232,20 @@ public class TriFactory {
             );
             recipes.add(
                     new Recipe() {{
-                        inputLiquid.add(new LiquidStack(Liquids.water,5f));
-                        outputLiquid.add(new LiquidStack(TriLiquids.steam,5f));
+                        inputLiquid.add(new LiquidStack(Liquids.water,5.0f));
+                        outputLiquid.add(new LiquidStack(TriLiquids.steam,5.0f));
+                        heatRequirement = 50f;
                         heatEnabled = true;
-                        heatCos = 10;
-                        craftTime = 60f;
-                        powerUse = 105f/60f;
+                        recipeMaxEfficiency = 2f;
+                        //heatOutput = 3;
                     }}
+//                    new Recipe() {{
+//                        inputLiquid.add(new LiquidStack(Liquids.oil,5.0f));
+//                        outputLiquid.add(new LiquidStack(TriLiquids.steam,5.0f));
+//                        heatRequirement = 20f;
+//                        heatEnabled = true;
+//                        heatOutput = 5;
+//                    }}
             );
         }};
 //        ComprehensiveProcessingFactory = new MultiRecipeFactory("ComprehensiveProcessingFactory"){{

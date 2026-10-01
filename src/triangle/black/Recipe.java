@@ -21,7 +21,15 @@ public class Recipe {
     public boolean heatEnabled = false; // 是否启用热量功能
     public float heatCos = 0f; // 热量需求
 
-    //public Recipe() {}
+    //欠压或低热时是否工作
+    public boolean stopUndervoltage = false;//电力不足时立刻停止生产
+    public boolean stopLowTemperature = false;//热量不足时立刻停止生产
+    
+    // 热量相关
+    public boolean heatEnabled = false; // 是否启用热量功能
+    public float heatRequirement = 0f; // 热量需求（消耗）
+    public float heatOutput = 0f; // 热量产出
+    public float recipeMaxEfficiency = 4f;
 
     public Recipe(Object... objects) {
         for (int i = 0; i < objects.length / 2; i++) {
@@ -39,15 +47,20 @@ public class Recipe {
                     powerUse = value;
                 } else if (key.equals("time")) {
                     craftTime = value;
-                } else if (key.equals("heat")) {
-                    heatCos = value;
-                    heatEnabled = value > 0;
+                } else if (key.equals("heatReq")) {
+                    heatRequirement = value;
+                    heatEnabled = true;
+                } else if (key.equals("heatOut")) {
+                    heatOutput = value;
+                    heatEnabled = true;
                 } else if (key.equals("heatEnabled")) {
-                    if (val instanceof Boolean b) {
-                        heatEnabled = b;
-                    } else {
-                        heatEnabled = value > 0;
-                    }
+                    heatEnabled = (val instanceof Boolean b) ? b : (value > 0);
+                } else if (key.equals("stopLowTemperature")) {
+                    stopLowTemperature = (val instanceof Boolean b) ? b : (value > 0);
+                } else if (key.equals("stopUndervoltage")) {
+                    stopUndervoltage = (val instanceof Boolean b) ? b : (value > 0);
+                } else if (key.equals("recipeMaxEfficiency")) {
+                    recipeMaxEfficiency = value;
                 }
             }
         }
