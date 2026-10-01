@@ -66,8 +66,6 @@ public class MultiRecipeFactory extends GenericCrafter{
             recipe.outputPayload.each(stack -> payloadOutput.add(stack.item));
         });
 
-        // 不再调用 consumePower()，因为已经在构造函数中注册了 ConsumePowerRecipe
-
         // 初始化输出
         if (recipes.isEmpty()) {
             outputItems = new ItemStack[]{new ItemStack(Items.copper, 0)};
@@ -102,11 +100,17 @@ public class MultiRecipeFactory extends GenericCrafter{
     @Override
     public void setStats() {
         super.setStats();
-        stats.add(Stat.input, displayRecipes());
+        // 移除原版 GenericCrafter 及自定义消耗器带来的输入/输出/电力/生产时间/热量容量等统计，
+        // 避免信息面板中与自定义配方表重复显示原版“输出”“输入”数据
+        stats.remove(Stat.input);
         stats.remove(Stat.output);
         stats.remove(Stat.productionTime);
         stats.remove(Stat.heatCapacity);
-        
+        stats.remove(Stat.powerUse);
+
+        // 添加自定义配方显示（输入、输出、电力、热量消耗与产出均在此表中展示）
+        stats.add(Stat.input, displayRecipes());
+
         // 添加热量统计
         boolean hasHeatReq = false, hasHeatOut = false;
         float maxHeatReq = 0, maxHeatOut = 0;
@@ -345,6 +349,18 @@ public class MultiRecipeFactory extends GenericCrafter{
                     }
                 }
 
+                // 检查热量输入（配方启用热量且需要热量输入时，热量不足则视为不可用）
+                if (valid && recipes.get(i).heatEnabled && recipes.get(i).heatRequirement > 0) {
+                    if (heat < recipes.get(i).heatRequirement) {
+                        valid = false;
+                    }
+                }
+
+                // 检查电力输入（配方需要电力且当前没有电力供应时，视为不可用）
+                if (valid && recipes.get(i).powerUse > 0 && power.status <= 0) {
+                    valid = false;
+                }
+
                 // 检查输出容量
                 if (valid) {
                     if (!canOutputForRecipe(recipes.get(i))) {
@@ -406,6 +422,16 @@ public class MultiRecipeFactory extends GenericCrafter{
                     return false;
                 }
             }
+
+            //当热量和电力消耗不足时立刻拉闸
+            if (recipes.get(recipeIndex).heatEnabled && recipes.get(recipeIndex).heatRequirement > 0 && heat < recipes.get(recipeIndex).heatRequirement && recipes.get(recipeIndex).stopLowTemperature) {
+                return false;
+            }
+
+            if (recipes.get(recipeIndex).powerUse > 0 && power.status <= 0 && recipes.get(recipeIndex).stopUndervoltage) {
+                return false;
+            }
+
             return true;
         }
 

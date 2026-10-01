@@ -16,6 +16,10 @@ public class Recipe {
     public float craftTime = 60f;
     public int priority = 0;
     public float powerUse = 1.0f;
+
+    //欠压或低热时是否工作
+    public boolean stopUndervoltage = false;//电力不足时立刻停止生产
+    public boolean stopLowTemperature = false;//热量不足时立刻停止生产
     
     // 热量相关
     public boolean heatEnabled = false; // 是否启用热量功能
@@ -48,6 +52,10 @@ public class Recipe {
                     heatEnabled = true;
                 } else if (key.equals("heatEnabled")) {
                     heatEnabled = (val instanceof Boolean b) ? b : (value > 0);
+                } else if (key.equals("stopLowTemperature")) {
+                    stopLowTemperature = (val instanceof Boolean b) ? b : (value > 0);
+                } else if (key.equals("stopUndervoltage")) {
+                    stopUndervoltage = (val instanceof Boolean b) ? b : (value > 0);
                 }
             }
         }
