@@ -9,7 +9,10 @@ import mindustry.gen.*;
 import mindustry.mod.*;
 import mindustry.ui.dialogs.*;
 import triangle.content.*;
+import tmi.RecipeEntryPoint;
+import triangle.tmi.TriRecipeEntry;
 
+@RecipeEntryPoint(TriRecipeEntry.class)
 public class triangle extends Mod{
 
     @Override

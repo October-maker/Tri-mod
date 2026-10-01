@@ -35,6 +35,14 @@ dependencies{
     compileOnly "com.github.Anuken.Arc:arc-core:$mindustryVersion"
     compileOnly "com.github.Anuken.Mindustry:core:$mindustryVersion"
 
+    // TooManyItems 第三方配方 API（compileOnly，不随模组打包；仅安装 TMI 时被调用）
+    // TMI jar 声明 JVM 17+，而本模组以 Java 8 字节码编译；此处覆盖该依赖的 JVM 版本属性以解除 Gradle 变体解析限制
+    compileOnly('com.github.EB-wilson:TooManyItems:3.3') {
+        attributes {
+            attribute(Attribute.of('org.gradle.jvm.version', Integer), 17)
+        }
+    }
+
     annotationProcessor "com.github.Anuken:jabel:$jabelVersion"
 }
 

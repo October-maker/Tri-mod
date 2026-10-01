@@ -16,10 +16,6 @@ public class Recipe {
     public float craftTime = 60f;
     public int priority = 0;
     public float powerUse = 1.0f;
-    
-    // 热量相关
-    public boolean heatEnabled = false; // 是否启用热量功能
-    public float heatCos = 0f; // 热量需求
 
     //欠压或低热时是否工作
     public boolean stopUndervoltage = false;//电力不足时立刻停止生产
