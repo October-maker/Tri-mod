@@ -495,8 +495,8 @@ public class MultiRecipeFactory extends GenericCrafter{
                     valid = false;
                 }
 
-                // 电力不足：仅当配方设定“欠压即停”时才排除
-                if (valid && recipe.powerUse > 0 && recipe.stopUndervoltage && power.status <= 0) {
+                // 电力不足：仅当配方设定“欠压即停”时才排除（供电不足 power.status<1 即视为不满足）
+                if (valid && recipe.powerUse > 0 && recipe.stopUndervoltage && power.status < 1f) {
                     valid = false;
                 }
 
@@ -564,7 +564,7 @@ public class MultiRecipeFactory extends GenericCrafter{
                 return false;
             }
 
-            if (recipes.get(recipeIndex).powerUse > 0 && power.status <= 0 && recipes.get(recipeIndex).stopUndervoltage) {
+            if (recipes.get(recipeIndex).powerUse > 0 && power.status < 1f && recipes.get(recipeIndex).stopUndervoltage) {
                 return false;
             }
 
@@ -575,6 +575,14 @@ public class MultiRecipeFactory extends GenericCrafter{
         public void updateTile() {
             // 如果当前配方无效，尝试更新配方（严格检索，保持原逻辑）
             if (!validRecipe()) updateRecipe();
+
+            // 欠压即停：严格检索仅按“彻底没电”(power.status<=0)判断，供电不足(status<1)时可能把“欠压即停”配方重新选中；此处撤销该选中，使其进入宽松检索被排除（与热量低温即停旁路对应）
+            Recipe gated = getRecipe();
+            if (gated != null && gated.powerUse > 0 && gated.stopUndervoltage && power.status < 1f) {
+                recipeIndex = -1;
+                currentPowerUse = 0f;
+            }
+
             // 严格检索无结果时，按配方布尔值放宽热量/电力要求再检索一次
             if (getRecipe() == null) trySelectRelaxed();
 
