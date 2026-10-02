@@ -2,8 +2,10 @@ displayName: "triangle-mod"
 name: "triangle"
 author: "October"
 main: "triangle.triangle"
-description: "这是一个基于原版赛普罗拓展而成的模组，其创作理由只是因为作者打不过主线战役"
-version: 0.2.2.1
+description: ""
+subtitle: "原版拓展类模组，基于赛普罗主线创作"
+version: 0.2.3
 minGameVersion: 154
 java: true
 repo: "October-maker/Tri-mod"
+hasScripts: true
