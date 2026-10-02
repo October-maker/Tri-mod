@@ -214,6 +214,7 @@ public class TriFactory {
                         outputLiquid.add(new LiquidStack(TriLiquids.steam,4.15f));
                         craftTime = 60f;
                         powerUse = 105f/60f;
+                        stopUndervoltage = true;
                     }},
                     new Recipe() {{
                         inputLiquid.add(new LiquidStack(TriLiquids.oilDiesel,0.4f));
@@ -234,6 +235,8 @@ public class TriFactory {
                     new Recipe() {{
                         inputLiquid.add(new LiquidStack(Liquids.water,5.0f));
                         outputLiquid.add(new LiquidStack(TriLiquids.steam,5.0f));
+                        craftTime = 60f;
+                        powerUse = 105f/60f;
                         heatRequirement = 50f;
                         heatEnabled = true;
                         recipeMaxEfficiency = 2f;

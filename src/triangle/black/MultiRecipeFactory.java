@@ -3,13 +3,10 @@ package triangle.black;
 import arc.Core;
 import arc.func.Floatp;
 import arc.graphics.Color;
-import arc.graphics.Texture;
 import arc.graphics.g2d.Draw;
 import arc.graphics.g2d.Lines;
-import arc.graphics.g2d.NinePatch;
 import arc.math.Mathf;
 import arc.scene.style.Drawable;
-import arc.scene.style.NinePatchDrawable;
 import arc.scene.ui.Image;
 import arc.scene.ui.layout.Stack;
 import arc.scene.ui.layout.Table;
@@ -17,7 +14,6 @@ import arc.struct.FloatSeq;
 import arc.struct.Seq;
 import arc.util.Scaling;
 import arc.util.Strings;
-import arc.util.Time;
 import mindustry.content.Items;
 import mindustry.content.Liquids;
 import mindustry.core.UI;
@@ -38,7 +34,6 @@ import java.awt.*;
 
 public class MultiRecipeFactory extends GenericCrafter{
     public Seq<Recipe> recipes = new Seq<>();
-    public float basePowerUse = 1.0f; // 基础电力消耗
 
     public Seq<Item> itemOutput = new Seq<>();
     public Seq<Liquid> liquidOutput = new Seq<>();
@@ -213,8 +208,18 @@ public class MultiRecipeFactory extends GenericCrafter{
 
                             inner.table(rec ->{
                                 rec.left();
-                                // 添加电力消耗显示
-                                rec.add("[stat]" + Strings.autoFixed(recipe.powerUse * 60f, 2) + " [lightgray]" + StatUnit.powerSecond.localized()).row();
+                                // 添加电力消耗显示（配方存在电力消耗时）
+                                if (recipe.powerUse > 0) {
+                                    rec.table(pow ->{
+                                        pow.image(Icon.power);
+                                        pow.add("[stat]" + Strings.autoFixed(recipe.powerUse * 60f, 2) + " [lightgray]" + StatUnit.powerSecond.localized()).row();
+                                    }).row();
+                                    if (recipe.stopUndervoltage) {
+                                        rec.add("[#FF3333]" + Core.bundle.get("notUndervoltage")).row();
+                                    }else {
+                                        rec.add("[#FFD27E]" + Core.bundle.get("undervoltage")).row();
+                                    }
+                                }
                                 // 生产进度条（替代原箭头）：按 craftTime 循环填充，并显示生产时长文本
                                 float sec = recipe.craftTime / 60f;
                                 String dur;
@@ -226,7 +231,12 @@ public class MultiRecipeFactory extends GenericCrafter{
                                     dur += "sec";
                                 }
                                 float period = Math.max(recipe.craftTime / 60f, 1f / 60f);
-                                rec.add(new LoopingBar(dur, Pal.accent, () -> (Time.time / 100f % period) / period)).width(128f).height(18f).padLeft(8f).padRight(12f).row();
+                                long startNanos = System.nanoTime();
+                                rec.add(new LoopingBar(dur, Pal.accent, () -> {
+                                    // 使用实时时钟(System.nanoTime)，避免游戏暂停（如从核心数据库查看详情）时进度冻结
+                                    float elapsed = (System.nanoTime() - startNanos) / 1e9f; // 单调递增，单位秒
+                                    return (elapsed % period) / period;
+                                })).width(128f).height(18f).padLeft(8f).padRight(12f).row();
                                 // 添加热量消耗显示（配方启用热量且需要输入热量时）
                                 if (recipe.heatEnabled && recipe.heatRequirement > 0) {
                                     rec.add("[#FF6666]" + Strings.autoFixed(recipe.heatRequirement, 2) + " [lightgray]" + StatUnit.heatUnits.localized()).row();
@@ -242,12 +252,7 @@ public class MultiRecipeFactory extends GenericCrafter{
                                     rec.add("[#FF6666]" + Strings.autoFixed(recipe.heatOutput, 2) + " [lightgray]" + StatUnit.heatUnits.localized()).row();
                                 }
                             }).growX().pad(6).margin(6);
-//
-//                            inner.table(rec -> {
-//                                rec.add("--------");
-//                            });
                         }).margin(6);
-//                        t.setBackground(Styles.grayPanel);
                         t.row();
                     }).fillX();
                     cont.row();

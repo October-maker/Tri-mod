@@ -15,7 +15,7 @@ public class Recipe {
 
     public float craftTime = 60f;
     public int priority = 0;
-    public float powerUse = 1.0f;
+    public float powerUse = 0.0f;
 
     //欠压或低热时是否工作
     public boolean stopUndervoltage = false;//电力不足时立刻停止生产
