@@ -1,6 +1,7 @@
 package triangle.black;
 
 import arc.Core;
+import arc.func.Floatp;
 import arc.graphics.Color;
 import arc.graphics.Texture;
 import arc.graphics.g2d.Draw;
@@ -16,6 +17,7 @@ import arc.struct.FloatSeq;
 import arc.struct.Seq;
 import arc.util.Scaling;
 import arc.util.Strings;
+import arc.util.Time;
 import mindustry.content.Items;
 import mindustry.content.Liquids;
 import mindustry.core.UI;
@@ -177,6 +179,20 @@ public class MultiRecipeFactory extends GenericCrafter{
         }
     }
 
+    // 进度条：禁用 Bar 自带的值平滑（value 逐渐逼近 fraction），
+    // 每次绘制前 snap() 使填充严格等于 fraction，保证按时长从左到右循环填充
+    public static class LoopingBar extends Bar {
+        public LoopingBar(String name, Color color, Floatp fraction) {
+            super(name, color, fraction);
+        }
+
+        @Override
+        public void draw() {
+            snap();
+            super.draw();
+        }
+    }
+
     // 显示所有配方
     public StatValue displayRecipes() {
         return table -> {
@@ -199,8 +215,18 @@ public class MultiRecipeFactory extends GenericCrafter{
                                 rec.left();
                                 // 添加电力消耗显示
                                 rec.add("[stat]" + Strings.autoFixed(recipe.powerUse * 60f, 2) + " [lightgray]" + StatUnit.powerSecond.localized()).row();
-                                // 生产箭头
-                                rec.image(Icon.right).size(32f).padLeft(8f).padRight(12f).row();
+                                // 生产进度条（替代原箭头）：按 craftTime 循环填充，并显示生产时长文本
+                                float sec = recipe.craftTime / 60f;
+                                String dur;
+                                if (sec == Mathf.floor(sec)) {
+                                    dur = (int) sec + "sec";
+                                } else {
+                                    dur = Strings.autoFixed(sec, 2);
+                                    if (dur.endsWith("0")) dur = dur.substring(0, dur.length() - 1);
+                                    dur += "sec";
+                                }
+                                float period = Math.max(recipe.craftTime / 60f, 1f / 60f);
+                                rec.add(new LoopingBar(dur, Pal.accent, () -> (Time.time / 100f % period) / period)).width(128f).height(18f).padLeft(8f).padRight(12f).row();
                                 // 添加热量消耗显示（配方启用热量且需要输入热量时）
                                 if (recipe.heatEnabled && recipe.heatRequirement > 0) {
                                     rec.add("[#FF6666]" + Strings.autoFixed(recipe.heatRequirement, 2) + " [lightgray]" + StatUnit.heatUnits.localized()).row();

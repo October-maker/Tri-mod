@@ -5,6 +5,7 @@ import mindustry.type.ItemStack;
 import mindustry.type.LiquidStack;
 import mindustry.type.PayloadStack;
 import mindustry.world.Block;
+import org.jetbrains.annotations.NotNull;
 import tmi.recipe.Recipe;
 import tmi.recipe.RecipeParser;
 import tmi.recipe.RecipeType;
@@ -25,17 +26,19 @@ public class TriFactoryParser extends RecipeParser<MultiRecipeFactory> {
     // MultiRecipeFactory 继承自 GenericCrafter，需排除 TMI 默认的 GenericCrafterParser，
     // 使该类型方块只由本解析器处理。
     @Override
-    public Seq<Class<? extends RecipeParser<?>>> getExcludes() {
-        return Seq.with(GenericCrafterParser.class);
+    public @NotNull Seq<Class<? extends RecipeParser<?>>> getExcludes() {
+        Seq<Class<? extends RecipeParser<?>>> excludes = new Seq<>();
+        excludes.add(GenericCrafterParser.class);
+        return excludes;
     }
 
     @Override
-    public boolean isTarget(Block content) {
+    public boolean isTarget(@NotNull Block content) {
         return content instanceof MultiRecipeFactory;
     }
 
     @Override
-    public Seq<Recipe> parse(MultiRecipeFactory factory) {
+    public @NotNull Seq<Recipe> parse(@NotNull MultiRecipeFactory factory) {
         Seq<Recipe> out = new Seq<>();
 
         // 为该工厂声明的每个自定义配方生成一个 TMI 配方
@@ -64,7 +67,7 @@ public class TriFactoryParser extends RecipeParser<MultiRecipeFactory> {
 
             // 热量需求（与 TMI 原生 HeatCrafter 解析惯例一致：HeatMark 归入 POWER 区）
             if (r.heatEnabled && r.heatRequirement > 0) {
-                recipe.addMaterial(HeatMark.INSTANCE, Float.valueOf(r.heatRequirement))
+                recipe.addMaterial(HeatMark.INSTANCE, r.heatRequirement)
                         .setType(RecipeItemType.POWER)
                         .floatFormat();
             }
@@ -86,7 +89,7 @@ public class TriFactoryParser extends RecipeParser<MultiRecipeFactory> {
 
             // 热量产出（与 TMI 原生 HeatProducer 解析惯例一致）
             if (r.heatEnabled && r.heatOutput > 0) {
-                recipe.addProduction(HeatMark.INSTANCE, Float.valueOf(r.heatOutput))
+                recipe.addProduction(HeatMark.INSTANCE, r.heatOutput)
                         .setType(RecipeItemType.POWER)
                         .floatFormat();
             }
