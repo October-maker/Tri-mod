@@ -240,6 +240,11 @@ public class MultiRecipeFactory extends GenericCrafter{
                                 // 添加热量消耗显示（配方启用热量且需要输入热量时）
                                 if (recipe.heatEnabled && recipe.heatRequirement > 0) {
                                     rec.add("[#FF6666]" + Strings.autoFixed(recipe.heatRequirement, 2) + " [lightgray]" + StatUnit.heatUnits.localized()).row();
+                                    if (recipe.stopLowTemperature) {
+                                        rec.add("[#FF3333]" + Core.bundle.get("notLowTemperature")).row();
+                                    }else {
+                                        rec.add("[#FFD27E]" + Core.bundle.get("lowTemperature")).row();
+                                    }
                                 }
                             }).pad(6);
 
