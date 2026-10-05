@@ -7,22 +7,38 @@
 	"hasPower": true,//是否需要电
 	"hasLiquids": true,//是否需要液体
 	"hasItems": true,//是否需要物品
-	"craftTime":60,//输出时间间隔
+	"craftTime":30,//输出时间间隔
 	"buildCostMultiplier":1.5,//建造速度倍率
-	"updateEffect": "none",//制造完成时产生的效果
+	"craftEffect": "drillSteam",
+	"updateEffect": "drillSteam",
 	"consumes": {
 		"power":1.2,//耗电，游戏里会乘60
 		"liquids":[
-            "weakSteam/20"
+            "weakSteam/10"
         ],
 	},//制造消耗
 	"drawer":{
-	    "type":"DrawMulti",//叠加
+	    "type":"DrawMulti",
 	    "drawers":[
-	        "DrawDefault",//绘制本体贴图
+	        {
+            "type": "DrawRegion",
+            "suffix": "-bottom"
+            },
+            {
+            "type": "drawLiquidTile",
+            "drawLiquid": "water",
+            "padding": 8,
+            },
+            {
+            "type": "drawLiquidTile",
+            "drawLiquid": "weakSteam",
+            "padding": 8,
+            "alpha": 0.5,
+            },
+	        "DrawDefault",
 	    ]
 	},
-	"outputLiquid": { "liquid": "water", "amount": 20 },
+	"outputLiquid": { "liquid": "water", "amount": 10 },
 	"requirements": [
 		"TiAlloy/150",
 		"Cu/80",

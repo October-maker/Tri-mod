@@ -11,7 +11,7 @@
     ],
     "warmupSpeed":0.3,
     "liquidCapacity": 450,
-    "powerProduction": 270,
+    "powerProduction": 210,
     "itemDuration": 30, // 生成物品的持续时间
     "consumes": { // 运行时消耗的资源
 		"liquids": [
