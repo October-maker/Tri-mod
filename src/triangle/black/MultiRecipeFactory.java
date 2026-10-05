@@ -392,14 +392,15 @@ public class MultiRecipeFactory extends GenericCrafter{
             return Math.min(Mathf.clamp(rawHeat / recipe.heatRequirement) + over / recipe.heatRequirement, recipe.recipeMaxEfficiency);
         }
 
-        // 预热目标
+        // 返回用于drawer的warmup值
         @Override
         public float warmupTarget() {
             Recipe recipe = getRecipe();
-            if (recipe == null || !recipe.heatEnabled || recipe.heatRequirement <= 0) {
-                return 0f;
+            if (recipe == null) return 0f;
+            if (recipe.heatEnabled && recipe.heatRequirement > 0) {
+                return Mathf.clamp(rawHeat / recipe.heatRequirement);
             }
-            return Mathf.clamp(rawHeat / recipe.heatRequirement);
+            return efficiency;
         }
 
         // 更新配方 - 寻找可用配方
@@ -603,13 +604,6 @@ public class MultiRecipeFactory extends GenericCrafter{
                 heat = Math.max(rawHeat, current.heatRequirement);
             } else {
                 heat = rawHeat;
-            }
-            
-            // 更新预热值（用于热量产出）
-            if (current != null && current.heatEnabled && current.heatOutput > 0) {
-                warmup = Mathf.lerpDelta(warmup, efficiency, 0.1f);
-            } else {
-                warmup = 0f;
             }
 
             // 调用父类更新逻辑

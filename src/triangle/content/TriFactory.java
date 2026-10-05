@@ -194,11 +194,7 @@ public class TriFactory {
             requirements(Category.power , with(TriItems.TiAlloy,125,TriItems.FeSteel,105,TriItems.Cu,60,TriItems.MonocrystallineSi,30));
             drawer = new DrawMulti(
                     new DrawDefault(),
-                    new DrawGlowRegion(){{
-                        suffix = "-glow";
-                        color = Color.valueOf("FFFFFF99");
-                        layer = 110;
-                    }}
+                    new DrawFlame()
             );
             recipes.add(
                     new Recipe() {{
@@ -214,7 +210,6 @@ public class TriFactory {
                         outputLiquid.add(new LiquidStack(TriLiquids.steam,4.15f));
                         craftTime = 60f;
                         powerUse = 105f/60f;
-                        stopUndervoltage = true;
                     }},
                     new Recipe() {{
                         inputLiquid.add(new LiquidStack(TriLiquids.oilDiesel,0.4f));

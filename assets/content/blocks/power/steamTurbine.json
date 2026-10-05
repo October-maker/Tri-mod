@@ -22,10 +22,18 @@
     "explodeOnFull": true,
     "explosionRadius": 12,
     "explosionDamage": 820,
+    "rebuildable": false,
     "drawer": { // 图形绘制配置
-      "type": "DrawMulti", // 使用多图层绘制技术
-      "drawers": [ // 绘制图层配置
-          "DrawDefault", // 默认绘制模式
+        "type": "DrawMulti", // 使用多图层绘制技术
+        "drawers": [ // 绘制图层配置
+            "DrawDefault", // 默认绘制模式
+            {
+			"type": "DrawGlowRegion",
+			"color": "FFFFFF99",
+			"layer": 110,
+			"suffix": "-glow",
+			"glowIntensity":0,
+			},
         ]
     },
 	"research": {
