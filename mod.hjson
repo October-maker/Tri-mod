@@ -2,10 +2,10 @@ displayName: "triangle-mod"
 name: "triangle"
 author: "October"
 main: "triangle.triangle"
-description: ""
+description: "原版拓展类模组，基于赛普罗主线创作"
 subtitle: "原版拓展类模组，基于赛普罗主线创作"
-version: 0.2.3
-minGameVersion: 154
+version: 0.2.2.2
+minGameVersion: 158
 java: true
 repo: "October-maker/Tri-mod"
 hasScripts: true
