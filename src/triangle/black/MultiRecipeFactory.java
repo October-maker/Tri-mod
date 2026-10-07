@@ -7,7 +7,9 @@ import arc.graphics.g2d.Draw;
 import arc.graphics.g2d.Lines;
 import arc.math.Mathf;
 import arc.scene.style.Drawable;
+import arc.scene.ui.Button;
 import arc.scene.ui.Image;
+import arc.scene.ui.TextButton;
 import arc.scene.ui.layout.Stack;
 import arc.scene.ui.layout.Table;
 import arc.struct.FloatSeq;
@@ -57,6 +59,7 @@ public class MultiRecipeFactory extends GenericCrafter{
         consumesPower = true;
         rotate = true;
         rotateDraw = false;
+        configurable = true; // 允许打开配置面板（手动选定配方 / 自动匹配开关）
     }
 
     @Override
@@ -294,6 +297,19 @@ public class MultiRecipeFactory extends GenericCrafter{
         return table;
     }
 
+    // 仅显示资源贴图（用于配置面板中的配方行），悬停仍显示资源名
+    public static Table displayIcon(UnlockableContent content) {
+        Table table = new Table();
+        Stack stack = new Stack();
+        stack.add(new Table(o -> {
+            o.left();
+            o.add(new Image(content.uiIcon)).size(32f).scaling(Scaling.fit);
+        }));
+        StatValues.withTooltip(stack, content);
+        table.add(stack);
+        return table;
+    }
+
     @Override
     public void setBars() {
         super.setBars();
@@ -334,6 +350,8 @@ public class MultiRecipeFactory extends GenericCrafter{
         public float heat = 0f; // 当前热量值（有效热量，供可用性/消耗检查使用）
         public float rawHeat = 0f; // 实际接收的热量（供效率计算与显示使用）
         public float warmup = 0f; // 预热值（用于热量产出）
+        public boolean auto = true; // true=自动匹配配方；false=手动选定 selectedIndex 配方制作
+        public int selectedIndex = -1; // 手动模式下选定的配方索引（-1 表示未选定）
 
         public Recipe getRecipe() {
             if (recipeIndex < 0 || recipeIndex >= recipes.size) return null;
@@ -406,6 +424,7 @@ public class MultiRecipeFactory extends GenericCrafter{
         // 更新配方 - 寻找可用配方
         public void updateRecipe() {
             for (int i = recipes.size - 1; i >= 0; i--) {
+                if (!recipes.get(i).enabled) continue; // 跳过硬禁用配方
                 boolean valid = true;
 
                 // 检查物品输入
@@ -466,6 +485,7 @@ public class MultiRecipeFactory extends GenericCrafter{
         public void trySelectRelaxed() {
             for (int i = recipes.size - 1; i >= 0; i--) {
                 Recipe recipe = recipes.get(i);
+                if (!recipe.enabled) continue; // 跳过硬禁用配方
                 boolean valid = true;
 
                 // 检查物品输入
@@ -546,6 +566,7 @@ public class MultiRecipeFactory extends GenericCrafter{
         // 检查当前配方是否有效
         public boolean validRecipe() {
             if (recipeIndex < 0) return false;
+            if (!recipes.get(recipeIndex).enabled) return false; // 禁用配方视为无效
 
             for (ItemStack input : recipes.get(recipeIndex).inputItem) {
                 if (items.get(input.item) < input.amount) {
@@ -579,18 +600,31 @@ public class MultiRecipeFactory extends GenericCrafter{
 
         @Override
         public void updateTile() {
-            // 如果当前配方无效，尝试更新配方（严格检索，保持原逻辑）
-            if (!validRecipe()) updateRecipe();
+            if (auto) {
+                // === 自动匹配模式 ===
+                // 如果当前配方无效，尝试更新配方（严格检索，保持原逻辑）
+                if (!validRecipe()) updateRecipe();
 
-            // 欠压即停：严格检索仅按“彻底没电”(power.status<=0)判断，供电不足(status<1)时可能把“欠压即停”配方重新选中；此处撤销该选中，使其进入宽松检索被排除（与热量低温即停旁路对应）
-            Recipe gated = getRecipe();
-            if (gated != null && gated.powerUse > 0 && gated.stopUndervoltage && power.status < 1f) {
-                recipeIndex = -1;
-                currentPowerUse = 0f;
+                // 欠压即停：严格检索仅按“彻底没电”(power.status<=0)判断，供电不足(status<1)时可能把“欠压即停”配方重新选中；此处撤销该选中，使其进入宽松检索被排除（与热量低温即停旁路对应）
+                Recipe gated = getRecipe();
+                if (gated != null && gated.powerUse > 0 && gated.stopUndervoltage && power.status < 1f) {
+                    recipeIndex = -1;
+                    currentPowerUse = 0f;
+                }
+
+                // 严格检索无结果时，按配方布尔值放宽热量/电力要求再检索一次
+                if (getRecipe() == null) trySelectRelaxed();
+            } else {
+                // === 手动选定模式：锁定 selectedIndex 配方制作 ===
+                // 输入不足时由 ConsumeRecipe.efficiency() 使效率归零，super.updateTile() 不会推进生产
+                if (selectedIndex >= 0 && selectedIndex < recipes.size && recipes.get(selectedIndex).enabled) {
+                    recipeIndex = selectedIndex;
+                    currentPowerUse = recipes.get(selectedIndex).powerUse / 60f;
+                } else {
+                    recipeIndex = -1;
+                    currentPowerUse = 0f;
+                }
             }
-
-            // 严格检索无结果时，按配方布尔值放宽热量/电力要求再检索一次
-            if (getRecipe() == null) trySelectRelaxed();
 
             Recipe current = getRecipe();
 
@@ -651,13 +685,16 @@ public class MultiRecipeFactory extends GenericCrafter{
         public boolean shouldConsume() {
             if (getRecipe() == null) return false;
 
-            // 检查电力供应
+            // 检查电力供应：彻底没电停止；或配方设“欠压即停”且供电不足(status<1)时停止
             Recipe currentRecipe = getRecipe();
-            if (currentRecipe != null && power.status <= 0) {
-                return false;
+            if (currentRecipe != null) {
+                if (power.status <= 0 || (currentRecipe.powerUse > 0 && currentRecipe.stopUndervoltage && power.status < 1f)) {
+                    return false;
+                }
             }
 
-            // 检查热量供应（如果配方需要热量）
+            // 检查热量供应（配方需要热量且有效热量不足时停止；
+            // stopLowTemperature=false 时 heat 已被抬升到需求，不触发；=true 时 heat=rawHeat，不足则触发）
             if (currentRecipe != null && currentRecipe.heatEnabled && currentRecipe.heatRequirement > 0) {
                 if (heat < currentRecipe.heatRequirement) {
                     return false;
@@ -706,8 +743,84 @@ public class MultiRecipeFactory extends GenericCrafter{
             progress %= 1f;
 
             if (wasVisible) craftEffect.at(x, y);
-            updateRecipe(); // 尝试更新配方（严格检索，保持原逻辑）
-            if (getRecipe() == null) trySelectRelaxed(); // 严格检索无结果时按配方布尔值放宽
+            if (auto) {
+                updateRecipe(); // 自动模式：尝试更新配方（严格检索，保持原逻辑）
+                if (getRecipe() == null) trySelectRelaxed(); // 严格检索无结果时按配方布尔值放宽
+            }
+            // 手动模式：保持锁定 selectedIndex，不重新选择配方
+        }
+
+        // 配置界面：自动匹配开关 + 手动选定配方（一行一个配方，参考 displayRecipes 布局）
+        @Override
+        public void buildConfiguration(Table table) {
+            // 自动匹配开关按钮（toggle：按下=自动模式；选中配方时自动弹起）
+            TextButton autoBtn = new TextButton("AUTO", Styles.flatTogglet);
+            autoBtn.clicked(() -> {
+                // 点击自动按钮：启用自动，并取消下方配方选择
+                auto = true;
+                selectedIndex = -1;
+            });
+            table.add(autoBtn).size(240f, 46f).padBottom(8f).row();
+
+            // 配方选择区：一行一个配方，仅显示资源贴图
+            Seq<Button> rows = new Seq<>();
+            table.table(cont -> {
+                for (int i = 0; i < recipes.size; i++) {
+                    Recipe recipe = recipes.get(i);
+                    int finalI = i;
+                    Button row = new Button(Styles.flatTogglet);
+                    row.left();
+                    row.add("[accent][" + (finalI + 1) + "]:[]").width(48f);
+                    row.table(inner -> {
+                        inner.table(r -> {
+                            r.left();
+                            recipe.inputItem.each(stack -> r.add(MultiRecipeFactory.displayIcon(stack.item)));
+                            recipe.inputLiquid.each(stack -> r.add(MultiRecipeFactory.displayIcon(stack.liquid)));
+                            recipe.inputPayload.each(stack -> r.add(MultiRecipeFactory.displayIcon(stack.item)));
+                            // 电力消耗显示
+                            // 添加电力消耗显示（配方存在电力消耗时）
+                            if (recipe.powerUse > 0) {
+                                r.table(pow ->{
+                                    pow.image(Icon.power);
+                                    pow.add("[stat]" + Strings.autoFixed(recipe.powerUse * 60f, 2));
+                                }).row();
+                            }
+                        }).growX();
+                        inner.table(r -> {
+                            r.left();
+                            r.image(Icon.right).size(32f).padLeft(8f).padRight(12f);
+                            recipe.outputItem.each(stack -> r.add(MultiRecipeFactory.displayIcon(stack.item)));
+                            recipe.outputLiquid.each(stack -> r.add(MultiRecipeFactory.displayIcon(stack.liquid)));
+                            recipe.outputPayload.each(stack -> r.add(MultiRecipeFactory.displayIcon(stack.item)));
+                        }).growX();
+                    }).growX();
+                    row.clicked(() -> {
+                        if (!recipe.enabled) return;
+                        if (!auto && selectedIndex == finalI) {
+                            // 再次点击已选中的配方：取消选择，恢复自动
+                            auto = true;
+                            selectedIndex = -1;
+                        } else {
+                            // 选中该配方：切到手动（旧选中自动被本按钮替代）
+                            auto = false;
+                            selectedIndex = finalI;
+                        }
+                    });
+                    rows.add(row);
+                    cont.add(row).fillX().row();
+                }
+            });
+
+            // 刷新状态：auto 按钮按下状态与文本、配方选中高亮、禁用灰显
+            table.update(() -> {
+                autoBtn.setText(auto ? "[green]自动匹配 [lightgray]开" : "[#FFD27E]自动匹配 [lightgray]关");
+                autoBtn.setChecked(auto); // 自动模式开启时按下
+                for (int i = 0; i < rows.size; i++) {
+                    Button b = rows.get(i);
+                    b.setChecked(!auto && selectedIndex == i);
+                    b.setDisabled(!recipes.get(i).enabled);
+                }
+            });
         }
 
         @Override

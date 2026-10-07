@@ -16,6 +16,7 @@ public class Recipe {
     public float craftTime = 60f;
     public int priority = 0;
     public float powerUse = 0.0f;
+    public boolean enabled = true; // 是否启用该配方（false 时在检索与手动选择中均不可用）
 
     //欠压或低热时是否工作
     public boolean stopUndervoltage = false;//电力不足时立刻停止生产
@@ -55,6 +56,8 @@ public class Recipe {
                     stopLowTemperature = (val instanceof Boolean b) ? b : (value > 0);
                 } else if (key.equals("stopUndervoltage")) {
                     stopUndervoltage = (val instanceof Boolean b) ? b : (value > 0);
+                } else if (key.equals("enabled")) {
+                    enabled = (val instanceof Boolean b) ? b : (value > 0);
                 } else if (key.equals("recipeMaxEfficiency")) {
                     recipeMaxEfficiency = value;
                 }
