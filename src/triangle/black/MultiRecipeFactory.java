@@ -21,6 +21,7 @@ import mindustry.content.Liquids;
 import mindustry.core.UI;
 import mindustry.ctype.UnlockableContent;
 import mindustry.gen.Icon;
+import mindustry.gen.Tex;
 import mindustry.graphics.Pal;
 import mindustry.type.*;
 import mindustry.ui.Bar;
@@ -750,25 +751,57 @@ public class MultiRecipeFactory extends GenericCrafter{
             // 手动模式：保持锁定 selectedIndex，不重新选择配方
         }
 
-        // 配置界面：自动匹配开关 + 手动选定配方（一行一个配方，参考 displayRecipes 布局）
+        // 配置界面：自动匹配开关 + 手动选定配方（一行一个配方，仅贴图；点触按钮 + 选中指示灯）
         @Override
         public void buildConfiguration(Table table) {
-            // 自动匹配开关按钮（toggle：按下=自动模式；选中配方时自动弹起）
-            TextButton autoBtn = new TextButton("AUTO", Styles.flatTogglet);
+            // AUTO 按钮样式：自动模式(激活)=button-over，手动模式(未激活)=button-trans
+            TextButton.TextButtonStyle autoActive = new TextButton.TextButtonStyle(Styles.defaultt);
+            autoActive.up = Tex.buttonOver;
+            autoActive.over = Tex.buttonOver;
+            autoActive.down = Tex.buttonOver;
+            autoActive.fontColor = Color.white; // button-over 为蓝底，白字才可读（标记失效时兜底）
+
+            TextButton.TextButtonStyle autoInactive = new TextButton.TextButtonStyle(Styles.defaultt);
+            autoInactive.up = Tex.buttonTrans;
+            autoInactive.over = Tex.buttonTrans;
+            autoInactive.down = Tex.buttonTrans;
+            autoInactive.fontColor = Color.white; // 半透明底，白字可读（标记失效时兜底）
+
+            Seq<Button> rows = new Seq<>();
+            Seq<Image> checks = new Seq<>();
+
+            // 自动匹配开关按钮：初始即显示刷新后的自动状态（自动匹配开 + button-over），而非 "AUTO" 占位
+            TextButton autoBtn = new TextButton("[white]自动匹配 [lightgray]开", autoActive);
+
+            // 状态刷新：AUTO 激活贴图/文本、配方指示灯、禁用灰显
+            Runnable refresh = () -> {
+                if (auto) {
+                    autoBtn.setStyle(autoActive);
+                    autoBtn.setText("[white]自动匹配 [lightgray]开");
+                } else {
+                    autoBtn.setStyle(autoInactive);
+                    autoBtn.setText("[white]自动匹配 [lightgray]关");
+                }
+                for (int i = 0; i < rows.size; i++) {
+                    rows.get(i).setDisabled(!recipes.get(i).enabled);
+                    boolean sel = !auto && selectedIndex == i;
+                    checks.get(i).setDrawable(sel ? Tex.checkOnOver : Tex.checkOff);
+                }
+            };
+
             autoBtn.clicked(() -> {
-                // 点击自动按钮：启用自动，并取消下方配方选择
                 auto = true;
                 selectedIndex = -1;
+                refresh.run(); // 点击后立即反映黄底/指示灯
             });
             table.add(autoBtn).size(240f, 46f).padBottom(8f).row();
 
-            // 配方选择区：一行一个配方，仅显示资源贴图
-            Seq<Button> rows = new Seq<>();
+            // 配方选择区：一行一个配方，仅显示资源贴图，行尾带选中指示灯
             table.table(cont -> {
                 for (int i = 0; i < recipes.size; i++) {
                     Recipe recipe = recipes.get(i);
                     int finalI = i;
-                    Button row = new Button(Styles.flatTogglet);
+                    Button row = new Button(Styles.defaultb);
                     row.left();
                     row.add("[accent][" + (finalI + 1) + "]:[]").width(48f);
                     row.table(inner -> {
@@ -777,10 +810,9 @@ public class MultiRecipeFactory extends GenericCrafter{
                             recipe.inputItem.each(stack -> r.add(MultiRecipeFactory.displayIcon(stack.item)));
                             recipe.inputLiquid.each(stack -> r.add(MultiRecipeFactory.displayIcon(stack.liquid)));
                             recipe.inputPayload.each(stack -> r.add(MultiRecipeFactory.displayIcon(stack.item)));
-                            // 电力消耗显示
-                            // 添加电力消耗显示（配方存在电力消耗时）
+                            // 电力消耗显示（配方存在电力消耗时）
                             if (recipe.powerUse > 0) {
-                                r.table(pow ->{
+                                r.table(pow -> {
                                     pow.image(Icon.power);
                                     pow.add("[stat]" + Strings.autoFixed(recipe.powerUse * 60f, 2));
                                 }).row();
@@ -805,22 +837,21 @@ public class MultiRecipeFactory extends GenericCrafter{
                             auto = false;
                             selectedIndex = finalI;
                         }
+                        refresh.run(); // 点击后立即同步指示灯与黄底
                     });
                     rows.add(row);
-                    cont.add(row).fillX().row();
+                    // 选中指示灯（check-off=未选中，check-on-over=选中）
+                    Image check = new Image(Tex.checkOff);
+                    checks.add(check);
+                    cont.table(c -> {
+                        c.add(row).growX();
+                        c.add(check).size(32f).padLeft(8f);
+                    }).fillX().row();
                 }
             });
 
-            // 刷新状态：auto 按钮按下状态与文本、配方选中高亮、禁用灰显
-            table.update(() -> {
-                autoBtn.setText(auto ? "[green]自动匹配 [lightgray]开" : "[#FFD27E]自动匹配 [lightgray]关");
-                autoBtn.setChecked(auto); // 自动模式开启时按下
-                for (int i = 0; i < rows.size; i++) {
-                    Button b = rows.get(i);
-                    b.setChecked(!auto && selectedIndex == i);
-                    b.setDisabled(!recipes.get(i).enabled);
-                }
-            });
+            // 每帧兜底刷新（配置面板打开期间持续同步）
+            table.update(refresh);
         }
 
         @Override
