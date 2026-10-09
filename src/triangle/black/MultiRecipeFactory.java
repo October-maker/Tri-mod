@@ -16,12 +16,15 @@ import arc.struct.FloatSeq;
 import arc.struct.Seq;
 import arc.util.Scaling;
 import arc.util.Strings;
+import arc.util.io.Reads;
+import arc.util.io.Writes;
 import mindustry.content.Items;
 import mindustry.content.Liquids;
 import mindustry.core.UI;
 import mindustry.ctype.UnlockableContent;
 import mindustry.gen.Icon;
 import mindustry.gen.Tex;
+import mindustry.gen.Unit;
 import mindustry.graphics.Pal;
 import mindustry.type.*;
 import mindustry.ui.Bar;
@@ -364,6 +367,57 @@ public class MultiRecipeFactory extends GenericCrafter{
                 return recipes.first();
             }
             return getRecipe();
+        }
+
+        // 配置序列化：自动模式编码为 -1，手动模式编码为选中的配方索引（供蓝图复制/粘贴）
+        @Override
+        public Object config() {
+            return auto ? -1 : selectedIndex;
+        }
+
+        // 真正的配置处理入口：蓝图粘贴(configureAny)、UI(configure)都会经 Call.tileConfig 触发本方法。
+        // 注意 configure()/configureAny() 本身只广播，不应用配置。
+        @Override
+        public void configured(Unit unit, Object value) {
+            if (value instanceof Integer v) {
+                if (v < 0) {
+                    auto = true;
+                    selectedIndex = -1;
+                } else if (v >= 0 && v < recipes.size) {
+                    auto = false;
+                    selectedIndex = v;
+                }
+            } else {
+                super.configured(unit, value);
+            }
+        }
+
+        // 存档读写：保存自动模式 / 选中配方索引（version 1 起包含该额外数据，旧存档自动用默认值）
+        @Override
+        public byte version() {
+            return 1;
+        }
+
+        @Override
+        public void write(Writes write) {
+            super.write(write);
+            write.i(auto ? -1 : selectedIndex);
+        }
+
+        @Override
+        public void read(Reads read, byte revision) {
+            super.read(read, revision);
+            // 兼容旧存档：仅当版本 >= 1 时才存在额外 int，否则保持默认（自动模式）
+            if (revision >= 1) {
+                int v = read.i();
+                if (v < 0) {
+                    auto = true;
+                    selectedIndex = -1;
+                } else if (v >= 0 && v < recipes.size) {
+                    auto = false;
+                    selectedIndex = v;
+                }
+            }
         }
 
         // HeatConsumer 接口实现
@@ -792,6 +846,7 @@ public class MultiRecipeFactory extends GenericCrafter{
             autoBtn.clicked(() -> {
                 auto = true;
                 selectedIndex = -1;
+                configure(-1);
                 refresh.run(); // 点击后立即反映黄底/指示灯
             });
             table.add(autoBtn).size(240f, 46f).padBottom(8f).row();
@@ -830,12 +885,10 @@ public class MultiRecipeFactory extends GenericCrafter{
                         if (!recipe.enabled) return;
                         if (!auto && selectedIndex == finalI) {
                             // 再次点击已选中的配方：取消选择，恢复自动
-                            auto = true;
-                            selectedIndex = -1;
+                            configure(-1);
                         } else {
                             // 选中该配方：切到手动（旧选中自动被本按钮替代）
-                            auto = false;
-                            selectedIndex = finalI;
+                            configure(finalI);
                         }
                         refresh.run(); // 点击后立即同步指示灯与黄底
                     });
@@ -850,6 +903,8 @@ public class MultiRecipeFactory extends GenericCrafter{
                 }
             });
 
+            // 打开时立即刷新一次，避免短暂显示默认/错误状态
+            refresh.run();
             // 每帧兜底刷新（配置面板打开期间持续同步）
             table.update(refresh);
         }
