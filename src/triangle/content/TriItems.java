@@ -5,7 +5,7 @@ import mindustry.type.Item;
 //import arc.struct.*;
 
 public class TriItems {
-    public static Item I,Ti,chip4004,S,VTiFe,NaHSO4,bauxite,Al,Fe2O3,FeSteel,SSteel,FeSO4,V2O5,V,TiAlloy,WSteel,SiSand,MonocrystallineSi,Pt,kaolin,USYmolecularSieve,USY,TNT,NaCl,Cu,Co,Cr,copperCo,NaOH,Ni,NiOre,CoPrecipitation,WC,chromite;
+    public static Item I,Ti,chip4004,S,VTiFe,NaHSO4,bauxite,Al,Fe2O3,FeSteel,SSteel,FeSO4,V2O5,V,TiAlloy,WSteel,SiSand,MonocrystallineSi,Pt,kaolin,USYmolecularSieve,USY,TNT,NaCl,Cu,Co,Cr,copperCo,NaOH,Ni,NiOre,CoPrecipitation,WC,chromite,PE;
     //bullet
     public static Item LHESH,LHEAT,thermite,BHE,BHEAT,BHESH,TGW,EMPB,WBullet;
     //bucket
@@ -56,6 +56,7 @@ public class TriItems {
         CoPrecipitation = new Item("CoPrecipitation",Color.valueOf("9F9F9F")){{}};
         WC = new Item("WC",Color.valueOf("9F9F9F")){{}};
         chromite = new Item("chromite",Color.valueOf("707070")){{}};
+        PE = new Item("PE",Color.valueOf("E0E0E0")){{}};
         //bucket
         barrel = new Item("barrel",Color.valueOf("FFFFFF")){{}};
         saltwaterBucket = new Item("saltwaterBucket",Color.valueOf("FFFFFF")){{}};

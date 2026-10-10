@@ -117,13 +117,16 @@ public class TriFactory {
                         outputItem.add(new ItemStack(TriItems.WBullet,3));
                         craftTime = 60f;
                         powerUse = 1f;
+                    }},
+                    new Recipe() {{
+                        inputItem.add(new ItemStack(TriItems.PE,2));
+                        inputItem.add(new ItemStack(TriItems.FeSteel,4));
+                        inputItem.add(new ItemStack(TriItems.TNT,6));
+                        outputItem.add(new ItemStack(TriItems.LHESH,4));
+                        craftTime = 30f;
+                        powerUse = 30f/60f;
+                        requiresResearch = true;
                     }}
-//                    new Recipe() {{
-//                        inputItem.add(new ItemStack(Items.thorium, 2));
-//                        inputLiquid.add(new LiquidStack(TriLiquids.H2O2,0.2f));
-//                        outputItem.add(new ItemStack(Items.plastanium, 1));
-//                        craftTime = 120f;
-//                    }}
             );
         }};
         liquidFillingMachine = new MultiRecipeFactory("liquidFillingMachine"){{

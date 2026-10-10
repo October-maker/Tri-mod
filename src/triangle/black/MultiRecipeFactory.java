@@ -5,6 +5,7 @@ import arc.func.Floatp;
 import arc.graphics.Color;
 import arc.graphics.g2d.Draw;
 import arc.graphics.g2d.Lines;
+import arc.graphics.g2d.TextureRegion;
 import arc.math.Mathf;
 import arc.scene.style.Drawable;
 import arc.scene.ui.Button;
@@ -14,13 +15,16 @@ import arc.scene.ui.layout.Stack;
 import arc.scene.ui.layout.Table;
 import arc.struct.FloatSeq;
 import arc.struct.Seq;
+import arc.util.Log;
 import arc.util.Scaling;
 import arc.util.Strings;
 import arc.util.io.Reads;
 import arc.util.io.Writes;
 import mindustry.content.Items;
 import mindustry.content.Liquids;
+import mindustry.content.TechTree;
 import mindustry.core.UI;
+import mindustry.ctype.ContentType;
 import mindustry.ctype.UnlockableContent;
 import mindustry.gen.Icon;
 import mindustry.gen.Tex;
@@ -344,6 +348,77 @@ public class MultiRecipeFactory extends GenericCrafter{
             }
             return null;
         });
+
+        // 为需要研究的配方创建研究条目并挂载到工厂科技树节点后
+        for (int i = 0; i < recipes.size; i++) {
+            Recipe r = recipes.get(i);
+            if (r.requiresResearch) {
+                r.research = createResearch(this, r, i + 1);
+            }
+        }
+    }
+
+    // 研究条目：配方所需的 UnlockableContent（用于科技树研究与解锁判断）
+    public static class RecipeResearch extends UnlockableContent {
+        public ItemStack[] cost;
+        public RecipeResearch(String name) {
+            super(name);
+        }
+        @Override
+        public ContentType getContentType() {
+            return ContentType.error;
+        }
+        @Override
+        public ItemStack[] researchRequirements() {
+            return cost == null ? ItemStack.empty : cost;
+        }
+    }
+
+    // 为单个配方创建研究条目（研究消耗默认 inputItem，可 researchCost 覆盖；图标可用"工厂名-配方编号.png"覆盖）
+    public static UnlockableContent createResearch(UnlockableContent factory, Recipe r, int index) {
+        String rname = factory.name + "-" + index;
+        RecipeResearch c = new RecipeResearch(rname);
+        c.cost = r.researchCost != null ? r.researchCost : r.inputItem.toArray(ItemStack.class);
+        c.localizedName = researchName(factory, r, index);
+        c.uiIcon = researchIcon(factory, r, rname);
+        addResearchNode(factory, c);
+        return c;
+    }
+
+    private static String researchName(UnlockableContent factory, Recipe r, int index) {
+        if (!r.outputItem.isEmpty()) return r.outputItem.first().item.localizedName;
+        if (!r.outputLiquid.isEmpty()) return r.outputLiquid.first().liquid.localizedName;
+        if (!r.outputPayload.isEmpty()) return r.outputPayload.first().item.localizedName;
+        return factory.name + "-" + index;
+    }
+
+    private static TextureRegion researchIcon(UnlockableContent factory, Recipe r, String rname) {
+        // 用户覆盖文件："工厂名-配方编号.png" → atlas 名
+        if (Core.atlas.has(rname)) return Core.atlas.find(rname);
+        if (!r.outputItem.isEmpty()) return r.outputItem.first().item.uiIcon;
+        if (!r.outputLiquid.isEmpty()) return r.outputLiquid.first().liquid.uiIcon;
+        if (!r.outputPayload.isEmpty()) return r.outputPayload.first().item.uiIcon;
+        return factory.uiIcon;
+    }
+
+    // 将研究条目节点挂到工厂科技树节点之后（参考 addNode 改进，增加工厂节点缺失的防御）
+    public static void addResearchNode(UnlockableContent parent, UnlockableContent child) {
+        TechTree.TechNode context = TechTree.all.find(t -> t.content == parent);
+        if (context == null) {
+            Log.warn("[triangle] factory '@' not found in tech tree; research node '@' not attached.", parent.name, child.name);
+            return;
+        }
+        TechTree.TechNode node = new TechTree.TechNode(null, child, child.researchRequirements());
+        if (!context.children.contains(node)) {
+            context.children.add(node);
+        }
+        node.parent = context;
+        node.planet = context.planet;
+    }
+
+    // 配方是否处于未解锁（需研究且未研究）
+    public static boolean isLocked(Recipe r) {
+        return r.requiresResearch && (r.research == null || !r.research.unlocked());
     }
 
     // 4. 建筑实体类
@@ -479,7 +554,7 @@ public class MultiRecipeFactory extends GenericCrafter{
         // 更新配方 - 寻找可用配方
         public void updateRecipe() {
             for (int i = recipes.size - 1; i >= 0; i--) {
-                if (!recipes.get(i).enabled) continue; // 跳过硬禁用配方
+                if (isLocked(recipes.get(i))) continue; // 跳过未解锁（需研究未研究）配方
                 boolean valid = true;
 
                 // 检查物品输入
@@ -540,7 +615,7 @@ public class MultiRecipeFactory extends GenericCrafter{
         public void trySelectRelaxed() {
             for (int i = recipes.size - 1; i >= 0; i--) {
                 Recipe recipe = recipes.get(i);
-                if (!recipe.enabled) continue; // 跳过硬禁用配方
+                if (isLocked(recipe)) continue; // 跳过未解锁（需研究未研究）配方
                 boolean valid = true;
 
                 // 检查物品输入
@@ -621,7 +696,7 @@ public class MultiRecipeFactory extends GenericCrafter{
         // 检查当前配方是否有效
         public boolean validRecipe() {
             if (recipeIndex < 0) return false;
-            if (!recipes.get(recipeIndex).enabled) return false; // 禁用配方视为无效
+            if (isLocked(recipes.get(recipeIndex))) return false; // 未解锁配方视为无效
 
             for (ItemStack input : recipes.get(recipeIndex).inputItem) {
                 if (items.get(input.item) < input.amount) {
@@ -672,7 +747,7 @@ public class MultiRecipeFactory extends GenericCrafter{
             } else {
                 // === 手动选定模式：锁定 selectedIndex 配方制作 ===
                 // 输入不足时由 ConsumeRecipe.efficiency() 使效率归零，super.updateTile() 不会推进生产
-                if (selectedIndex >= 0 && selectedIndex < recipes.size && recipes.get(selectedIndex).enabled) {
+                if (selectedIndex >= 0 && selectedIndex < recipes.size && !isLocked(recipes.get(selectedIndex))) {
                     recipeIndex = selectedIndex;
                     currentPowerUse = recipes.get(selectedIndex).powerUse / 60f;
                 } else {
@@ -824,20 +899,19 @@ public class MultiRecipeFactory extends GenericCrafter{
             Seq<Button> rows = new Seq<>();
             Seq<Image> checks = new Seq<>();
 
-            // 自动匹配开关按钮：初始即显示刷新后的自动状态（自动匹配开 + button-over），而非 "AUTO" 占位
-            TextButton autoBtn = new TextButton("[white]自动匹配 [lightgray]开", autoActive);
+            TextButton autoBtn = new TextButton("AUTO", autoActive);
 
             // 状态刷新：AUTO 激活贴图/文本、配方指示灯、禁用灰显
             Runnable refresh = () -> {
                 if (auto) {
                     autoBtn.setStyle(autoActive);
-                    autoBtn.setText("[white]自动匹配 [lightgray]开");
+                    autoBtn.setText("[white]" + Core.bundle.get("autoRecipe") + "[lightgray]" + Core.bundle.get("onRe"));
                 } else {
                     autoBtn.setStyle(autoInactive);
-                    autoBtn.setText("[white]自动匹配 [lightgray]关");
+                    autoBtn.setText("[white]" + Core.bundle.get("autoRecipe") + "[lightgray]" + Core.bundle.get("offRe"));
                 }
                 for (int i = 0; i < rows.size; i++) {
-                    rows.get(i).setDisabled(!recipes.get(i).enabled);
+                    rows.get(i).setDisabled(isLocked(recipes.get(i)));
                     boolean sel = !auto && selectedIndex == i;
                     checks.get(i).setDrawable(sel ? Tex.checkOnOver : Tex.checkOff);
                 }
@@ -882,7 +956,7 @@ public class MultiRecipeFactory extends GenericCrafter{
                         }).growX();
                     }).growX();
                     row.clicked(() -> {
-                        if (!recipe.enabled) return;
+                        if (isLocked(recipe)) return;
                         if (!auto && selectedIndex == finalI) {
                             // 再次点击已选中的配方：取消选择，恢复自动
                             configure(-1);

@@ -16,7 +16,9 @@ public class Recipe {
     public float craftTime = 60f;
     public int priority = 0;
     public float powerUse = 0.0f;
-    public boolean enabled = true; // 是否启用该配方（false 时在检索与手动选择中均不可用）
+    public boolean requiresResearch = false; // 是否需要研究解锁生产（原 enabled 重命名；默认 false=无需研究）
+    public UnlockableContent research; // 研究条目（requiresResearch=true 时在工厂 init 中创建并挂载）
+    public ItemStack[] researchCost; // 可选：显式研究消耗，覆盖默认的 inputItem
 
     //欠压或低热时是否工作
     public boolean stopUndervoltage = false;//电力不足时立刻停止生产
@@ -56,8 +58,8 @@ public class Recipe {
                     stopLowTemperature = (val instanceof Boolean b) ? b : (value > 0);
                 } else if (key.equals("stopUndervoltage")) {
                     stopUndervoltage = (val instanceof Boolean b) ? b : (value > 0);
-                } else if (key.equals("enabled")) {
-                    enabled = (val instanceof Boolean b) ? b : (value > 0);
+                } else if (key.equals("requiresResearch")) {
+                    requiresResearch = (val instanceof Boolean b) ? b : (value > 0);
                 } else if (key.equals("recipeMaxEfficiency")) {
                     recipeMaxEfficiency = value;
                 }
