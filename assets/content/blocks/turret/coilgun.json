@@ -184,41 +184,21 @@
 			}//爆炸产生的子弹
 		},//破甲弹
 		"LHESH":{
+			"type": "ArmorReactiveBulletType",
 			"speed": 20,
-			"damage": 20,
+			"baseDamage": 200,
+			"baseArmor": 10,
+			"damageChangeRate": 75,
 			"splashDamageRadius":6,
 			"splashDamage":10,
 			"lifetime":35,
 			"width": 5, 
 			"height": 10,
-			"ammoMultiplier":1,
 			"knockback":10,
 			"sprite":"triangle-205HESH",
-			"pierce":false,
 			"drag":0.00,
 			"hitSize":12,
-			"pierceArmor":false,
 			"buildingDamageMultiplier":1,
-			"fragRandomSpread":90,//散射范围
-			"fragBullets":6,//产生子弹药数量
-			"fragBullet":{
-			    "collides":false,//不参与碰撞
-			    "speed": 50,
-    			"damage": 0,
-    			"fragRandomSpread":0,
-	    		"lifetime":1,
-	    		"fragBullets":1,
-			    "fragBullet": {
-                    "type": "BulletType",
-                    "damage": 30,
-                    "speed": 14,
-                    "collides":true,
-                    "lifetime": 6,
-                    /*"shootEffect": "shootSmall",（发射效果）*/
-                    "hitEffect": "flakExplosion",//爆炸效果
-                    "buildingDamageMultiplier":2.5,
-                }
-            }    
 		},//碎甲弹
 		"thermite":{
 			"speed": 18,

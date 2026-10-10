@@ -8,6 +8,7 @@ import mindustry.game.EventType.*;
 import mindustry.gen.*;
 import mindustry.mod.*;
 import mindustry.ui.dialogs.*;
+import triangle.black.ArmorReactiveBulletType;
 import triangle.content.*;
 import tmi.RecipeEntryPoint;
 import triangle.tmi.TriRecipeEntry;
@@ -17,6 +18,9 @@ public class triangle extends Mod{
 
     @Override
     public void loadContent(){
+        // 注册自定义子弹类型到 ClassMap，使其可在 JSON 内容（如炮塔）中使用：JSON 里写 "type": "ArmorReactiveBulletType"，引擎经 ClassMap 按类名解析并无参实例化。
+        ClassMap.classes.put("ArmorReactiveBulletType", ArmorReactiveBulletType.class);
+
         TriItems.load();
         TriLiquids.load();
         TriFactory.load();

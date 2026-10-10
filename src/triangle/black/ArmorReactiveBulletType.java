@@ -64,6 +64,15 @@ public class ArmorReactiveBulletType extends BasicBulletType {
         this.pierceArmor = true;
     }
 
+    /**
+     * 无参构造器：供 JSON 内容解析使用。
+     * 引擎(mindustry.mod.ContentParser)解析 JSON 子弹时通过 Class.getDeclaredConstructor()
+     * 以无参构造实例化，再反射填充 public 字段；故必须提供无参构造。
+     */
+    public ArmorReactiveBulletType(){
+        this(5f);
+    }
+
     /** f(armor) = damageChangeRate × (-ln(armor / baseArmor))，带防溢出钳制。armor == baseArmor 时返回 0。 */
     public float armorBonus(float armor){
         float a = Math.max(armor, minArmor);

@@ -2,36 +2,25 @@ package triangle.content;
 
 import arc.Events;
 import arc.util.Log;
-import mindustry.content.Planets;
+import mindustry.content.Blocks;
 import mindustry.content.TechTree;
 import mindustry.ctype.UnlockableContent;
 import mindustry.game.EventType;
-import mindustry.type.ItemStack;
-import static mindustry.content.TechTree.node;
-import static mindustry.content.TechTree.nodeRoot;
 
 public class SerTriTechTree {
     public static void load(){
-        TechTree.TechNode root = nodeRoot("SerTriTechTree", TriItems.SerTri, () -> {
-        	node(TriFactory.BulletFactory, ItemStack.with(), () -> {
-                node(TriFactory.liquidFillingMachine, ItemStack.with(), () -> {});
-                node(TriFactory.liquidPourer, ItemStack.with(), () -> {});
-            });
-            node(TriTurret.solubilize, ItemStack.with(), () -> {});
-        });
-
-        root.planet = Planets.serpulo;
-        root.children.each(c -> c.planet = Planets.serpulo);
-
-        // 将 boiler 挂载到 TiRollingMill 之后（Serpulo 科技树）。
-        // 必须延迟到 ContentInitEvent：此时 JSON 内容（含 TiRollingMill 经 research 生成的科技树节点）
-        // 与完整科技树均已加载完成；若在 loadContent 阶段直接调用 addNode，父节点尚未生成会被跳过。
+        // 将child挂载到SerContent之后（Serpulo科技树）必须延迟到ContentInitEvent：此时JSON内容（含模组json内容经research生成的科技树节点）与完整科技树均已加载完成；以达到避免在loadContent阶段直接调用addNode时发生因为父节点尚未生成导致的跳过。
         Events.on(EventType.ContentInitEvent.class, e -> addNode(TriFactory.TiRollingMill, TriFactory.boiler));
+        Events.on(EventType.ContentInitEvent.class, e -> addNode(TriFactory.TiRollingMill, TriFactory.BulletFactory));
+        Events.on(EventType.ContentInitEvent.class, e -> addNode(TriFactory.boiler, TriFactory.Condenser));
+        Events.on(EventType.ContentInitEvent.class, e -> addNode(Blocks.wave, TriTurret.solubilize));
+        Events.on(EventType.ContentInitEvent.class, e -> addNode(TriFactory.saltDistillationFurnace, TriFactory.liquidFillingMachine));
+        Events.on(EventType.ContentInitEvent.class, e -> addNode(TriFactory.liquidFillingMachine, TriFactory.liquidPourer));
     }
 
-    /**
-     * @param content 已在科技树中的父内容
-     * @param child   要挂载的 Java 子内容
+    /*
+     * content 已在科技树中的父内容
+     * child   要挂载的 Java 子内容
      */
     public static void addNode(UnlockableContent content, UnlockableContent child){
         TechTree.TechNode context = TechTree.all.find(t -> t.content == content);

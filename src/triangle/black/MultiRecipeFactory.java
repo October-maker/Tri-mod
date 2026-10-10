@@ -1,6 +1,7 @@
 package triangle.black;
 
 import arc.Core;
+import arc.Events;
 import arc.func.Floatp;
 import arc.graphics.Color;
 import arc.graphics.g2d.Draw;
@@ -26,6 +27,7 @@ import mindustry.content.TechTree;
 import mindustry.core.UI;
 import mindustry.ctype.ContentType;
 import mindustry.ctype.UnlockableContent;
+import mindustry.game.EventType.ContentInitEvent;
 import mindustry.gen.Icon;
 import mindustry.gen.Tex;
 import mindustry.gen.Unit;
@@ -349,13 +351,25 @@ public class MultiRecipeFactory extends GenericCrafter{
             return null;
         });
 
-        // 为需要研究的配方创建研究条目并挂载到工厂科技树节点后
+        // 为需要研究的配方创建研究条目（对象创建不依赖科技树，可在此进行）
         for (int i = 0; i < recipes.size; i++) {
             Recipe r = recipes.get(i);
             if (r.requiresResearch) {
                 r.research = createResearch(this, r, i + 1);
             }
         }
+
+        // 挂载研究条目到科技树节点的时机延后到 ContentInitEvent 之后：
+        // 此时原版科技树（SerpuloTechTree）已完全加载，且工厂自身的科技树节点已就位，
+        // 避免在 init() 阶段 TechTree.all 尚未包含工厂节点导致 find 返回 null 而无法挂载。
+        Events.on(ContentInitEvent.class, e -> {
+            for (int i = 0; i < recipes.size; i++) {
+                Recipe r = recipes.get(i);
+                if (r.requiresResearch && r.research != null) {
+                    addResearchNode(this, r.research);
+                }
+            }
+        });
     }
 
     // 研究条目：配方所需的 UnlockableContent（用于科技树研究与解锁判断）
@@ -382,10 +396,9 @@ public class MultiRecipeFactory extends GenericCrafter{
         c.localizedName = researchName(factory, r, index);
         c.uiIcon = researchIcon(factory, r, rname);
         // 研究条目不注册进 Vars.content；hideDatabase=true 使数据库的 select 过滤将其排除（官方隐藏方式），databaseTabs 清空确保不归属任何 tab。
-        // 仅通过科技树（TechNode）显示。
+        // 仅通过科技树（TechNode）显示。挂载（addResearchNode）在 ContentInitEvent 之后进行。
         c.hideDatabase = true;
         c.databaseTabs.clear();
-        addResearchNode(factory, c);
         return c;
     }
 
