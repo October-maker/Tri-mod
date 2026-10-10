@@ -381,6 +381,10 @@ public class MultiRecipeFactory extends GenericCrafter{
         c.cost = r.researchCost != null ? r.researchCost : r.inputItem.toArray(ItemStack.class);
         c.localizedName = researchName(factory, r, index);
         c.uiIcon = researchIcon(factory, r, rname);
+        // 研究条目不注册进 Vars.content；hideDatabase=true 使数据库的 select 过滤将其排除（官方隐藏方式），databaseTabs 清空确保不归属任何 tab。
+        // 仅通过科技树（TechNode）显示。
+        c.hideDatabase = true;
+        c.databaseTabs.clear();
         addResearchNode(factory, c);
         return c;
     }
