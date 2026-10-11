@@ -35,7 +35,7 @@ Remember to attach the error text, and if you can find the crash log, please upl
 ---
 ### Regarding module compatibility
 This module is currently only compatible with [TooManyItems] [TooManyItems](https://github.com/EB-wilson/TooManyItems).\
-If you need to load other modules, please exercise caution. If any abnormalities occur, please refer to the entry titled "Abnormalities caused by mixing multiple modules"
+If you need to load other modules, please exercise caution. If any abnormalities occur, please refer to the entry titled "[Abnormalities caused by mixing multiple modules](https://github.com/October-maker/Tri-mod/blob/main/README_EN.md#abnormalities-caused-by-mixing-multiple-mods)"
 #### Abnormalities caused by mixing multiple mods
 If the game crashes or malfunctions after loading auxiliary mods (such as time acceleration mods), please consider uninstalling or replacing the conflicting auxiliary mods.
 
