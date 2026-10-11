@@ -1,14 +1,11 @@
 package triangle;
 
-import arc.*;
 import arc.util.*;
 import mindustry.*;
 import mindustry.content.*;
-import mindustry.game.EventType.*;
-import mindustry.gen.*;
 import mindustry.mod.*;
-import mindustry.ui.dialogs.*;
 import triangle.black.ArmorReactiveBulletType;
+import triangle.black.TriSetting;
 import triangle.content.*;
 import tmi.RecipeEntryPoint;
 import triangle.tmi.TriRecipeEntry;
@@ -39,20 +36,7 @@ public class triangle extends Mod{
     }
 
     public triangle(){
-        Events.on(ClientLoadEvent.class, e -> {
-            String remind = Core.bundle.get("remind");
-            String open = Core.bundle.get("began");
-            String stop = Core.bundle.get("end");
-            String word = Core.bundle.get("login");
-            String get = Core.bundle.get("Iknow");
-            //读取bundle里面的字符串
-            Time.runTask(1f, () -> {
-                BaseDialog dialog = new BaseDialog("Triangle");
-                dialog.cont.image(Core.atlas.find("logo")).pad(20f).row();
-                dialog.cont.add(open +"\n" + word + "\n" + remind + "\n" + stop).growX().wrap().width(720).maxWidth(730).pad(4).row();
-                dialog.cont.button(get, dialog::hide).size(100f, 50f);
-                dialog.show();
-            });
-        });
+        // 启动欢迎弹窗与设置页等逻辑集中在 TriSetting，此处仅注册
+        TriSetting.init();
     }
 }
