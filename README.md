@@ -5,11 +5,11 @@
 ---
 ## 总览
 本模组源于json并辅以Java实例构建而成；整体基于原版Serpulo主线创作；为Serpulo的战役进行拓展
-
+\
 在本模组中，Sharded（此后称PL）在攻城略地时接收到了未知签名与证书的公开信号：其声称是对PL所释放信号的回应，期望与PL所在势力建交并附上一份数据库链接用以表达诚意。玩家将继续作为PL清剿敌对势力，并借助数据库内容进入太空
 ---
 ## 链接
-[本模组已发布文件](https://github.com/October-maker/Tri-mod/releases)
+[本模组已发布文件](https://github.com/October-maker/Tri-mod/releases).\
 本模组也可在游戏内的模组浏览器中查看
 ---
 ## 问答
