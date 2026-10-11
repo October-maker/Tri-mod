@@ -17,12 +17,19 @@ public class TriMail{
     public final String body;
     /** 解锁条件：返回 true 表示当前战役进度已解锁该邮件。 */
     public final Boolp unlocked;
+    /** 类型：true=战役剧情邮件（战役星球 TMail 显示）；false=模组资讯邮件（主菜单 TMail 显示）。 */
+    public final boolean story;
 
     public TriMail(String key, String sender, String subject, String body, Boolp unlocked){
+        this(key, sender, subject, body, unlocked, true);
+    }
+
+    public TriMail(String key, String sender, String subject, String body, Boolp unlocked, boolean story){
         this.key = key;
         this.sender = sender;
         this.subject = subject;
         this.body = body;
         this.unlocked = unlocked;
+        this.story = story;
     }
 }

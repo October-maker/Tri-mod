@@ -5,6 +5,7 @@ import mindustry.*;
 import mindustry.mod.*;
 import triangle.black.ArmorReactiveBulletType;
 import triangle.black.TMail.TriInbox;
+import triangle.black.TMail.TriMainMenuButton;
 import triangle.black.TMail.TriPlanetMailButton;
 import triangle.black.TriSetting;
 import triangle.content.*;
@@ -43,5 +44,7 @@ public class triangle extends Mod{
         TriSetting.init();
         // 战役星球界面“收件箱”按钮
         TriPlanetMailButton.init();
+        // 主菜单 TMail 入口（固定模组资讯）
+        TriMainMenuButton.init();
     }
 }

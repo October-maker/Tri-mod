@@ -32,10 +32,15 @@ public class TriInbox{
         return mails;
     }
 
-    /** 当前战役进度已解锁的邮件。 */
+    /** 当前战役进度已解锁的战役剧情邮件（story=true）。 */
     public static Seq<TriMail> unlocked(){
+        return unlocked(true);
+    }
+
+    /** 当前战役进度已解锁的指定类型邮件（story=true 剧情 / story=false 资讯）。 */
+    public static Seq<TriMail> unlocked(boolean story){
         Seq<TriMail> out = new Seq<>();
-        for(TriMail m : mails) if(m.unlocked.get()) out.add(m);
+        for(TriMail m : mails) if(m.story == story && m.unlocked.get()) out.add(m);
         return out;
     }
 
@@ -45,12 +50,24 @@ public class TriInbox{
 
     public static void markRead(TriMail mail){
         Core.settings.put(READ_PREFIX + mail.key, true);
+        // 记录最近阅读时间戳，供“历史”分类按最后阅读顺序排列
+        Core.settings.put(READ_PREFIX + mail.key + "-time", System.currentTimeMillis());
     }
 
-    /** 未读（已解锁且未读）数量。 */
+    /** 最近一次阅读的时间戳（毫秒）；从未读过返回 0。 */
+    public static long readTime(TriMail mail){
+        return Core.settings.getLong(READ_PREFIX + mail.key + "-time", 0);
+    }
+
+    /** 未读（已解锁且未读）数量：默认统计战役剧情邮件。 */
     public static int unreadCount(){
+        return unreadCount(true);
+    }
+
+    /** 未读（已解锁且未读）数量：按类型统计（story=true 剧情 / story=false 资讯）。 */
+    public static int unreadCount(boolean story){
         int n = 0;
-        for(TriMail m : mails) if(m.unlocked.get() && !isRead(m)) n++;
+        for(TriMail m : mails) if(m.story == story && m.unlocked.get() && !isRead(m)) n++;
         return n;
     }
 
@@ -112,5 +129,15 @@ public class TriInbox{
 
         add(new TriMail("surgealloy", "总司令", "决战在即",
             "冲击合金已列入装备序列。\n能走到这一步，说明你的攻势足以动摇整片大陆。", tech(Items.surgeAlloy)));
+
+        // ---- 模组资讯邮件（主菜单 TMail 显示，无条件解锁）----
+        add(new TriMail("info_about", "Triangle 制作组", "欢迎使用 Triangle 模组",
+            "这里是 TMail 资讯频道。\n模组动态、玩法说明与世界观设定将在此发布。\n\n战役推进的剧情邮件请在战役星球界面查看。", always(), false));
+
+        add(new TriMail("info_update", "Triangle 制作组", "更新日志",
+            "本频道用于发布模组更新内容与说明。\n（示例条目，可替换为实际更新信息。）", always(), false));
+
+        add(new TriMail("info_tmail", "系统", "关于 TMail",
+            "TMail 是 Triangle 模组的叙事收件箱系统：\n战役星球界面的 TMail 显示随进度解锁的剧情邮件；\n主菜单的 TMail 显示模组资讯。", always(), false));
     }
 }
