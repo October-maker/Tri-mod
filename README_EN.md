@@ -50,5 +50,5 @@ Currently, the mod supports running on MindustryX, but unknown bugs may occur on
 
 ---
 ### About the source of inspiration
-In fact, much of the content was not entirely created by the author. For example, the design of industrial lines draws on real-world implementation methods in many aspects; and some functions of the MultiRecipeFactory were added after seeing excellent works and thinking "This feature is great, I want to make it too", before opening up the IDEA······Fortunately, there is a favorite game, many outstanding colleagues, and a vast community that can accommodate this small mod.
+In fact, much of the content was not entirely created by the author. For example, the design of industrial lines draws on real-world implementation methods in many aspects; and some functions of the MultiRecipeFactory were added after seeing excellent works and thinking "This feature is great, I want to make it too", before opening up the IDEA······Fortunately, there is a favorite game, many outstanding colleagues, and a vast community that can accommodate this small mod. .\
 In any case, the author would never say "these are all my original ideas"; that would be malicious.

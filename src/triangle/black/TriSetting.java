@@ -13,8 +13,8 @@ import mindustry.ui.dialogs.*;
  */
 public class TriSetting{
 
-    /** 启动欢迎弹窗的持久化开关（存于 Core.settings），默认显示。 */
-    public static final String STARTUP_DIALOG_KEY = "tri-startup-dialog";
+    public static String DialogKey = Core.bundle.get("tri.startup.dialog.toggle");
+    public static final String STARTUP_DIALOG_KEY = DialogKey;
 
     /** 是否已向设置界面添加“三角”设置页（防止 ClientLoadEvent 重复触发导致重复添加）。 */
     private static boolean settingsAdded = false;
@@ -59,6 +59,9 @@ public class TriSetting{
             if(settingsAdded) return;
             settingsAdded = true;
             Vars.ui.settings.addCategory(Core.bundle.get("triSettings"), t -> {
+                // checkPref 的第一参既是“设置存储键”又是“bundle 显示文案键”。
+                // STARTUP_DIALOG_KEY(=tri.startup.dialog.toggle) 即 bundle 键，故显示文本自动本地化；
+                // 且与弹窗内勾选框读写同一个键，状态保持同步（键为跨语言稳定的标识符）。
                 t.checkPref(STARTUP_DIALOG_KEY, true);
             });
         });

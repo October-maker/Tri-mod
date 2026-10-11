@@ -1,4 +1,4 @@
-package triangle.black;
+package triangle.black.MRFactory;
 
 import arc.Core;
 import arc.Events;
@@ -41,8 +41,6 @@ import mindustry.world.blocks.heat.HeatConsumer;
 import mindustry.world.blocks.payloads.BuildPayload;
 import mindustry.world.blocks.production.GenericCrafter;
 import mindustry.world.meta.*;
-
-import java.awt.*;
 
 public class MultiRecipeFactory extends GenericCrafter{
     public Seq<Recipe> recipes = new Seq<>();

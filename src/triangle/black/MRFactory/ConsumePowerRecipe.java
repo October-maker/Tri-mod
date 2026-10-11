@@ -1,4 +1,4 @@
-package triangle.black;
+package triangle.black.MRFactory;
 
 import arc.func.Func;
 import mindustry.gen.Building;

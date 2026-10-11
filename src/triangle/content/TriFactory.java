@@ -13,8 +13,8 @@ import mindustry.world.draw.DrawDefault;
 import mindustry.world.draw.DrawFlame;
 import mindustry.world.draw.DrawGlowRegion;
 import mindustry.world.draw.DrawMulti;
-import triangle.black.MultiRecipeFactory;
-import triangle.black.Recipe;
+import triangle.black.MRFactory.MultiRecipeFactory;
+import triangle.black.MRFactory.Recipe;
 
 import static mindustry.type.ItemStack.with;
 

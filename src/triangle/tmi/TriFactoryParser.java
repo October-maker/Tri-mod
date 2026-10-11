@@ -13,7 +13,7 @@ import tmi.recipe.parser.GenericCrafterParser;
 import tmi.recipe.types.HeatMark;
 import tmi.recipe.types.PowerMark;
 import tmi.recipe.types.RecipeItemType;
-import triangle.black.MultiRecipeFactory;
+import triangle.black.MRFactory.MultiRecipeFactory;
 
 /**
  * 为多配方工厂 {@link MultiRecipeFactory} 向 TMI(TooManyItems) 注册配方。
@@ -42,7 +42,7 @@ public class TriFactoryParser extends RecipeParser<MultiRecipeFactory> {
         Seq<Recipe> out = new Seq<>();
 
         // 为该工厂声明的每个自定义配方生成一个 TMI 配方
-        for (triangle.black.Recipe r : factory.recipes) {
+        for (triangle.black.MRFactory.Recipe r : factory.recipes) {
             Recipe recipe = new Recipe(RecipeType.getFactory(), getWrap(factory), r.craftTime);
 
             // 输入物品（每周期消耗，整数显示）

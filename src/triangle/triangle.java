@@ -2,9 +2,10 @@ package triangle;
 
 import arc.util.*;
 import mindustry.*;
-import mindustry.content.*;
 import mindustry.mod.*;
 import triangle.black.ArmorReactiveBulletType;
+import triangle.black.TMail.TriInbox;
+import triangle.black.TMail.TriPlanetMailButton;
 import triangle.black.TriSetting;
 import triangle.content.*;
 import tmi.RecipeEntryPoint;
@@ -26,6 +27,8 @@ public class triangle extends Mod{
         TriTurret.load();
         TriWeather.load();
         SerTriTechTree.load();
+        // 注册叙事邮件（此时 vanilla 内容已创建，可按科技/占领进度解锁）
+        TriInbox.registerDefaults();
         Vars.renderer.minZoom =0.3f;
         Vars.renderer.maxZoom = 20.0f;
         float MiZ = Vars.renderer.minZoom;
@@ -36,7 +39,9 @@ public class triangle extends Mod{
     }
 
     public triangle(){
-        // 启动欢迎弹窗与设置页等逻辑集中在 TriSetting，此处仅注册
+        // 欢迎弹窗与设置页逻辑集中在 TriSetting
         TriSetting.init();
+        // 战役星球界面“收件箱”按钮
+        TriPlanetMailButton.init();
     }
 }
