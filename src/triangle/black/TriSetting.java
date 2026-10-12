@@ -13,7 +13,7 @@ import mindustry.ui.dialogs.*;
  */
 public class TriSetting{
 
-    public static String DialogKey = Core.bundle.get("tri.startup.dialog.toggle");
+    public static String DialogKey = Core.bundle.get("tri.startupDialogToggle");
     public static final String STARTUP_DIALOG_KEY = DialogKey;
 
     /** 是否已向设置界面添加“三角”设置页（防止 ClientLoadEvent 重复触发导致重复添加）。 */

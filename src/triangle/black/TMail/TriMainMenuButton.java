@@ -4,6 +4,7 @@ import arc.Core;
 import arc.Events;
 import arc.scene.Element;
 import arc.scene.Group;
+import arc.scene.ui.Image;
 import arc.scene.ui.TextButton;
 import arc.scene.ui.layout.Table;
 import mindustry.Vars;
@@ -17,7 +18,7 @@ import mindustry.ui.Styles;
  * v150 的主菜单在 UI.init() 时一次性 build（读取 desktopButtons/customButtons 渲染），
  * mod 加载早于 UI，无法在其 build 前注入；因此这里逐帧自愈：
  * 在已渲染的主菜单场景树（Vars.ui.menuGroup）中递归查找名为 "buttons" 的按钮表，
- * 用原版同款风格（Styles.flatToggleMenut + Icon.chat）把按钮直接注入该表。
+ * 手动排布 chat 图标（带合适右间距）与文字，把按钮直接注入该表。
  */
 public class TriMainMenuButton{
 
@@ -40,8 +41,16 @@ public class TriMainMenuButton{
         // 用 cleart：透明背景（融入其他半透明菜单按钮，不显突兀）+ 瞬时按下（非 toggle）
         if(injected == null || !buttons.getChildren().contains(injected)){
             buttons.row(); // 独占新一行
-            injected = (TextButton)buttons.button(bundle("tri.mail.button"), Icon.chat,
-                Styles.cleart, TriMainMenuButton::showInfo).get();
+
+            TextButton b = new TextButton(bundle("tri.mail.button"), Styles.cleart);
+            b.clearChildren();
+            // 图标与文字之间留出恰当间距（arc 的 button(text,icon,...) 重载内部无右间距）
+            b.add(new Image(Icon.chat)).size(Icon.chat.imageSize()).padRight(8);
+            b.add(b.getLabel());
+            b.clicked(TriMainMenuButton::showInfo);
+
+            buttons.add(b);
+            injected = b;
         }
     }
 

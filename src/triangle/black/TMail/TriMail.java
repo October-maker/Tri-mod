@@ -3,7 +3,7 @@ package triangle.black.TMail;
 import arc.func.Boolp;
 
 /**
- * 一封叙事邮件：内容数据 + 战役进度解锁条件。
+ * 一封叙事邮件：内容数据 + 战役进度解锁条件 + 可选附件（收取时执行动作）。
  */
 public class TriMail{
 
@@ -19,17 +19,33 @@ public class TriMail{
     public final Boolp unlocked;
     /** 类型：true=战役剧情邮件（战役星球 TMail 显示）；false=模组资讯邮件（主菜单 TMail 显示）。 */
     public final boolean story;
+    /** 是否有附件（可选，编写信件时可省略）。 */
+    public final boolean hasAttachment;
+    /** 附件名称/说明（在正文下方显示）。 */
+    public final String attachment;
+    /** 收取附件时执行的动作（如强制解锁科技）。 */
+    public final Runnable onCollect;
 
+    /** 无附件。 */
     public TriMail(String key, String sender, String subject, String body, Boolp unlocked){
         this(key, sender, subject, body, unlocked, true);
     }
 
+    /** 无附件。 */
     public TriMail(String key, String sender, String subject, String body, Boolp unlocked, boolean story){
+        this(key, sender, subject, body, unlocked, story, null, null);
+    }
+
+    /** 带附件。 */
+    public TriMail(String key, String sender, String subject, String body, Boolp unlocked, boolean story, String attachment, Runnable onCollect){
         this.key = key;
         this.sender = sender;
         this.subject = subject;
         this.body = body;
         this.unlocked = unlocked;
         this.story = story;
+        this.hasAttachment = attachment != null;
+        this.attachment = attachment;
+        this.onCollect = onCollect;
     }
 }

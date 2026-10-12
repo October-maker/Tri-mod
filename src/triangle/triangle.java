@@ -7,6 +7,7 @@ import triangle.black.ArmorReactiveBulletType;
 import triangle.black.TMail.TriInbox;
 import triangle.black.TMail.TriMainMenuButton;
 import triangle.black.TMail.TriPlanetMailButton;
+import triangle.black.TMail.TriSettingsDataButton;
 import triangle.black.TriSetting;
 import triangle.content.*;
 import tmi.RecipeEntryPoint;
@@ -46,5 +47,7 @@ public class triangle extends Mod{
         TriPlanetMailButton.init();
         // 主菜单 TMail 入口（固定模组资讯）
         TriMainMenuButton.init();
+        // 设置→数据页“重置战役信件”按钮
+        TriSettingsDataButton.init();
     }
 }

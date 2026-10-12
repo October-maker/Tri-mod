@@ -143,7 +143,8 @@ public class TriMailDialog{
         // 统一放入固定宽度的内容表，限制详情页宽度
         Table content = new Table();
         content.top().left();
-        content.add("[accent]" + mail.sender + "[/]").left().growX().pad(12).row();
+        content.add("[accent]" + mail.subject).left().growX().pad(12).row();
+        content.add("[accent]" + mail.sender).left().growX().pad(12).row();
 
         // 分割线：发件人与正文之间
         Image divider = new Image(Tex.whiteui, Color.gray);
@@ -153,6 +154,26 @@ public class TriMailDialog{
         body.setWrap(true);
         body.setAlignment(Align.topLeft);
         content.add(body).left().top().growX().pad(12).row();
+
+        // 附件：正文下方，用与发件人/正文同款的分割线分隔；可点“收取附件”执行动作
+        if(TriInbox.hasAttachment(mail)){
+            Image div2 = new Image(Tex.whiteui, Color.gray);
+            content.add(div2).growX().height(2).padLeft(12).padRight(12).row();
+            content.add("[accent]附件：[/]" + mail.attachment).left().growX().pad(12).row();
+
+            TextButton collect = new TextButton(bundle("tri.mail.collect"));
+            boolean done = TriInbox.attachmentCollected(mail);
+            if(done){
+                collect.setText(bundle("tri.mail.collected"));
+                collect.setDisabled(true);
+            }
+            collect.clicked(() -> {
+                TriInbox.collectAttachment(mail);
+                collect.setText(bundle("tri.mail.collected"));
+                collect.setDisabled(true);
+            });
+            content.add(collect).size(130f, 44f).pad(8).row();
+        }
 
         content.button(bundle("tri.mail.back"), () -> {
             dialog.hide();
