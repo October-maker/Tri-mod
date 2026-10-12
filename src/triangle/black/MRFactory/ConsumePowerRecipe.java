@@ -23,6 +23,24 @@ public class ConsumePowerRecipe extends ConsumePower {
     }
     
     @Override
+    public float efficiency(Building build) {
+        // 欠压即停：当前配方低于需求电量（power.status < 1）时，该消费器视为零效率（不耗电、配合 shouldConsume 使生产完全停止）
+        if (isUndervoltage(build)) return 0f;
+        return super.efficiency(build);
+    }
+    
+    /**
+     * 欠压跳闸判定：当前配方需要电力（powerUse > 0）、设定“欠压即停”（stopUndervoltage），
+     * 且供电不满足需求（power.status < 1）时返回 true。
+     * 电力恢复供应并达到需求后自动返回 false，从而恢复生产（行为与热量的低温跳闸 stopLowTemperature 对称）。
+     */
+    public boolean isUndervoltage(Building build) {
+        Recipe recipe = recipeProvider.get(build);
+        return recipe != null && recipe.powerUse > 0 && recipe.stopUndervoltage
+                && build.power != null && build.power.status < 1f;
+    }
+    
+    @Override
     public void update(Building build) {
         // 每次更新前同步 usage 为当前配方的 powerUse
         Recipe recipe = recipeProvider.get(build);

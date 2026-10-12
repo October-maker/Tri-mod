@@ -52,17 +52,21 @@ public class MultiRecipeFactory extends GenericCrafter{
     public boolean checkItemOutputFullness = true;
     public boolean checkLiquidOutputFullness = true;
 
+    // 动态电力消耗器（保存引用，供欠压跳闸判定与效率控制使用）
+    public ConsumePowerRecipe powerConsumer;
+
     public MultiRecipeFactory(String name) {
         super(name);
         // 注册自定义消费器
         consume(new ConsumeRecipe(MultiRecipeFactoryBuild::getRecipe, MultiRecipeFactoryBuild::getDisplayRecipe));
         // 注册动态电力消耗器
-        consume(new ConsumePowerRecipe(build -> {
+        powerConsumer = new ConsumePowerRecipe(build -> {
             if (build instanceof MultiRecipeFactoryBuild mrb) {
                 return mrb.getRecipe();
             }
             return null;
-        }));
+        });
+        consume(powerConsumer);
         hasPower = true;
         consumesPower = true;
         rotate = true;
@@ -667,7 +671,7 @@ public class MultiRecipeFactory extends GenericCrafter{
                 }
 
                 // 电力不足：仅当配方设定“欠压即停”时才排除（供电不足 power.status<1 即视为不满足）
-                if (valid && recipe.powerUse > 0 && recipe.stopUndervoltage && power.status < 1f) {
+                if (valid && powerConsumer.isUndervoltage(this)) {
                     valid = false;
                 }
 
@@ -736,7 +740,7 @@ public class MultiRecipeFactory extends GenericCrafter{
                 return false;
             }
 
-            if (recipes.get(recipeIndex).powerUse > 0 && power.status < 1f && recipes.get(recipeIndex).stopUndervoltage) {
+            if (powerConsumer.isUndervoltage(this)) {
                 return false;
             }
 
@@ -749,13 +753,6 @@ public class MultiRecipeFactory extends GenericCrafter{
                 // === 自动匹配模式 ===
                 // 如果当前配方无效，尝试更新配方（严格检索，保持原逻辑）
                 if (!validRecipe()) updateRecipe();
-
-                // 欠压即停：严格检索仅按“彻底没电”(power.status<=0)判断，供电不足(status<1)时可能把“欠压即停”配方重新选中；此处撤销该选中，使其进入宽松检索被排除（与热量低温即停旁路对应）
-                Recipe gated = getRecipe();
-                if (gated != null && gated.powerUse > 0 && gated.stopUndervoltage && power.status < 1f) {
-                    recipeIndex = -1;
-                    currentPowerUse = 0f;
-                }
 
                 // 严格检索无结果时，按配方布尔值放宽热量/电力要求再检索一次
                 if (getRecipe() == null) trySelectRelaxed();
@@ -833,7 +830,7 @@ public class MultiRecipeFactory extends GenericCrafter{
             // 检查电力供应：彻底没电停止；或配方设“欠压即停”且供电不足(status<1)时停止
             Recipe currentRecipe = getRecipe();
             if (currentRecipe != null) {
-                if (power.status <= 0 || (currentRecipe.powerUse > 0 && currentRecipe.stopUndervoltage && power.status < 1f)) {
+                if (power.status <= 0 || powerConsumer.isUndervoltage(this)) {
                     return false;
                 }
             }
