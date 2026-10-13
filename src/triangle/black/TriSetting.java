@@ -13,8 +13,14 @@ import mindustry.ui.dialogs.*;
  */
 public class TriSetting{
 
-    public static String DialogKey = Core.bundle.get("tri.startupDialogToggle");
-    public static final String STARTUP_DIALOG_KEY = DialogKey;
+    /**
+     * 欢迎弹窗开关的设置存储键。
+     * 设置页 checkPref 会按原版习惯以 "setting.&lt;name&gt;.name" 为 bundle 显示键查文本
+     * （缺失则回落为原始键名），故需在 bundle 中提供 setting.tri.startupDialogToggle.name。
+     * 该键同时作为设置页 checkbox 与启动弹窗内勾选框共用的设置存储键，状态保持同步。
+     * 注意：不要用 Core.bundle.get(...) 在此处静态初始化取文本——此时模组 bundle 尚未并入。
+     */
+    public static final String STARTUP_DIALOG_KEY = "tri.startupDialogToggle";
 
     /** 是否已向设置界面添加“三角”设置页（防止 ClientLoadEvent 重复触发导致重复添加）。 */
     private static boolean settingsAdded = false;

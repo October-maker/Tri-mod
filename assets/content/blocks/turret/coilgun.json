@@ -1,5 +1,5 @@
 {
-	"type": "ItemTurret",//种类
+	"type": "TriArmorTurret",//种类
 	"health": 1250,//血量
 	"size": 2,//大小 
 	"reload": 60,//装填时间
@@ -188,6 +188,7 @@
 			"speed": 20,
 			"baseDamage": 200,
 			"baseArmor": 10,
+			"ammoMultiplier": 1,
 			"damageChangeRate": 75,
 			"splashDamageRadius":6,
 			"splashDamage":10,

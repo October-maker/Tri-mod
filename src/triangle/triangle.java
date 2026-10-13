@@ -4,6 +4,7 @@ import arc.util.*;
 import mindustry.*;
 import mindustry.mod.*;
 import triangle.black.ArmorReactiveBulletType;
+import triangle.black.TriArmorTurret;
 import triangle.black.TMail.TriInbox;
 import triangle.black.TMail.TriMainMenuButton;
 import triangle.black.TMail.TriPlanetMailButton;
@@ -20,6 +21,8 @@ public class triangle extends Mod{
     public void loadContent(){
         // 注册自定义子弹类型到 ClassMap，使其可在 JSON 内容（如炮塔）中使用：JSON 里写 "type": "ArmorReactiveBulletType"，引擎经 ClassMap 按类名解析并无参实例化。
         ClassMap.classes.put("ArmorReactiveBulletType", ArmorReactiveBulletType.class);
+        // 注册自定义炮塔类，用于在炮台详情页隐藏护甲反应弹药的默认伤害/穿甲并追加自定义横向伤害表。
+        ClassMap.classes.put("TriArmorTurret", TriArmorTurret.class);
 
         TriItems.load();
         TriLiquids.load();
