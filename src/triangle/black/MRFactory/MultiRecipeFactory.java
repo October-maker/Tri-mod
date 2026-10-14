@@ -24,6 +24,7 @@ import arc.util.io.Writes;
 import mindustry.content.Items;
 import mindustry.content.Liquids;
 import mindustry.content.TechTree;
+import mindustry.Vars;
 import mindustry.core.UI;
 import mindustry.ctype.ContentType;
 import mindustry.ctype.UnlockableContent;
@@ -437,6 +438,9 @@ public class MultiRecipeFactory extends GenericCrafter{
 
     // 配方是否处于未解锁（需研究且未研究）
     public static boolean isLocked(Recipe r) {
+        if (r == null) return false;
+        // 沙盒模式（无限资源/自由建造）下，需研究的配方视为已解锁（其他情况保持需研究解锁）
+        if (Vars.state.rules.infiniteResources) return false;
         return r.requiresResearch && (r.research == null || !r.research.unlocked());
     }
 
