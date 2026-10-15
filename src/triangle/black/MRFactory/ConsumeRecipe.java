@@ -37,20 +37,24 @@ class ConsumeRecipe extends Consume {
 
     @Override
     public void update(Building build) {
-        if (recipe.get(build) == null) return;
-        for (LiquidStack stack : recipe.get(build).inputLiquid) {
-            build.liquids.remove(stack.liquid, stack.amount * build.edelta() * multiplier.get(build));
+        Recipe r = recipe.get(build);
+        if (r == null) return;
+        float m = multiplier.get(build);
+        for (LiquidStack stack : r.inputLiquid) {
+            build.liquids.remove(stack.liquid, stack.amount * build.edelta() * m);
         }
     }
 
     @Override
     public void trigger(Building build) {
-        if (recipe.get(build) == null) return;
-        for (ItemStack stack : recipe.get(build).inputItem) {
-            build.items.remove(stack.item, Math.round(stack.amount * multiplier.get(build)));
+        Recipe r = recipe.get(build);
+        if (r == null) return;
+        float m = multiplier.get(build);
+        for (ItemStack stack : r.inputItem) {
+            build.items.remove(stack.item, Math.round(stack.amount * m));
         }
-        for (PayloadStack stack : recipe.get(build).inputPayload) {
-            build.getPayloads().remove(stack.item, Math.round(stack.amount * multiplier.get(build)));
+        for (PayloadStack stack : r.inputPayload) {
+            build.getPayloads().remove(stack.item, Math.round(stack.amount * m));
         }
     }
 
@@ -58,29 +62,37 @@ class ConsumeRecipe extends Consume {
     public float efficiency(Building build) {
         float ed = build.edelta() * build.efficiencyScale();
         if (ed <= 0.00000001f) return 0f;
-        if (recipe.get(build) == null) return 0f;
+        Recipe r = recipe.get(build);
+        if (r == null) return 0f;
+        float m = multiplier.get(build);
 
         float min = 1f;
 
         // 检查载荷输入
-        for (PayloadStack stack : recipe.get(build).inputPayload) {
-            if (!build.getPayloads().contains(stack.item, Math.round(stack.amount * multiplier.get(build)))) {
+        for (PayloadStack stack : r.inputPayload) {
+            if (!build.getPayloads().contains(stack.item, Math.round(stack.amount * m))) {
                 min = 0f;
                 break;
             }
         }
 
         // 检查物品输入
-        for (ItemStack stack : recipe.get(build).inputItem) {
-            if (!build.items.has(stack.item, Math.round(stack.amount * multiplier.get(build)))) {
+        for (ItemStack stack : r.inputItem) {
+            if (!build.items.has(stack.item, Math.round(stack.amount * m))) {
                 min = 0f;
                 break;
             }
         }
 
         // 检查液体输入
-        for (LiquidStack stack : recipe.get(build).inputLiquid) {
-            min = Math.min(build.liquids.get(stack.liquid) / (stack.amount * ed * multiplier.get(build)), min);
+        for (LiquidStack stack : r.inputLiquid) {
+            float req = stack.amount * ed * m;
+            // 防止 multiplier=0 导致 0/0=NaN 污染整体效率
+            if (req <= 0.00000001f) {
+                min = 0f;
+                break;
+            }
+            min = Math.min(build.liquids.get(stack.liquid) / req, min);
         }
 
         return min;

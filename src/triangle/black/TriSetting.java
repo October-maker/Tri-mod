@@ -66,7 +66,7 @@ public class TriSetting{
             settingsAdded = true;
             Vars.ui.settings.addCategory(Core.bundle.get("triSettings"), t -> {
                 // checkPref 的第一参既是“设置存储键”又是“bundle 显示文案键”。
-                // STARTUP_DIALOG_KEY(=tri.startup.dialog.toggle) 即 bundle 键，故显示文本自动本地化；
+                // STARTUP_DIALOG_KEY(=tri.startupDialogToggle) 即 bundle 键，故显示文本自动本地化；
                 // 且与弹窗内勾选框读写同一个键，状态保持同步（键为跨语言稳定的标识符）。
                 t.checkPref(STARTUP_DIALOG_KEY, true);
             });

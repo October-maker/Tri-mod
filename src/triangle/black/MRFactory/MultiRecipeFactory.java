@@ -447,7 +447,6 @@ public class MultiRecipeFactory extends GenericCrafter{
     // 4. 建筑实体类
     public class MultiRecipeFactoryBuild extends GenericCrafterBuild implements HeatConsumer, HeatBlock {
         public int recipeIndex = -1;
-        public float currentPowerUse = 0f;  //当前配方的电力消耗
         public float[] sideHeat = new float[4]; // 四面热量输入
         public float heat = 0f; // 当前热量值（有效热量，供可用性/消耗检查使用）
         public float rawHeat = 0f; // 实际接收的热量（供效率计算与显示使用）
@@ -625,12 +624,10 @@ public class MultiRecipeFactory extends GenericCrafter{
 
                 if (valid) {
                     recipeIndex = i;
-                    currentPowerUse = recipes.get(i).powerUse / 60;
                     return;
                 }
             }
             recipeIndex = -1;
-            currentPowerUse = 0f;
         }
 
         // 宽松配方检索：仅当严格检索(updateRecipe)无结果时使用。
@@ -686,7 +683,6 @@ public class MultiRecipeFactory extends GenericCrafter{
 
                 if (valid) {
                     recipeIndex = i;
-                    currentPowerUse = recipe.powerUse / 60;
                     return;
                 }
             }
@@ -765,10 +761,8 @@ public class MultiRecipeFactory extends GenericCrafter{
                 // 输入不足时由 ConsumeRecipe.efficiency() 使效率归零，super.updateTile() 不会推进生产
                 if (selectedIndex >= 0 && selectedIndex < recipes.size && !isLocked(recipes.get(selectedIndex))) {
                     recipeIndex = selectedIndex;
-                    currentPowerUse = recipes.get(selectedIndex).powerUse / 60f;
                 } else {
                     recipeIndex = -1;
-                    currentPowerUse = 0f;
                 }
             }
 

@@ -14,7 +14,7 @@ public class Recipe {
     public Seq<PayloadStack> outputPayload = new Seq<>();
 
     public float craftTime = 60f;
-    public int priority = 0;
+    /** 单位：每 tick（1/60 秒）。每秒消耗 = powerUse × 60；如 20f/60f = 20/秒。 */
     public float powerUse = 0.0f;
     public boolean requiresResearch = false; // 是否需要研究解锁生产（原 enabled 重命名；默认 false=无需研究）
     public UnlockableContent research; // 研究条目（requiresResearch=true 时在工厂 init 中创建并挂载）

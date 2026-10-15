@@ -95,6 +95,7 @@ public class TriFactory {
             requirements(Category.crafting, with(TriItems.Cu,10,TriItems.TiAlloy,30,TriItems.FeSteel,20,TriItems.MonocrystallineSi,10));
             drawer = new DrawMulti(new DrawDefault(), new DrawFlame(Color.valueOf("E58760")));
             recipes.add(
+                    // 说明：powerUse 单位为“每 tick（1/60 秒）”，每秒消耗 = powerUse×60（如 20f/60f = 20/秒）
                     new Recipe() {{
                         inputItem.add(new ItemStack(TriItems.Cu, 2));
                         inputItem.add(new ItemStack(TriItems.FeSteel,1));
