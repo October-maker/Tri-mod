@@ -6,7 +6,9 @@ import mindustry.world.consumers.ConsumePower;
 
 /**
  * 自定义电力消耗器，根据当前配方动态调整电力消耗。
- * 每次 update 时同步 usage 字段，确保父类 ConsumePower 的电力消耗逻辑正确执行。
+ * 实际消耗由 requestedPower() 按配方 powerUse（每 tick）驱动；
+ * 父类 usage 字段仅用于 powerUse 统计显示，而 MultiRecipeFactory.setStats()
+ * 已移除该显示（改用 displayRecipes 自定义展示），故无需每帧同步 usage。
  */
 public class ConsumePowerRecipe extends ConsumePower {
     private final Func<Building, Recipe> recipeProvider;
@@ -38,13 +40,5 @@ public class ConsumePowerRecipe extends ConsumePower {
         Recipe recipe = recipeProvider.get(build);
         return recipe != null && recipe.powerUse > 0 && recipe.stopUndervoltage
                 && build.power != null && build.power.status < 1f;
-    }
-    
-    @Override
-    public void update(Building build) {
-        // 每次更新前同步 usage 为当前配方的 powerUse
-        Recipe recipe = recipeProvider.get(build);
-        usage = recipe == null ? 0f : recipe.powerUse;
-        super.update(build);
     }
 }

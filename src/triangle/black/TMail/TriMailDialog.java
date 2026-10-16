@@ -57,21 +57,24 @@ public class TriMailDialog{
     private static void build(BaseDialog dlg){
         dlg.cont.clearChildren();
 
+        // 一次解锁遍历，供分类角标与列表共用（避免每个分类各自 new Seq + 重复遍历全部邮件）
+        Seq<TriMail> all = TriInbox.unlocked(storyScope);
+
         // 顶部居中的分类栏（放大按钮 + 未读角标）
         Table bar = new Table();
         bar.center();
         ButtonGroup<TextButton> group = new ButtonGroup<>();
         group.setMinCheckCount(1);
-        addCategory(dlg, bar, group, Filter.ALL, "tri.mail.cat.all");
-        addCategory(dlg, bar, group, Filter.READ, "tri.mail.cat.read");
-        addCategory(dlg, bar, group, Filter.UNREAD, "tri.mail.cat.unread");
-        addCategory(dlg, bar, group, Filter.HISTORY, "tri.mail.cat.history");
+        addCategory(dlg, bar, group, Filter.ALL, "tri.mail.cat.all", all);
+        addCategory(dlg, bar, group, Filter.READ, "tri.mail.cat.read", all);
+        addCategory(dlg, bar, group, Filter.UNREAD, "tri.mail.cat.unread", all);
+        addCategory(dlg, bar, group, Filter.HISTORY, "tri.mail.cat.history", all);
         dlg.cont.add(bar).padTop(8).padBottom(4).row();
 
         // 竖直向下的邮件列表（居中），可滚动
         Table list = new Table();
         list.center();
-        Seq<TriMail> shown = mailsFor(filter);
+        Seq<TriMail> shown = mailsFor(filter, all);
         if(shown.isEmpty()){
             list.add("[#7f8c8d]" + bundle("tri.mail.empty") + "[/]").pad(30);
         }else{
@@ -86,9 +89,9 @@ public class TriMailDialog{
         dlg.cont.add(scroll).grow().pad(4);
     }
 
-    private static void addCategory(BaseDialog dlg, Table bar, ButtonGroup<TextButton> group, Filter f, String key){
+    private static void addCategory(BaseDialog dlg, Table bar, ButtonGroup<TextButton> group, Filter f, String key, Seq<TriMail> all){
         // 角标：该分类结果集中未读邮件的数量（>0 才显示）
-        int unread = unreadIn(mailsFor(f));
+        int unread = unreadIn(all, f);
         String text = bundle(key);
         if(unread > 0) text += " [accent](" + unread + ")";
 
@@ -185,33 +188,32 @@ public class TriMailDialog{
         dialog.show();
     }
 
-    /** 按当前分类过滤（历史按最后阅读时间倒序）。 */
-    private static Seq<TriMail> mailsFor(Filter f){
+    /** 按当前分类过滤（历史按最后阅读时间倒序）。传入已解锁邮件列表，避免重复遍历。 */
+    private static Seq<TriMail> mailsFor(Filter f, Seq<TriMail> all){
         switch(f){
-            case READ:{
-                Seq<TriMail> r = new Seq<>();
-                for(TriMail m : TriInbox.unlocked(storyScope)) if(TriInbox.isRead(m)) r.add(m);
-                return r;
-            }
-            case UNREAD:{
-                Seq<TriMail> r = new Seq<>();
-                for(TriMail m : TriInbox.unlocked(storyScope)) if(!TriInbox.isRead(m)) r.add(m);
-                return r;
-            }
+            case READ: return filter(all, true);
+            case UNREAD: return filter(all, false);
             case HISTORY:{
-                Seq<TriMail> r = new Seq<>();
-                for(TriMail m : TriInbox.unlocked(storyScope)) if(TriInbox.isRead(m)) r.add(m);
+                Seq<TriMail> r = filter(all, true);
                 r.sort((a, b) -> Long.compare(TriInbox.readTime(b), TriInbox.readTime(a))); // 最后阅读的在前
                 return r;
             }
-            default: return TriInbox.unlocked(storyScope); // ALL，且限定当前作用域
+            default: return all; // ALL，且限定当前作用域
         }
     }
 
-    /** 统计某列表中的未读数量。 */
-    private static int unreadIn(Seq<TriMail> list){
+    /** 按已读状态过滤出新的列表（复用传入的解锁列表，不重复遍历 TriInbox）。 */
+    private static Seq<TriMail> filter(Seq<TriMail> all, boolean read){
+        Seq<TriMail> r = new Seq<>();
+        for(TriMail m : all) if(TriInbox.isRead(m) == read) r.add(m);
+        return r;
+    }
+
+    /** 统计某分类中的未读数量（已读/历史类恒为 0；全部/未读类返回未读总数，一次遍历计数）。 */
+    private static int unreadIn(Seq<TriMail> all, Filter f){
+        if(f == Filter.READ || f == Filter.HISTORY) return 0;
         int n = 0;
-        for(TriMail m : list) if(!TriInbox.isRead(m)) n++;
+        for(TriMail m : all) if(!TriInbox.isRead(m)) n++;
         return n;
     }
 

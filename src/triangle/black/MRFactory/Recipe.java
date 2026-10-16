@@ -1,6 +1,7 @@
 package triangle.black.MRFactory;
 
 import arc.struct.Seq;
+import arc.util.Log;
 import mindustry.ctype.UnlockableContent;
 import mindustry.type.*;
 
@@ -31,6 +32,12 @@ public class Recipe {
     public float recipeMaxEfficiency = 4f;
 
     public Recipe(Object... objects) {
+        // 参数必须成对（键:值 或 资源:数量）；奇数长度说明配置笔误，最后一个参数会被静默丢弃，
+        // 提前告警避免配方配置错误静默失效
+        if(objects.length % 2 != 0){
+            Log.warn("[triangle] Recipe 构造器收到奇数个参数（@ 个），最后一个参数 '@' 被忽略；配方参数应为成对的 键:值 或 资源:数量。",
+                    objects.length, String.valueOf(objects[objects.length - 1]));
+        }
         for (int i = 0; i < objects.length / 2; i++) {
             if (objects[i * 2] instanceof Item item && objects[i * 2 + 1] instanceof Integer count) {
                 inputItem.add(new ItemStack(item, count));

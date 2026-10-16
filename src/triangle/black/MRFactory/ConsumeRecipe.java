@@ -101,13 +101,19 @@ class ConsumeRecipe extends Consume {
     @Override
     public void build(Building build, Table table) {
         if (display.get(build) == null) return;
+        // 缓存上一次渲染的配方；仅当配方切换时才重建需求表，
+        // 避免配置面板打开期间每帧 clear + 新建 ReqImage（原实现每帧全量重建）。
+        Recipe[] lastShown = {null};
         table.update(() -> {
+            Recipe current = display.get(build);
+            if (current == null || lastShown[0] == current) return;
+            lastShown[0] = current;
             table.clear();
             table.left();
 
-            ItemStack[] currentItem = display.get(build).inputItem.toArray(ItemStack.class);
-            LiquidStack[] currentLiquid = display.get(build).inputLiquid.toArray(LiquidStack.class);
-            PayloadStack[] currentPayload = display.get(build).inputPayload.toArray(PayloadStack.class);
+            ItemStack[] currentItem = current.inputItem.toArray(ItemStack.class);
+            LiquidStack[] currentLiquid = current.inputLiquid.toArray(LiquidStack.class);
+            PayloadStack[] currentPayload = current.inputPayload.toArray(PayloadStack.class);
 
             table.table(cont -> {
                 int i = 0;

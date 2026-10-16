@@ -8,6 +8,7 @@ import mindustry.gen.Building;
 import mindustry.gen.Bullet;
 import mindustry.gen.Healthc;
 import mindustry.gen.Hitboxc;
+import mindustry.gen.Teamc;
 import mindustry.gen.Unit;
 
 /**
@@ -97,6 +98,9 @@ public class ArmorReactiveBulletType extends BasicBulletType {
 
     @Override
     public void hitEntity(Bullet b, Hitboxc entity, float health){
+        // 队伍门控（防御性）：默认碰撞已过滤友军，但 JSON 一旦配置 collidesTeam=true
+        // 子弹会命中友军，这里显式排除，避免误伤
+        if(entity instanceof Teamc tc && tc.team() == b.team) return;
         // 实体（单位/建筑）命中：结算自定义伤害；弹头移除/穿透由引擎 Bullet.collision 处理
         if(entity instanceof Healthc h){
             float dmg = totalDamage(armorOf(entity));

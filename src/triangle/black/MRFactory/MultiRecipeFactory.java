@@ -15,6 +15,7 @@ import arc.scene.ui.TextButton;
 import arc.scene.ui.layout.Stack;
 import arc.scene.ui.layout.Table;
 import arc.struct.FloatSeq;
+import arc.struct.ObjectMap;
 import arc.struct.Seq;
 import arc.util.Log;
 import arc.util.Scaling;
@@ -131,41 +132,48 @@ public class MultiRecipeFactory extends GenericCrafter{
         stats.add(Stat.input, displayRecipes());
     }
 
-    // 将 Drawable 包装为带白色(#FFFFFF)描边的版本
+    // 将 Drawable 包装为带白色(#FFFFFF)描边的版本（按 base 缓存复用，避免每次 new 匿名对象）
+    private static final ObjectMap<Drawable, Drawable> outlinedCache = new ObjectMap<>();
+
     public static Drawable whiteOutlined(Drawable base) {
-        return new Drawable() {
-            @Override
-            public void draw(float x, float y, float width, float height) {
-                base.draw(x, y, width, height);
-                stroke(x, y, width, height);
-            }
+        Drawable cached = outlinedCache.get(base);
+        if (cached == null) {
+            cached = new Drawable() {
+                @Override
+                public void draw(float x, float y, float width, float height) {
+                    base.draw(x, y, width, height);
+                    stroke(x, y, width, height);
+                }
 
-            @Override
-            public void draw(float x, float y, float width, float height, float color, float u1, float v1, float u2, float v2) {
-                base.draw(x, y, width, height, color, u1, v1, u2, v2);
-                stroke(x, y, width, height);
-            }
+                @Override
+                public void draw(float x, float y, float width, float height, float color, float u1, float v1, float u2, float v2) {
+                    base.draw(x, y, width, height, color, u1, v1, u2, v2);
+                    stroke(x, y, width, height);
+                }
 
-            private void stroke(float x, float y, float width, float height) {
-                Draw.color(Color.white);
-                Lines.stroke(2.5f);
-                roundRectStroke(x, y, width, height, 8f);
-                Draw.reset();
-            }
+                private void stroke(float x, float y, float width, float height) {
+                    Draw.color(Color.white);
+                    Lines.stroke(2.5f);
+                    roundRectStroke(x, y, width, height, 8f);
+                    Draw.reset();
+                }
 
-            @Override public float getLeftWidth() { return base.getLeftWidth(); }
-            @Override public void setLeftWidth(float leftWidth) { base.setLeftWidth(leftWidth); }
-            @Override public float getRightWidth() { return base.getRightWidth(); }
-            @Override public void setRightWidth(float rightWidth) { base.setRightWidth(rightWidth); }
-            @Override public float getTopHeight() { return base.getTopHeight(); }
-            @Override public void setTopHeight(float topHeight) { base.setTopHeight(topHeight); }
-            @Override public float getBottomHeight() { return base.getBottomHeight(); }
-            @Override public void setBottomHeight(float bottomHeight) { base.setBottomHeight(bottomHeight); }
-            @Override public float getMinWidth() { return base.getMinWidth(); }
-            @Override public void setMinWidth(float minWidth) { base.setMinWidth(minWidth); }
-            @Override public float getMinHeight() { return base.getMinHeight(); }
-            @Override public void setMinHeight(float minHeight) { base.setMinHeight(minHeight); }
-        };
+                @Override public float getLeftWidth() { return base.getLeftWidth(); }
+                @Override public void setLeftWidth(float leftWidth) { base.setLeftWidth(leftWidth); }
+                @Override public float getRightWidth() { return base.getRightWidth(); }
+                @Override public void setRightWidth(float rightWidth) { base.setRightWidth(rightWidth); }
+                @Override public float getTopHeight() { return base.getTopHeight(); }
+                @Override public void setTopHeight(float topHeight) { base.setTopHeight(topHeight); }
+                @Override public float getBottomHeight() { return base.getBottomHeight(); }
+                @Override public void setBottomHeight(float bottomHeight) { base.setBottomHeight(bottomHeight); }
+                @Override public float getMinWidth() { return base.getMinWidth(); }
+                @Override public void setMinWidth(float minWidth) { base.setMinWidth(minWidth); }
+                @Override public float getMinHeight() { return base.getMinHeight(); }
+                @Override public void setMinHeight(float minHeight) { base.setMinHeight(minHeight); }
+            };
+            outlinedCache.put(base, cached);
+        }
+        return cached;
     }
 
     // 绘制圆角矩形描边（四个角用弧线采样，直边由相邻弧线端点自然连成）
@@ -989,8 +997,18 @@ public class MultiRecipeFactory extends GenericCrafter{
 
             // 打开时立即刷新一次，避免短暂显示默认/错误状态
             refresh.run();
-            // 每帧兜底刷新（配置面板打开期间持续同步）
-            table.update(refresh);
+            // 状态快照：仅当 auto/选中配方变化时（本地点击或联机远程配置）才刷新 UI，
+            // 避免配置面板打开期间每帧遍历所有配方行执行 setStyle/setText/setDisabled
+            //（研究解锁不会在面板打开期间发生，锁定状态无需逐帧检查）
+            boolean[] lastAuto = {auto};
+            int[] lastSelected = {selectedIndex};
+            table.update(() -> {
+                if(auto != lastAuto[0] || selectedIndex != lastSelected[0]){
+                    lastAuto[0] = auto;
+                    lastSelected[0] = selectedIndex;
+                    refresh.run();
+                }
+            });
         }
 
         @Override

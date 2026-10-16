@@ -21,7 +21,7 @@ public class TriWeather {
             sizeMin = 5.5f;
             minAlpha = 0.5f;
             maxAlpha = 0.8f;
-            density = 3200f;
+            density = 1600f;
             baseSpeed = 10.3f;
             xspeed = -6.2f;
             yspeed = 8.5f;
