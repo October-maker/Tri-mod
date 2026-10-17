@@ -117,7 +117,7 @@ public class TriMailDialog{
         boolean read = TriInbox.isRead(mail);
 
         // 上一行：发件人（未读时高亮），顶部左对齐
-        String senderText = read ? mail.sender : "[accent]" + mail.sender + "[/]";
+        String senderText = read ? mail.sender : "[accent]" + mail.sender;
         Label sender = new Label(senderText);
         sender.setEllipsis(true);
         sender.setAlignment(Align.topLeft);
@@ -162,7 +162,7 @@ public class TriMailDialog{
         if(TriInbox.hasAttachment(mail)){
             Image div2 = new Image(Tex.whiteui, Color.gray);
             content.add(div2).growX().height(2).padLeft(12).padRight(12).row();
-            content.add("[accent]附件：[/]" + mail.attachment).left().growX().pad(12).row();
+            content.add("[accent]附件：" + mail.attachment).left().growX().pad(12).row();
 
             TextButton collect = new TextButton(bundle("tri.mail.collect"));
             boolean done = TriInbox.attachmentCollected(mail);
