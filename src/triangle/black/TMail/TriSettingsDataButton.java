@@ -14,7 +14,7 @@ import mindustry.ui.Styles;
 
 /**
  * 在设置的数据页（“清除数据/重置存档”按钮所在的对话框）注入“重置战役信件”按钮：
- * 将所有 TMail 邮件的已读状态与附件收取状态清除，恢复初始（全部未读、附件未收取）状态。
+ * 将所有 TMail 邮件的已读状态、附件收取状态与回信状态清除，恢复初始（全部未读、附件未收取、未回信）状态。
  *
  * 数据页对话框字段私有且原版不提供引用，故这里自愈注入：设置界面显示期间每帧只做
  * O(深度) 的可达性检查，仅当缓存失效（按钮表被移除/关闭、或尚未找到）才遍历场景树
@@ -83,6 +83,8 @@ public class TriSettingsDataButton{
                     Core.settings.remove(TriInbox.READ_PREFIX + m.key);
                     Core.settings.remove(TriInbox.READ_PREFIX + m.key + "-time");
                     Core.settings.remove(TriInbox.ATTACH_PREFIX + m.key);
+                    Core.settings.remove(TriInbox.REPLY_PREFIX + m.key);
+                    Core.settings.remove(TriInbox.READBTN_PREFIX + m.key);
                 }
                 Core.settings.forceSave();
                 Vars.ui.showInfoFade(bundle("tri.settings.resetmail.done"));

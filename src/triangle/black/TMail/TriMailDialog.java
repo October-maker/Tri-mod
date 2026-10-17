@@ -2,14 +2,20 @@ package triangle.black.TMail;
 
 import arc.Core;
 import arc.graphics.Color;
+import arc.input.KeyCode;
+import arc.scene.Element;
+import arc.scene.event.ClickListener;
+import arc.scene.event.InputEvent;
 import arc.scene.ui.ButtonGroup;
 import arc.scene.ui.Image;
 import arc.scene.ui.Label;
 import arc.scene.ui.ScrollPane;
 import arc.scene.ui.TextButton;
 import arc.scene.ui.layout.Table;
+import arc.scene.event.Touchable;
 import arc.struct.Seq;
 import arc.util.Align;
+import arc.util.Time;
 import mindustry.gen.Tex;
 import mindustry.ui.Styles;
 import mindustry.ui.dialogs.BaseDialog;
@@ -156,7 +162,8 @@ public class TriMailDialog{
         Label body = new Label(mail.body);
         body.setWrap(true);
         body.setAlignment(Align.topLeft);
-        content.add(body).left().top().growX().pad(12).row();
+        // 底部留 2px：使下方回信区紧贴正文
+        content.add(body).left().top().growX().pad(12, 12, 2, 12).row();
 
         // 附件：正文下方，用与发件人/正文同款的分割线分隔；可点“收取附件”执行动作
         if(TriInbox.hasAttachment(mail)){
@@ -178,14 +185,212 @@ public class TriMailDialog{
             content.add(collect).size(130f, 44f).pad(8).row();
         }
 
-        content.button(bundle("tri.mail.back"), () -> {
-            dialog.hide();
-            build(inbox); // 返回并刷新收件箱（已读状态/历史顺序/角标）
-        }).size(100f, 50f).pad(10);
+        // 回信区（仅战役剧情信件显示）：按钮控制；按下后在邮件下方展开带描边的回信框
+        if(mail.story){
+            content.add(replySection(mail)).left().row();
+        }
+
+        // “已读”按钮：点击后置灰并禁用（详情页已有右上角返回键，无需再次返回操作）；
+        // 置灰状态持久化记忆，重新打开详情页时保持置灰
+        TextButton readBtn = new TextButton(bundle("tri.mail.back"));
+        if(TriInbox.isReadBtnClicked(mail)){
+            readBtn.setDisabled(true);
+        }else{
+            readBtn.clicked(() -> {
+                TriInbox.markReadBtnClicked(mail); // 记忆置灰状态
+                readBtn.setDisabled(true);
+                dialog.hide();
+                build(inbox); // 返回并刷新收件箱（已读状态/历史顺序/角标）
+            });
+        }
+        content.add(readBtn).size(100f, 50f).pad(10);
 
         dialog.cont.add(content).width(DETAIL_WIDTH); // 限定详情页宽度
         dialog.addCloseButton();
         dialog.show();
+    }
+
+    /**
+     * 回信区：检测回信状态后决定显示形态——
+     * 未回信（isReplied=false）：显示原来的“回信”按钮，点击进入打字机 + 发送流程；
+     * 已回信（检测到回信完成）：显示“回信内容”面板（点击查看完整回信，展开时点击收回）。
+     */
+    private static Table replySection(TriMail mail){
+        Table section = new Table();
+        section.top().left();
+        // 未设置回信内容的信件（无 replyText 且 bundle 无 tri.mail.reply.<key>）：整个回信区不显示
+        if(replyTextOf(mail).isEmpty()){
+            return section;
+        }
+        if(TriInbox.isReplied(mail)){
+            // 检测到回信已完成：显示“回信内容”面板（默认收起），紧贴正文
+            section.add(replyBox(mail)).width(DETAIL_WIDTH).pad(2, 0, 2, 0).row();
+        }else{
+            // 未回信：显示“回信”按钮（回信功能入口）
+            addReplyButton(section, mail);
+        }
+        return section;
+    }
+
+    /** 回信按钮（未回信入口）：点击后进入打字机回信框；打字机未发送时点击框收回会恢复本按钮。 */
+    private static void addReplyButton(Table section, TriMail mail){
+        TextButton replyBtn = new TextButton(bundle("tri.mail.reply"));
+        replyBtn.clicked(() -> {
+            // 整表重建：按钮的 Table cell 连同布局一并清除。
+            // 注意：Element.remove() 只移除组件、其 cell 仍会占位，导致回信框上方残留空行；
+            // arc Table.clearChildren() 会连 cells 一并清除，可彻底消除占位。
+            section.clearChildren();
+            section.top().left();
+            Table box = new Table();
+            box.top().left();
+            box.background(MultiRecipeFactory.whiteOutlined(Styles.grayPanel));
+            buildReplyFull(box, mail, replyTextOf(mail), false, () -> {
+                if(TriInbox.isReplied(mail)){
+                    // 已发送：点击框 → 收起为“回信内容”面板
+                    buildReplyMini(box, mail, replyTextOf(mail));
+                }else{
+                    // 未发送：点击框 → 恢复“回信”按钮
+                    section.clearChildren();
+                    section.top().left();
+                    addReplyButton(section, mail);
+                }
+            });
+            section.add(box).width(DETAIL_WIDTH).pad(2, 0, 2, 0).row();
+        });
+        // 回信按钮紧贴正文（顶部仅 2px）
+        section.add(replyBtn).size(110f, 44f).pad(2, 8, 8, 8).row();
+    }
+
+    /** 回信框（已回信查看入口）：白描边圆角（whiteOutlined），宽度与详情页一致；初始为收起的“回信内容”面板。 */
+    private static Table replyBox(TriMail mail){
+        Table box = new Table();
+        box.top().left();
+        box.background(MultiRecipeFactory.whiteOutlined(Styles.grayPanel));
+        buildReplyMini(box, mail, replyTextOf(mail));
+        return box;
+    }
+
+    /** 回信正文：优先硬编码 replyText（中文示例信，不本地化）；否则 bundle（tri.mail.reply.<key>）。 */
+    private static String replyTextOf(TriMail mail){
+        String text = mail.replyText != null ? mail.replyText : bundle("tri.mail.reply." + mail.key);
+        if(mail.replyText == null && text.equals("tri.mail.reply." + mail.key)) return ""; // 未配置保持空白
+        return text;
+    }
+
+    /** 回信面板收起态（仅已回信显示）：白色描边框内显示“回信内容”（一行字体的高度），
+     *  点击面板任意处展开完整回信；展开时点击则收回。
+     *  面板用透明样式 TextButton 承载（天然可点击组件，不依赖表格命中判定）。 */
+    private static void buildReplyMini(Table box, TriMail mail, String text){
+        box.clearListeners();
+        box.clearChildren();
+        box.top().left();
+        box.touchable = Touchable.enabled; // 防御：确保面板本身可点击
+
+        // 一行字高的透明按钮行：点击展开完整回信（已回信查看）
+        TextButton open = new TextButton(bundle("tri.mail.reply.panel"), Styles.cleart);
+        open.clicked(() -> buildReplyFull(box, mail, text, true, null));
+        box.add(open).growX().height(26).pad(2);
+    }
+
+    /** 回信框展开态。done=false：打字机播放（每封信可单独设置速度，未设置默认 24 字/秒），
+     *  播完动态出现“发送”按钮；done=true：直接完整显示回信（无发送按钮、无空行）。
+     *  展开时点击整个表格任意处则收回：onCollapse 非空（未回信打字机）→ 执行该回调（恢复“回信”按钮）；
+     *  否则（已回信查看）→ 收起为“回信内容”面板。
+     *  注意：arc 事件冒泡（子→父），点击框内任意子元素都会冒泡到本表触发 clicked；
+     *  发送按钮的点击由按钮自身处理，收回监听通过事件目标排除其区域，避免“发送后立即收起”。 */
+    private static void buildReplyFull(Table box, TriMail mail, String text, boolean done, Runnable onCollapse){
+        box.clearListeners();
+        box.clearChildren();
+        box.top().left();
+        box.touchable = Touchable.enabled; // 防御：确保整表可点击（点击收回）
+
+        // 发件人 / 收件人：带标注字样（本地化）；文字不拦截点击（点击整表任意处可收回）
+        Label from = new Label(bundle("tri.mail.reply.from") + bundle("tri.mail.reply.sender"));
+        from.touchable = Touchable.disabled;
+        box.add(from).left().pad(12).row();
+        Label to = new Label(bundle("tri.mail.reply.to") + mail.sender);
+        to.touchable = Touchable.disabled;
+        box.add(to).left().pad(12).row();
+
+        // 分割线：收发信息与回信正文之间（同信件格式）
+        Image divider = new Image(Tex.whiteui, Color.gray);
+        divider.touchable = Touchable.disabled;
+        box.add(divider).growX().height(2).padLeft(12).padRight(12).row();
+
+        // 发送按钮引用：不预先加入布局（空文本 Label 与按钮占位都会造成空行）；
+        // 供收回判定排除其区域，且仅打字机态/无内容态动态加入
+        TextButton sendBtn = new TextButton(bundle("tri.mail.send"));
+        boolean[] btnAdded = {false};
+
+        // 点击整表收回。arc 事件冒泡：点击框内任意子元素都会冒泡到本表触发 clicked；
+        // 若本次点击目标是发送按钮（或其子元素），由按钮自身处理，不收回
+        Element[] clickTarget = {null};
+        box.addListener(new ClickListener(){
+            @Override public boolean touchDown(InputEvent e, float x, float y, int pointer, KeyCode button){
+                clickTarget[0] = e.targetActor;
+                return super.touchDown(e, x, y, pointer, button);
+            }
+            @Override public void clicked(InputEvent e, float x, float y){
+                if(clickTarget[0] != null && (clickTarget[0] == sendBtn || clickTarget[0].isDescendantOf(sendBtn))) return;
+                if(onCollapse != null){
+                    onCollapse.run();
+                }else{
+                    buildReplyMini(box, mail, text);
+                }
+            }
+        });
+
+        if(done){
+            // 已回信查看：直接用文本创建正文（避免空 Label 占行），无发送按钮
+            Label full = new Label(text);
+            full.touchable = Touchable.disabled;
+            full.setWrap(true);
+            full.setAlignment(Align.topLeft);
+            box.add(full).left().top().growX().pad(12).row();
+            return;
+        }
+
+        // 发送：执行触发动作 + 记忆状态；发送后默认展开（“默认开始”：完整回信显示，无按钮、无空行）
+        sendBtn.clicked(() -> {
+            if(mail.onReply != null) mail.onReply.run();
+            TriInbox.markReplied(mail);
+            buildReplyFull(box, mail, text, true, null);
+        });
+
+        if(text.isEmpty()){
+            box.row();
+            box.add(sendBtn).size(100f, 44f).pad(8);
+            return;
+        }
+
+        // 打字机：逻辑挂在 box 上（box 始终在场景中才会执行 update）；
+        // typed 初始不加入布局（空文本占行导致空行），出现第一个字后动态加入；
+        // 播放完成后动态加入“发送”按钮
+        Label typed = new Label("");
+        typed.touchable = Touchable.disabled;
+        typed.setWrap(true);
+        typed.setAlignment(Align.topLeft);
+        float speed = mail.replySpeed > 0 ? mail.replySpeed : 24f;
+        float start = Time.time;
+        int[] last = {0};
+        boolean[] typedAdded = {false};
+        box.update(() -> {
+            int shown = Math.min(text.length(), (int)((Time.time - start) * speed));
+            if(shown != last[0]){
+                last[0] = shown;
+                typed.setText(text.substring(0, shown));
+                if(shown > 0 && !typedAdded[0]){
+                    typedAdded[0] = true;
+                    box.row();
+                    box.add(typed).left().top().growX().pad(12).row();
+                }
+            }
+            if(shown >= text.length() && !btnAdded[0]){
+                btnAdded[0] = true;
+                box.row();
+                box.add(sendBtn).size(100f, 44f).pad(8);
+            }
+        });
     }
 
     /** 按当前分类过滤（历史按最后阅读时间倒序）。传入已解锁邮件列表，避免重复遍历。 */

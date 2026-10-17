@@ -25,19 +25,43 @@ public class TriMail{
     public final String attachment;
     /** 收取附件时执行的动作（如强制解锁科技）。 */
     public final Runnable onCollect;
+    /** 按下“回信”按钮时执行的事件触发器（可空：仅展示回信框，不触发额外动作）。 */
+    public final Runnable onReply;
+    /**
+     * 回信正文：非空时直接使用（硬编码文本，如中文示例信，不参与 bundle 本地化）；
+     * 为 null 时回信框回退到 bundle 键 tri.mail.reply.&lt;key&gt;。
+     */
+    public final String replyText;
+    /** 回信打字机速度（字符/秒）；&lt;=0 表示未设置，使用默认 24 字/秒。 */
+    public final float replySpeed;
 
-    /** 无附件。 */
+    /** 无附件、无回信事件。 */
     public TriMail(String key, String sender, String subject, String body, Boolp unlocked){
         this(key, sender, subject, body, unlocked, true);
     }
 
-    /** 无附件。 */
+    /** 无附件、无回信事件。 */
     public TriMail(String key, String sender, String subject, String body, Boolp unlocked, boolean story){
-        this(key, sender, subject, body, unlocked, story, null, null);
+        this(key, sender, subject, body, unlocked, story, null, null, null, null, -1f);
     }
 
     /** 带附件。 */
     public TriMail(String key, String sender, String subject, String body, Boolp unlocked, boolean story, String attachment, Runnable onCollect){
+        this(key, sender, subject, body, unlocked, story, attachment, onCollect, null, null, -1f);
+    }
+
+    /** 带附件与回信事件触发器（按下“发送”按钮时执行；原回信按钮触发器保留备用）。 */
+    public TriMail(String key, String sender, String subject, String body, Boolp unlocked, boolean story, String attachment, Runnable onCollect, Runnable onReply){
+        this(key, sender, subject, body, unlocked, story, attachment, onCollect, onReply, null, -1f);
+    }
+
+    /** 带附件、回信事件触发器与硬编码回信正文（replyText 非空时不用 bundle）。 */
+    public TriMail(String key, String sender, String subject, String body, Boolp unlocked, boolean story, String attachment, Runnable onCollect, Runnable onReply, String replyText){
+        this(key, sender, subject, body, unlocked, story, attachment, onCollect, onReply, replyText, -1f);
+    }
+
+    /** 全参数构造器：可同时指定回信打字机速度（replySpeed 字符/秒；&lt;=0 默认 24）。 */
+    public TriMail(String key, String sender, String subject, String body, Boolp unlocked, boolean story, String attachment, Runnable onCollect, Runnable onReply, String replyText, float replySpeed){
         this.key = key;
         this.sender = sender;
         this.subject = subject;
@@ -47,5 +71,8 @@ public class TriMail{
         this.hasAttachment = attachment != null;
         this.attachment = attachment;
         this.onCollect = onCollect;
+        this.onReply = onReply;
+        this.replyText = replyText;
+        this.replySpeed = replySpeed;
     }
 }

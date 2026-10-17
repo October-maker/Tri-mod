@@ -21,6 +21,10 @@ public class TriInbox{
     public static final String READ_PREFIX = "tri-mail-read-";
     /** 附件收取状态在 Core.settings 中的键前缀。 */
     public static final String ATTACH_PREFIX = "tri-mail-attach-";
+    /** 回信状态在 Core.settings 中的键前缀（发送后记忆，可被“重置战役信件”按钮清除）。 */
+    public static final String REPLY_PREFIX = "tri-mail-reply-";
+    /** 详情页“已读”按钮置灰状态在 Core.settings 中的键前缀（点击后记忆）。 */
+    public static final String READBTN_PREFIX = "tri-mail-readbtn-";
 
     private static final Seq<TriMail> mails = new Seq<>();
 
@@ -85,6 +89,30 @@ public class TriInbox{
     /** 附件动作：强制解锁指定内容（科技）。剧情模式信件可用。 */
     public static Runnable forceUnlock(UnlockableContent content){
         return () -> content.unlock();
+    }
+
+    // ---------- 回信 ----------
+
+    /** 该邮件是否已回信（发送过回信，状态已持久化记忆）。 */
+    public static boolean isReplied(TriMail mail){
+        return Core.settings.getBool(REPLY_PREFIX + mail.key, false);
+    }
+
+    /** 标记为已回信（发送按钮点击时调用；“重置战役信件”按钮会清除该状态）。 */
+    public static void markReplied(TriMail mail){
+        Core.settings.put(REPLY_PREFIX + mail.key, true);
+    }
+
+    // ---------- 已读按钮 ----------
+
+    /** 详情页“已读”按钮是否已被点击置灰（状态持久化记忆）。 */
+    public static boolean isReadBtnClicked(TriMail mail){
+        return Core.settings.getBool(READBTN_PREFIX + mail.key, false);
+    }
+
+    /** 标记“已读”按钮已点击（置灰后记忆；“重置战役信件”按钮会清除该状态）。 */
+    public static void markReadBtnClicked(TriMail mail){
+        Core.settings.put(READBTN_PREFIX + mail.key, true);
     }
 
     /** 未读（已解锁且未读）数量：默认统计战役剧情邮件。 */
@@ -169,6 +197,17 @@ public class TriInbox{
                 b("tri.mail.info_about.subject"),
                 b("tri.mail.info_about.body"),
                 always(), false));
+
+        // 中文示例信件（回信功能演示）：全部文本硬编码，不参与 bundle 本地化。
+        // 回信内容同样硬编码（replyText 非空即不读 bundle）；
+        // 发送后触发 onReply（演示事件：解锁重建投影仪），发送后内容保留显示、点击框再收起。
+        // 打字机速度未设置（-1f）→ 使用默认 24 字/秒；如需演示单独调速，可改最后一个参数。
+        add(new TriMail("demoReply", "示例发件人", "回信功能演示",
+                "这是一封用于演示回信功能的中文示例信件。\n点击“回信”按钮，等待回信正文播放完毕后点击“发送”，回信内容将保留显示；再次点击回信框即可收起。",
+                always(), true, null, null,
+                () -> Blocks.mendProjector.unlock(),
+                "收到！这是一封由PL发出的中文回信示例。\n回信内容可以直接硬编码在信件中，无需通过bundle进行本地化，适合用于事件触发的演示。\n——PL",
+                -1f));
 
     }
 
