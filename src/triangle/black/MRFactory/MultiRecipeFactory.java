@@ -222,8 +222,8 @@ public class MultiRecipeFactory extends GenericCrafter{
                     int finalI = i;
                     cont.table(t -> {
                         t.left().marginLeft(12f).add("[accent][" + (finalI + 1) + "]:[]").width(48f);
-                        t.table(inner -> {//加小背景
-                            inner.table(whiteOutlined(Styles.grayPanel), rec -> {//输入框背景（带白色描边）
+                        t.table(inner -> { // 加小背景
+                            inner.table(whiteOutlined(Styles.grayPanel), rec -> { // 输入框背景（带白色描边）
                                 rec.left();
                                 recipe.inputItem.each(stack -> rec.add(display(stack.item, stack.amount, recipe.craftTime)).row());
                                 recipe.inputLiquid.each(stack -> rec.add(display(stack.liquid, stack.amount * 60, 60f)).row());
@@ -313,7 +313,7 @@ public class MultiRecipeFactory extends GenericCrafter{
 
         table.add(stack);
         table.add((content.localizedName + "\n") + "[lightgray]" +
-                        Strings.autoFixed(amount / (timePeriod / 60f), 2) + StatUnit.perSecond.localized() )//+ Strings.autoFixed(amount / (timePeriod / 60f), 2) + " " + StatUnit.powerSecond.localized() 显示电量消耗
+                        Strings.autoFixed(amount / (timePeriod / 60f), 2) + StatUnit.perSecond.localized() ) // 每秒产出速率；电量消耗显示已移除
                 .padLeft(2).padRight(5).style(Styles.outlineLabel);
         return table;
     }
@@ -452,7 +452,7 @@ public class MultiRecipeFactory extends GenericCrafter{
         return r.requiresResearch && (r.research == null || !r.research.unlocked());
     }
 
-    // 4. 建筑实体类
+    // 建筑实体类
     public class MultiRecipeFactoryBuild extends GenericCrafterBuild implements HeatConsumer, HeatBlock {
         public int recipeIndex = -1;
         public float[] sideHeat = new float[4]; // 四面热量输入
@@ -743,7 +743,7 @@ public class MultiRecipeFactory extends GenericCrafter{
                 }
             }
 
-            //当热量和电力消耗不足时立刻拉闸
+            // 当热量和电力消耗不足时立刻拉闸
             if (recipes.get(recipeIndex).heatEnabled && recipes.get(recipeIndex).heatRequirement > 0 && heat < recipes.get(recipeIndex).heatRequirement && recipes.get(recipeIndex).stopLowTemperature) {
                 return false;
             }

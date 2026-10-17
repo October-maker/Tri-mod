@@ -22,7 +22,7 @@ public class TriFactory {
     public static GenericCrafter
             electrolyticCell,oxygenReductionFurnace,IExtractor,IodinationPurificationFurnace,bauxiteElectrolyticCell,VBlastFurnace,VBlastFurnaceBlowing,VacuumAluminothermicGenerator,CoSulfationRoaster,WSteelMixingFurnace,WCarbideFurnace,
             FeBlastFurnace,TiRollingMill,SCombustionVessel,AcidReactionKettle,AcidResistantHeater,saltDistillationFurnace,SaltMixingPool,CuElectrolyticRefiningPool,NickelDiaphragmElectrolyzer,alkalineElectrolyzer,CopperConcentrator,CoElectrolyticCell,
-            CrThermiteReactionChamber,armoredSinteringFurnace,Condenser;
+            CrThermiteReactionChamber,armoredSinteringFurnace,Condenser,oilTubularReactor;
     public static HeatProducer SAbsorptionTower,FeMixingPool;
     public static HeatCrafter GreenVitriolRoastingFurnace,electricArcFurnaceFluidizedBedReactor,SiReductionFurnace,sandRefiningPool;
     //N
@@ -58,6 +58,19 @@ public class TriFactory {
         NAbsorptionTower = new GenericCrafter("NAbsorptionTower"){{}};
         NClMixedPool = new GenericCrafter("NClMixedPool"){{}};
         ExplosiveMixer = new GenericCrafter("ExplosiveMixer"){{}};
+        //oil
+        oilElectricDesaltingTank = new GenericCrafter("oilElectricDesaltingTank"){{}};
+        oilPrimaryAtmosphericDistillationTower = new GenericCrafter("oilPrimaryAtmosphericDistillationTower"){{}};
+        oilSecondaryAtmosphericDistillationTower = new GenericCrafter("oilSecondaryAtmosphericDistillationTower"){{}};
+        oilVacuumDistillationColumn = new GenericCrafter("oilVacuumDistillationColumn"){{}};
+        oilCatalyticCrackingTower = new GenericCrafter("oilCatalyticCrackingTower"){{}};
+        USYHydrothermalReactor = new GenericCrafter("USYHydrothermalReactor"){{}};
+        USYMixer = new GenericCrafter("USYMixer"){{}};
+        oilHydrocrackingTower = new GenericCrafter("oilHydrocrackingTower"){{}};
+        oilCatalyticReformingTower = new GenericCrafter("oilCatalyticReformingTower"){{}};
+        oilAromaticHydrocarbonComplex = new GenericCrafter("oilAromaticHydrocarbonComplex"){{}};
+        oilCokingHydrogenationTower = new GenericCrafter("oilCokingHydrogenationTower"){{}};
+        oilSteamCrackingTower = new GenericCrafter("oilSteamCrackingTower"){{}};
 
         CuElectrolyticRefiningPool = new GenericCrafter("CuElectrolyticRefiningPool"){{}};
         SaltMixingPool = new GenericCrafter("SaltMixingPool"){{}};
@@ -73,19 +86,7 @@ public class TriFactory {
         CrThermiteReactionChamber = new GenericCrafter("CrThermiteReactionChamber"){{}};
         armoredSinteringFurnace = new GenericCrafter("armoredSinteringFurnace"){{}};
         Condenser = new GenericCrafter("Condenser"){{}};
-        //oil
-        oilElectricDesaltingTank = new GenericCrafter("oilElectricDesaltingTank"){{}};
-        oilPrimaryAtmosphericDistillationTower = new GenericCrafter("oilPrimaryAtmosphericDistillationTower"){{}};
-        oilSecondaryAtmosphericDistillationTower = new GenericCrafter("oilSecondaryAtmosphericDistillationTower"){{}};
-        oilVacuumDistillationColumn = new GenericCrafter("oilVacuumDistillationColumn"){{}};
-        oilCatalyticCrackingTower = new GenericCrafter("oilCatalyticCrackingTower"){{}};
-        USYHydrothermalReactor = new GenericCrafter("USYHydrothermalReactor"){{}};
-        USYMixer = new GenericCrafter("USYMixer"){{}};
-        oilHydrocrackingTower = new GenericCrafter("oilHydrocrackingTower"){{}};
-        oilCatalyticReformingTower = new GenericCrafter("oilCatalyticReformingTower"){{}};
-        oilAromaticHydrocarbonComplex = new GenericCrafter("oilAromaticHydrocarbonComplex"){{}};
-        oilCokingHydrogenationTower = new GenericCrafter("oilCokingHydrogenationTower"){{}};
-        oilSteamCrackingTower = new GenericCrafter("oilSteamCrackingTower"){{}};
+        oilTubularReactor = new GenericCrafter("oilTubularReactor"){{}};
         //special
         BulletFactory = new MultiRecipeFactory("BulletFactory"){{
             size = 4;
@@ -151,7 +152,7 @@ public class TriFactory {
                         outputItem.add(new ItemStack(TriItems.barrel, 5));
                         craftTime = 60f;
                         powerUse = 12f/60f;
-                    }},//water
+                    }}, // water
                 new Recipe() {{
                     inputItem.add(new ItemStack(Items.metaglass, 2));
                     inputLiquid.add(new LiquidStack(TriLiquids.salineWater, 1));
@@ -181,7 +182,7 @@ public class TriFactory {
                         outputLiquid.add(new LiquidStack(Liquids.water, 1));
                         craftTime = 60f;
                         powerUse = 7f/60f;
-                    }},//water
+                    }}, // water
                     new Recipe() {{
                         inputItem.add(new ItemStack(TriItems.saltwaterBucket, 5));
                         outputLiquid.add(new LiquidStack(TriLiquids.salineWater, 1));

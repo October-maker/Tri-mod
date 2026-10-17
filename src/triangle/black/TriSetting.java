@@ -47,7 +47,6 @@ public class TriSetting{
             String stop = Core.bundle.get("end");
             String word = Core.bundle.get("login");
             String get = Core.bundle.get("Iknow");
-            //读取bundle里面的字符串
             Time.runTask(1f, () -> {
                 BaseDialog dialog = new BaseDialog("Triangle");
                 dialog.cont.image(Core.atlas.find("logo")).pad(20f).row();

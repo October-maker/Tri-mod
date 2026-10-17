@@ -3,10 +3,10 @@ name: "triangle"
 author: "October"
 main: "triangle.triangle"
 
-description: "三角模组 \n Triangle-mod \n \n 当前版本：v0.2.2.3 \n version: v0.2.2.3 \n\n\n 模组交流群：469358412 \n 模组的开发、讨论与反馈集中在交流群。模组没有开放专属的群，现有的群不限制交流内容。 \n 反馈问题前，请检查模组版本、游戏版本、内容描述等信息"
+description: "三角模组 \n Triangle-mod \n \n 当前版本：v0.2.2.4 \n version: v0.2.2.4 \n\n\n 模组交流群：469358412 \n 模组的开发、讨论与反馈集中在交流群。模组没有开放专属的群，现有的群不限制交流内容。 \n 反馈问题前，请检查模组版本、游戏版本、内容描述等信息"
 
 subtitle: "原版拓展类模组\n基于赛普罗主线创作"
-version: 0.2.2.3
+version: 0.2.2.4
 minGameVersion: 160
 java: true
 repo: "October-maker/Tri-mod"

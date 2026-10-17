@@ -17,13 +17,17 @@ public class Recipe {
     public float craftTime = 60f;
     /** 单位：每 tick（1/60 秒）。每秒消耗 = powerUse × 60；如 20f/60f = 20/秒。 */
     public float powerUse = 0.0f;
-    public boolean requiresResearch = false; // 是否需要研究解锁生产（原 enabled 重命名；默认 false=无需研究）
-    public UnlockableContent research; // 研究条目（requiresResearch=true 时在工厂 init 中创建并挂载）
-    public ItemStack[] researchCost; // 可选：显式研究消耗，覆盖默认的 inputItem
+    /** 是否需要研究解锁生产（默认 false=无需研究；由原 enabled 重命名而来）。 */
+    public boolean requiresResearch = false;
+    /** 研究条目：requiresResearch=true 时在工厂 init 中创建并挂载。 */
+    public UnlockableContent research;
+    /** 可选：显式研究消耗，覆盖默认的 inputItem。 */
+    public ItemStack[] researchCost;
 
-    //欠压或低热时是否工作
-    public boolean stopUndervoltage = false;//电力不足时立刻停止生产
-    public boolean stopLowTemperature = false;//热量不足时立刻停止生产
+    /** 电力不足时是否立刻停止生产。 */
+    public boolean stopUndervoltage = false;
+    /** 热量不足时是否立刻停止生产。 */
+    public boolean stopLowTemperature = false;
     
     // 热量相关
     public boolean heatEnabled = false; // 是否启用热量功能

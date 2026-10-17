@@ -9,7 +9,9 @@ import mindustry.game.EventType;
 
 public class SerTriTechTree {
     public static void load(){
-        // 将child挂载到SerContent之后（Serpulo科技树）必须延迟到ContentInitEvent：此时JSON内容（含模组json内容经research生成的科技树节点）与完整科技树均已加载完成；以达到避免在loadContent阶段直接调用addNode时发生因为父节点尚未生成导致的跳过。
+        // 将 child 挂载到 Serpulo 科技树必须延迟到 ContentInitEvent：
+        // 此时 JSON 内容（含模组 json 经 research 生成的科技树节点）与完整科技树均已加载完成，
+        // 可避免在 loadContent 阶段直接调用 addNode 时因父节点尚未生成而被跳过。
         Events.on(EventType.ContentInitEvent.class, e -> addNode(TriFactory.TiRollingMill, TriFactory.boiler));
         Events.on(EventType.ContentInitEvent.class, e -> addNode(TriFactory.TiRollingMill, TriFactory.BulletFactory));
         Events.on(EventType.ContentInitEvent.class, e -> addNode(TriFactory.boiler, TriFactory.Condenser));

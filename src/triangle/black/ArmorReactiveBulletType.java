@@ -28,11 +28,6 @@ import mindustry.gen.Unit;
  *   <li>正向加值可设上限 maxBonus，限制极端低甲时的数值；</li>
  *   <li>总伤害被钳制不低于 minTotalDamage，防止高护甲负加值把伤害变成“治疗”。</li>
  * </ul>
- *
- *       护甲反应型弹药示例：伤害 = baseDamage + damageChangeRate × f(armor)，f(armor) = -ln(armor / baseArmor)。
- *       装甲低于 baseArmor 时伤害提升、高于 baseArmor 时伤害降低；armor == baseArmor 时加值为 0。
- *       damageChangeRate 控制伤害随装甲的变化倍率（0=恒定，1=默认，越大变化越剧烈）。
- *
  */
 
 public class ArmorReactiveBulletType extends BasicBulletType {

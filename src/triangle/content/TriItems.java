@@ -60,7 +60,5 @@ public class TriItems {
         //bucket
         barrel = new Item("barrel",Color.valueOf("FFFFFF")){{}};
         saltwaterBucket = new Item("saltwaterBucket",Color.valueOf("FFFFFF")){{}};
-        //node
-        SerTri = new Item("SerTri",Color.valueOf("7d4dff")){{}};
     };
 }
