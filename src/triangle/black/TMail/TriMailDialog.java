@@ -82,7 +82,7 @@ public class TriMailDialog{
         list.center();
         Seq<TriMail> shown = mailsFor(filter, all);
         if(shown.isEmpty()){
-            list.add("[#7f8c8d]" + bundle("tri.mail.empty") + "[/]").pad(30);
+            list.add("[#7f8c8d]" + bundle("tri.mail.empty")).pad(30);
         }else{
             for(TriMail m : shown){
                 list.row();

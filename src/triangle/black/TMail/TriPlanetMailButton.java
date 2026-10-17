@@ -3,12 +3,13 @@ package triangle.black.TMail;
 import arc.Core;
 import arc.Events;
 import arc.scene.Element;
+import arc.scene.style.TextureRegionDrawable;
 import arc.scene.ui.TextButton;
 import mindustry.Vars;
 import mindustry.game.EventType;
-import mindustry.gen.Icon;
 import mindustry.ui.Styles;
 import mindustry.ui.dialogs.PlanetDialog;
+import triangle.black.TriIcon;
 
 /**
  * 在战役星球界面（PlanetDialog）底栏“科技树”按钮右侧并排添加“收件箱”按钮，点击打开 TriMailDialog。
@@ -48,7 +49,8 @@ public class TriPlanetMailButton{
         if(button == null || !attachedTo(button, planet)){
             // 追加为底栏最后一个 cell（科技树右侧），与原版底栏按钮同款底部对齐，
             // 行高随 sectorTop 变化时按钮贴底不动
-            button = planet.buttons.button(bundle("tri.mail.button"), Icon.chat,
+            button = planet.buttons.button(bundle("tri.mail.button"),
+                new TextureRegionDrawable(TriIcon.tex("Tmail")),
                 Styles.defaultt, () -> TriMailDialog.show()).size(150f, 48f).pad(2).bottom().get();
             lastUnread = -1; // 强制刷新角标
         }

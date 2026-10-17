@@ -1,13 +1,18 @@
 package triangle.black.TMail;
 
 import arc.Core;
+import arc.Events;
 import arc.func.Boolp;
+import arc.struct.ObjectSet;
 import arc.struct.Seq;
+import mindustry.Vars;
 import mindustry.content.Blocks;
-import mindustry.content.Items;
 import mindustry.content.Planets;
 import mindustry.content.SectorPresets;
 import mindustry.ctype.UnlockableContent;
+import mindustry.game.EventType;
+import mindustry.gen.Sounds;
+import mindustry.ui.Menus;
 import mindustry.type.Sector;
 import mindustry.type.SectorPreset;
 import triangle.content.TriFactory;
@@ -25,8 +30,13 @@ public class TriInbox{
     public static final String REPLY_PREFIX = "tri-mail-reply-";
     /** 详情页“已读”按钮置灰状态在 Core.settings 中的键前缀（点击后记忆）。 */
     public static final String READBTN_PREFIX = "tri-mail-readbtn-";
+    /** “收到新邮件”提示已显示状态在 Core.settings 中的键前缀（每封邮件只提示一次）。 */
+    public static final String NOTIFIED_PREFIX = "tri-mail-notified-";
 
     private static final Seq<TriMail> mails = new Seq<>();
+    /** 会话内已提示过的邮件键（避免每帧读 settings；跨会话由 NOTIFIED_PREFIX 持久化）。 */
+    private static final ObjectSet<String> notifiedSession = new ObjectSet<>();
+    private static boolean newMailHooked = false;
 
     private TriInbox(){}
 
@@ -115,6 +125,51 @@ public class TriInbox{
         Core.settings.put(READBTN_PREFIX + mail.key, true);
     }
 
+    // ---------- 收到新邮件提示 ----------
+
+    /** 该邮件是否已显示过“收到新邮件”提示。 */
+    public static boolean isNotified(TriMail mail){
+        return Core.settings.getBool(NOTIFIED_PREFIX + mail.key, false);
+    }
+
+    /** 标记已显示提示（持久化，跨会话不重复提示）。 */
+    public static void markNotified(TriMail mail){
+        Core.settings.put(NOTIFIED_PREFIX + mail.key, true);
+    }
+
+    /**
+     * 注册“收到新邮件”的地图内提示（在 triangle 主类构造中调用一次）。
+     *
+     * 解锁条件为被动 Boolp（仅在评估时才知道是否满足），故采用轮询：
+     * 每帧仅在玩家处于地图内（Vars.state.isGame()）时检查战役剧情邮件，
+     * 某封邮件首次满足解锁条件（且该封从未提示过）时弹出黑色信息条
+     * （Menus.infoToast，与原版世界处理器“显示信息”的弹黑框模式一致，
+     * 也是 InfoToastCallPacket 客户端渲染所用的本地 API），显示 3 秒，
+     * 并播放原版通知音效（Sounds.uiNotify）作为接收提示。
+     * 无条件邮件（always()）不触发提示；已提示状态持久化，避免每封信重复打扰；
+     * 会话内用内存集合做快速跳过。
+     */
+    public static void hookNewMailToast(){
+        if(newMailHooked) return;
+        newMailHooked = true;
+        Events.run(EventType.Trigger.update, () -> {
+            if(!Vars.state.isGame()) return;
+            for(TriMail m : mails){
+                // 只提示战役剧情邮件；会话内已提示过的直接跳过（快路径）
+                if(!m.story || notifiedSession.contains(m.key)) continue;
+                // 无条件邮件（always()）收到时不触发提示
+                if(m.unlocked == TriInbox.always()) continue;
+                if(!m.unlocked.get()) continue;
+                notifiedSession.add(m.key);
+                // 跨会话只提示一次：之前会话已提示过则不再重复
+                if(isNotified(m)) continue;
+                markNotified(m);
+                Menus.infoToast(Core.bundle.get("tri.mail.newmail", "tri.mail.newmail"), 3f);
+                Sounds.uiNotify.play();
+            }
+        });
+    }
+
     /** 未读（已解锁且未读）数量：默认统计战役剧情邮件。 */
     public static int unreadCount(){
         return unreadCount(true);
@@ -142,9 +197,12 @@ public class TriInbox{
         };
     }
 
+    /** 恒真条件（无条件解锁）。共享单例：新邮件提示据此跳过无条件邮件。 */
+    public static final Boolp ALWAYS = () -> true;
+
     /** 恒真条件（无条件解锁）。 */
     public static Boolp always(){
-        return () -> true;
+        return ALWAYS;
     }
 
     /** 全部条件同时满足。 */
@@ -183,13 +241,20 @@ public class TriInbox{
                 b("tri.mail.electrolyticCell.sender"),
                 b("tri.mail.electrolyticCell.subject"),
                 b("tri.mail.electrolyticCell.body"),
-                always(),
+                sectorCaptured(SectorPresets.biomassFacility),
                 true,
                 b("tri.mail.electrolyticCell.attachment"),
-                forceUnlock(TriFactory.electrolyticCell)));//sectorCaptured(SectorPresets.biomassFacility)
+                forceUnlock(TriFactory.electrolyticCell)));
 
 //        add(new TriMail("silicon", "科技部", "硅基纪元",
 //            "微晶硅制备工艺已上线。\n更复杂的自动化和逻辑网络将由此展开。", tech(Items.silicon)));
+
+        // 示例剧情邮件：解锁“硅”科技时收到（文本硬编码，不参与 bundle 本地化）
+//        add(new TriMail("silicon",
+//                "科技部",
+//                "传输",
+//                "微晶硅制备工艺已上线。\n更复杂的自动化和逻辑网络将由此展开。\n——示例剧情邮件",
+//                tech(Blocks.conveyor)));
 
         // ---- 模组资讯邮件（主菜单 TMail 显示，无条件解锁）----
         add(new TriMail("info_about",
@@ -202,12 +267,12 @@ public class TriInbox{
         // 回信内容同样硬编码（replyText 非空即不读 bundle）；
         // 发送后触发 onReply（演示事件：解锁重建投影仪），发送后内容保留显示、点击框再收起。
         // 打字机速度未设置（-1f）→ 使用默认 24 字/秒；如需演示单独调速，可改最后一个参数。
-        add(new TriMail("demoReply", "示例发件人", "回信功能演示",
-                "这是一封用于演示回信功能的中文示例信件。\n点击“回信”按钮，等待回信正文播放完毕后点击“发送”，回信内容将保留显示；再次点击回信框即可收起。",
-                always(), true, null, null,
-                () -> Blocks.mendProjector.unlock(),
-                "收到！这是一封由PL发出的中文回信示例。\n回信内容可以直接硬编码在信件中，无需通过bundle进行本地化，适合用于事件触发的演示。\n——PL",
-                -1f));
+//        add(new TriMail("demoReply", "示例发件人", "回信功能演示",
+//                "这是一封用于演示回信功能的中文示例信件。\n点击“回信”按钮，等待回信正文播放完毕后点击“发送”，回信内容将保留显示；再次点击回信框即可收起。",
+//                always(), true, null, null,
+//                () -> Blocks.mendProjector.unlock(),
+//                "收到！这是一封由PL发出的中文回信示例。\n回信内容可以直接硬编码在信件中，无需通过bundle进行本地化，适合用于事件触发的演示。\n——PL",
+//                -1f));
 
     }
 

@@ -85,6 +85,7 @@ public class TriSettingsDataButton{
                     Core.settings.remove(TriInbox.ATTACH_PREFIX + m.key);
                     Core.settings.remove(TriInbox.REPLY_PREFIX + m.key);
                     Core.settings.remove(TriInbox.READBTN_PREFIX + m.key);
+                    Core.settings.remove(TriInbox.NOTIFIED_PREFIX + m.key);
                 }
                 Core.settings.forceSave();
                 Vars.ui.showInfoFade(bundle("tri.settings.resetmail.done"));

@@ -52,5 +52,7 @@ public class triangle extends Mod{
         TriMainMenuButton.init();
         // 设置→数据页“重置战役信件”按钮
         TriSettingsDataButton.init();
+        // 战役地图内“收到新邮件”提示（解锁时弹黑框 3 秒）
+        TriInbox.hookNewMailToast();
     }
 }

@@ -1,13 +1,13 @@
 package triangle.black;
 
 import arc.*;
+import arc.scene.style.TextureRegionDrawable;
 import arc.scene.ui.CheckBox;
 import arc.scene.ui.Image;
 import arc.scene.ui.TextButton;
 import arc.util.*;
 import mindustry.*;
 import mindustry.game.EventType.*;
-import mindustry.gen.Icon;
 import mindustry.ui.Styles;
 import mindustry.ui.dialogs.*;
 import triangle.black.TMail.TriMainMenuButton;
@@ -61,11 +61,11 @@ public class TriSetting{
                 dialog.cont.add(check).pad(4).row();
 
                 // 与“知道了”按钮样式一致（都用标准按钮样式 Styles.defaultt，带按钮背景），
-                // 置于其上方，两按钮尺寸统一
+                // 置于其上方，两按钮尺寸统一；图标使用模组自带 Tmail.png（m 小写规范）
                 TextButton mail = new TextButton(Core.bundle.get("tri.mail.button"), Styles.defaultt);
                 mail.clearChildren();
                 // 图标与文字之间留出恰当间距（与 TriMainMenuButton 构造一致）
-                mail.add(new Image(Icon.chat)).size(Icon.chat.imageSize()).padRight(8);
+                mail.add(new Image(TriIcon.tex("Tmail"))).size(32f).padRight(8);
                 mail.add(mail.getLabel());
                 mail.clicked(TriMainMenuButton::showInfo);
                 dialog.cont.add(mail).size(150f, 50f).pad(4).row();
@@ -79,7 +79,9 @@ public class TriSetting{
         Events.on(ClientLoadEvent.class, e -> {
             if(settingsAdded) return;
             settingsAdded = true;
-            Vars.ui.settings.addCategory(Core.bundle.get("triSettings"), t -> {
+            // 设置→三角 分类：图标置于分类标题前（与原版“游戏”等分类前的齿轮图标排版一致）
+            Vars.ui.settings.addCategory(Core.bundle.get("triSettings"),
+                new TextureRegionDrawable(TriIcon.tex("TriSetting")), t -> {
                 // checkPref 的第一参既是“设置存储键”又是“bundle 显示文案键”。
                 // STARTUP_DIALOG_KEY(=tri.startupDialogToggle) 即 bundle 键，故显示文本自动本地化；
                 // 且与弹窗内勾选框读写同一个键，状态保持同步（键为跨语言稳定的标识符）。
