@@ -5,6 +5,7 @@ import mindustry.*;
 import mindustry.mod.*;
 import triangle.black.ArmorReactiveBulletType;
 import triangle.black.TriArmorTurret;
+import triangle.black.TMail.TriGameMailButton;
 import triangle.black.TMail.TriInbox;
 import triangle.black.TMail.TriMainMenuButton;
 import triangle.black.TMail.TriPlanetMailButton;
@@ -55,5 +56,6 @@ public class triangle extends Mod{
         TriSettingsDataButton.init();
         // 战役地图内“收到新邮件”提示（解锁时弹黑框 3 秒）
         TriInbox.hookNewMailToast();
+        TriGameMailButton.init();
     }
 }
