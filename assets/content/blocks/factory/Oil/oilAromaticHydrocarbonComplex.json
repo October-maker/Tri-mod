@@ -42,6 +42,5 @@
 	    "TiAlloy/20",
 	],
 	"category": "crafting",//建造栏分类
-	"research": "oilCatalyticReformingTower",//前置研究
 	"databaseTag":"Oil",
 }

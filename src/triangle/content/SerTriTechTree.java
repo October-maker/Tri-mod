@@ -18,6 +18,23 @@ public class SerTriTechTree {
         Events.on(EventType.ContentInitEvent.class, e -> addNode(Blocks.wave, TriTurret.solubilize));
         Events.on(EventType.ContentInitEvent.class, e -> addNode(TriFactory.saltDistillationFurnace, TriFactory.liquidFillingMachine));
         Events.on(EventType.ContentInitEvent.class, e -> addNode(TriFactory.liquidFillingMachine, TriFactory.liquidPourer));
+
+        // 石油化工
+        // 注意依赖顺序：addNode 要求父节点已在科技树中
+        Events.on(EventType.ContentInitEvent.class, e -> addNode(TriFactory.IodinationPurificationFurnace, TriFactory.oilElectricDesaltingTank));
+        Events.on(EventType.ContentInitEvent.class, e -> addNode(TriFactory.oilElectricDesaltingTank, TriFactory.USYHydrothermalReactor));
+        Events.on(EventType.ContentInitEvent.class, e -> addNode(TriFactory.USYHydrothermalReactor, TriFactory.USYMixer));
+        Events.on(EventType.ContentInitEvent.class, e -> addNode(TriFactory.oilElectricDesaltingTank, TriFactory.oilPrimaryAtmosphericDistillationTower));
+        Events.on(EventType.ContentInitEvent.class, e -> addNode(TriFactory.oilPrimaryAtmosphericDistillationTower, TriFactory.oilSecondaryAtmosphericDistillationTower));
+        Events.on(EventType.ContentInitEvent.class, e -> addNode(TriFactory.oilPrimaryAtmosphericDistillationTower, TriFactory.oilVacuumDistillationColumn));
+        Events.on(EventType.ContentInitEvent.class, e -> addNode(TriFactory.oilVacuumDistillationColumn, TriFactory.oilCatalyticCrackingTower));
+        Events.on(EventType.ContentInitEvent.class, e -> addNode(TriFactory.oilVacuumDistillationColumn, TriFactory.oilCokingHydrogenationTower));
+        Events.on(EventType.ContentInitEvent.class, e -> addNode(TriFactory.oilCokingHydrogenationTower, TriFactory.oilSteamCrackingTower));
+        Events.on(EventType.ContentInitEvent.class, e -> addNode(TriFactory.oilSteamCrackingTower, TriFactory.oilTubularReactor));
+        Events.on(EventType.ContentInitEvent.class, e -> addNode(TriFactory.oilVacuumDistillationColumn, TriFactory.oilHydrocrackingTower));
+        Events.on(EventType.ContentInitEvent.class, e -> addNode(TriFactory.oilHydrocrackingTower, TriFactory.oilCatalyticReformingTower));
+        Events.on(EventType.ContentInitEvent.class, e -> addNode(TriFactory.oilCatalyticReformingTower, TriFactory.oilAromaticHydrocarbonComplex));
+        Events.on(EventType.ContentInitEvent.class, e -> addNode(TriFactory.oilAromaticHydrocarbonComplex, TriFactory.ExplosiveMixer));
     }
 
     /*

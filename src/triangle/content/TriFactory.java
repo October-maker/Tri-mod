@@ -22,14 +22,14 @@ public class TriFactory {
     public static GenericCrafter
             electrolyticCell,oxygenReductionFurnace,IExtractor,IodinationPurificationFurnace,bauxiteElectrolyticCell,VBlastFurnace,VBlastFurnaceBlowing,VacuumAluminothermicGenerator,CoSulfationRoaster,WSteelMixingFurnace,WCarbideFurnace,
             FeBlastFurnace,TiRollingMill,SCombustionVessel,AcidReactionKettle,AcidResistantHeater,saltDistillationFurnace,SaltMixingPool,CuElectrolyticRefiningPool,NickelDiaphragmElectrolyzer,alkalineElectrolyzer,CopperConcentrator,CoElectrolyticCell,
-            CrThermiteReactionChamber,armoredSinteringFurnace,Condenser,oilTubularReactor;
+            CrThermiteReactionChamber,armoredSinteringFurnace,Condenser;
     public static HeatProducer SAbsorptionTower,FeMixingPool;
     public static HeatCrafter GreenVitriolRoastingFurnace,electricArcFurnaceFluidizedBedReactor,SiReductionFurnace,sandRefiningPool;
     //N
     public static GenericCrafter NCollector,NCatalyticChamber,NOxidationPlantGroup,NAbsorptionTower,NClMixedPool,ExplosiveMixer;
     //oil
     public static GenericCrafter oilElectricDesaltingTank,oilPrimaryAtmosphericDistillationTower,oilSecondaryAtmosphericDistillationTower,oilVacuumDistillationColumn,
-            oilCatalyticCrackingTower,USYHydrothermalReactor,USYMixer,oilHydrocrackingTower,oilCatalyticReformingTower,oilAromaticHydrocarbonComplex,oilCokingHydrogenationTower,oilSteamCrackingTower;
+            oilCatalyticCrackingTower,USYHydrothermalReactor,USYMixer,oilHydrocrackingTower,oilCatalyticReformingTower,oilAromaticHydrocarbonComplex,oilCokingHydrogenationTower,oilSteamCrackingTower,oilTubularReactor;
     //special
     public static MultiRecipeFactory BulletFactory,liquidFillingMachine,liquidPourer,boiler;/*ComprehensiveProcessingFactory*/
     public static void load(){
@@ -71,6 +71,7 @@ public class TriFactory {
         oilAromaticHydrocarbonComplex = new GenericCrafter("oilAromaticHydrocarbonComplex"){{}};
         oilCokingHydrogenationTower = new GenericCrafter("oilCokingHydrogenationTower"){{}};
         oilSteamCrackingTower = new GenericCrafter("oilSteamCrackingTower"){{}};
+        oilTubularReactor = new GenericCrafter("oilTubularReactor"){{}};
 
         CuElectrolyticRefiningPool = new GenericCrafter("CuElectrolyticRefiningPool"){{}};
         SaltMixingPool = new GenericCrafter("SaltMixingPool"){{}};
@@ -86,7 +87,6 @@ public class TriFactory {
         CrThermiteReactionChamber = new GenericCrafter("CrThermiteReactionChamber"){{}};
         armoredSinteringFurnace = new GenericCrafter("armoredSinteringFurnace"){{}};
         Condenser = new GenericCrafter("Condenser"){{}};
-        oilTubularReactor = new GenericCrafter("oilTubularReactor"){{}};
         //special
         BulletFactory = new MultiRecipeFactory("BulletFactory"){{
             size = 4;

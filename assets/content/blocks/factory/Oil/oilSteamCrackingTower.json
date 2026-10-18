@@ -48,6 +48,5 @@
 	    "FeSteel/30",
 	],
 	"category": "crafting",//建造栏分类
-	"research": "oilCokingHydrogenationTower",//前置研究
 	"databaseTag":"Oil",
 }
