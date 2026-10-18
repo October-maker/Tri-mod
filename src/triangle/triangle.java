@@ -32,9 +32,9 @@ public class triangle extends Mod{
         TriStatus.load();
         TriTurret.load();
         TriWeather.load();
+        TriUnits.load();
         ExSerBlocks.load();
         SerTriTechTree.load();
-        // 注册叙事邮件（此时 vanilla 内容已创建，可按科技/占领进度解锁）
         TriInbox.registerDefaults();
         Vars.renderer.minZoom =0.3f;
         Vars.renderer.maxZoom = 20.0f;

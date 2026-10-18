@@ -5,7 +5,7 @@
     "armor":15,
     "itemCapacity": 2000,//物品容量，注：是全物品都加
     "unitCapModifier":10,//单位上限，增加工厂可以制造的单位上限
-    "unitType":"gamma",//核心的单位，玩家操纵的那种
+    "unitType":"coreUnit",//核心的单位，玩家操纵的那种（triangle-coreUnit，见 TriUnits.core）
     "requirements": [
         "TiAlloy/300",
         "Al/100",
