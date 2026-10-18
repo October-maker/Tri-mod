@@ -101,14 +101,48 @@ public class TriArmorTurret extends ItemTurret {
         };
         parent.table(dt -> {
             dt.left();
-            for(int i = 0; i < heads.length; i++){
-                final int idx = i;
-                dt.table(cell -> {
-                    cell.top().left();
-                    cell.add("[lightgray]" + heads[idx] + "[/]").padBottom(2f).row();
-                    cell.add("[accent]" + Strings.autoFixed(vals[idx], 1) + "[/]");
-                }).padRight(10f);
-            }
+            dt.table(dam ->{
+                dam.left();
+                dam.add("[#FF6666]" + Strings.autoFixed(b.totalDamage(0f),1)).row();
+                dam.image(Icon.right).size(32f).padLeft(8f).padRight(12f).row();
+                dam.add("[#999999]Armor:" + 0f);
+            }).margin(6f);
+            dt.table(dam -> {
+                dam.left();
+                dam.add("|").row();
+                dam.add("[#FFFFFF]" + half).row();
+                dam.add("|").row();
+            }).margin(6f);
+            dt.table(dam ->{
+                dam.left();
+                dam.add("[#FF6666]" + Strings.autoFixed(b.totalDamage(half),1)).row();
+                dam.image(Icon.right).size(32f).padLeft(8f).padRight(12f).row();
+                dam.add("[#999999]Armor:" + half);
+            }).margin(6f);
+            dt.table(dam -> {
+                dam.left();
+                dam.add("|").row();
+                dam.add("[#FFFFFF]" + half).row();
+                dam.add("|").row();
+            }).margin(6f);
+            dt.table(dam ->{
+                dam.left();
+                dam.add("[#FF6666]" + Strings.autoFixed(b.baseDamage,1)).row();
+                dam.image(Icon.right).size(32f).padLeft(8f).padRight(12f).row();
+                dam.add("[#999999]Armor:" + b.baseArmor);
+            }).margin(6f);
+            dt.table(dam -> {
+                dam.left();
+                dam.add("|").row();
+                dam.add("[#FFFFFF]" + half).row();
+                dam.add("|").row();
+            }).margin(6f);
+            dt.table(dam ->{
+                dam.left();
+                dam.add("[#FF6666]" + Strings.autoFixed(b.totalDamage(threeHalf),1)).row();
+                dam.image(Icon.right).size(32f).padLeft(8f).padRight(12f).row();
+                dam.add("[#999999]Armor:" + threeHalf);
+            }).margin(6f);
         });
     }
 
