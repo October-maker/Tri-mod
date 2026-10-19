@@ -3,7 +3,9 @@ package triangle.black.TMail;
 import arc.Core;
 import arc.graphics.Color;
 import arc.input.KeyCode;
+import arc.math.Interp;
 import arc.scene.Element;
+import arc.scene.actions.Actions;
 import arc.scene.event.ClickListener;
 import arc.scene.event.InputEvent;
 import arc.scene.ui.ButtonGroup;
@@ -39,6 +41,12 @@ public class TriMailDialog{
     private static Filter filter = Filter.ALL;
     /** 当前收件箱作用域：true=战役剧情邮件（战役星球 TMail）；false=模组资讯邮件（主菜单 TMail）。 */
     private static boolean storyScope = true;
+    /** 收件箱打开时的全屏毛玻璃背景。 */
+    private static TriBlurBackground blur;
+    /** 收件箱内容整体 Table（供整体滑入动画）。 */
+    private static Table lastContent;
+    /** 收件箱内容滑入时长（先快后慢）。 */
+    private static final float SLIDE_IN_DURATION = 0.4f;
 
     private TriMailDialog(){}
 
@@ -53,18 +61,55 @@ public class TriMailDialog{
         if(inbox == null){
             inbox = new BaseDialog("");
             inbox.addCloseButton();
+            // 收件箱关闭时移除毛玻璃背景
+            inbox.hidden(() -> {
+                if(blur != null){
+                    blur.remove();
+                    blur = null;
+                }
+            });
         }
         inbox.title.setText(story ? bundle("tri.mail.title") : bundle("tri.modinfo.title"));
+
+        // 全屏毛玻璃背景（截屏 + 模糊 + 透明度渐深），置于收件箱窗口之下
+        if(blur == null || !blur.hasParent()){
+            blur = new TriBlurBackground();
+            Core.scene.add(blur);
+        }
+
         inbox.show();
         build(inbox);
+
+        // 内容整体滑入：收件箱内容 Table 从右侧滑入到屏幕右半屏中心（右 3/4 处），空出左半屏（用于 logo）。
+        // 延迟到下一帧触发，避免与 Dialog.show() 内部流程同帧竞争；
+        // content 布局已冻结（setLayoutEnabled(false)），位置手动控制，不会被 Table 布局覆盖。
+        Time.runTask(1f, () -> {
+            if(!inbox.isShown() || lastContent == null) return;
+            float cw = lastContent.getWidth(), ch = lastContent.getHeight();
+            if(cw <= 0f || ch <= 0f) return;
+            float sw = Core.graphics.getWidth(), sh = Core.graphics.getHeight();
+            // 目标：content 中心位于屏幕右半屏中心（右 3/4 处）
+            float targetScreenX = sw * 0.75f, targetScreenY = sh / 2f;
+            // content 坐标是相对 cont 的局部坐标：
+            // 局部目标 = 屏幕目标 - dialog 左下角(inbox.x/y) - cont 相对 dialog 偏移(inbox.cont.x/y) - content 半宽/半高
+            float targetLocalX = targetScreenX - inbox.x - inbox.cont.x - cw / 2f;
+            float targetLocalY = targetScreenY - inbox.y - inbox.cont.y - ch / 2f;
+            // 起点：content 完全移出 cont 右侧（y 保持目标 y → 水平平行滑入）
+            lastContent.setPosition(cw, targetLocalY);
+            lastContent.actions(Actions.moveTo(targetLocalX, targetLocalY, SLIDE_IN_DURATION, Interp.pow2Out));
+        });
     }
 
-    /** 重建收件箱内容（清空后重绘分类栏 + 邮件列表）。 */
+    /** 重建收件箱内容（清空后重绘分类栏 + 邮件列表）。整个内容包成一个 Table 供整体滑入动画。 */
     private static void build(BaseDialog dlg){
         dlg.cont.clearChildren();
 
         // 一次解锁遍历，供分类角标与列表共用（避免每个分类各自 new Seq + 重复遍历全部邮件）
         Seq<TriMail> all = TriInbox.unlocked(storyScope);
+
+        // 整个收件箱内容包成一个 Table（便于整体滑入动画与后续改进）
+        Table content = new Table();
+        content.top();
 
         // 顶部居中的分类栏（放大按钮 + 未读角标）
         Table bar = new Table();
@@ -75,7 +120,7 @@ public class TriMailDialog{
         addCategory(dlg, bar, group, Filter.READ, "tri.mail.cat.read", all);
         addCategory(dlg, bar, group, Filter.UNREAD, "tri.mail.cat.unread", all);
         addCategory(dlg, bar, group, Filter.HISTORY, "tri.mail.cat.history", all);
-        dlg.cont.add(bar).padTop(8).padBottom(4).row();
+        content.add(bar).padTop(8).padBottom(4).row();
 
         // 竖直向下的邮件列表（居中），可滚动
         Table list = new Table();
@@ -92,7 +137,15 @@ public class TriMailDialog{
 
         ScrollPane scroll = new ScrollPane(list);
         scroll.setOverscroll(false, false);
-        dlg.cont.add(scroll).grow().pad(4);
+        content.add(scroll).grow().pad(4);
+
+        dlg.cont.add(content).grow();
+        // 先让父布局（cont）把 content 排到正确尺寸/位置（grow 填满），再让 content 子元素布局，
+        // 随后冻结布局：位置改由手动控制（供整体滑入动画，不被 Table 布局覆盖）。
+        dlg.cont.validate();
+        content.validate();
+        content.setLayoutEnabled(false);
+        lastContent = content;
     }
 
     private static void addCategory(BaseDialog dlg, Table bar, ButtonGroup<TextButton> group, Filter f, String key, Seq<TriMail> all){

@@ -87,7 +87,7 @@ public class TriMainMenuButton{
         return null;
     }
 
-    /** 打开主菜单 TMail：显示模组资讯邮件（与战役星球收件箱同款邮件式界面）。 */
+    /** 打开主菜单 TMail：直接进入模组资讯收件箱页面（页面内执行毛玻璃+滑入流程）。 */
     public static void showInfo(){
         TriMailDialog.show(false);
     }

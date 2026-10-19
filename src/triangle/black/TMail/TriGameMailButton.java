@@ -12,7 +12,6 @@ import arc.scene.ui.Label.LabelStyle;
 import arc.scene.ui.TextButton;
 import arc.scene.ui.layout.Table;
 import arc.util.Align;
-import arc.util.Log;
 import arc.util.Time;
 import mindustry.Vars;
 import mindustry.game.EventType;
@@ -24,8 +23,9 @@ import triangle.black.TriIcon;
  * 外层为更大的透明 Table（可点击/拖动区域），内部按钮仅含 Tmail 图标（居中），
  * 背景为原版默认灰色按钮（Styles.defaultt）；
  * 未读角标为独立 Label 置于外层容器右上角。
- * 短按点击打开收件箱：战役模式（Vars.state.isCampaign()）打开战役剧情收件箱
- * （TriMailDialog.show(true)），自定义游戏地图打开模组资讯（主界面版，TriMailDialog.show(false)）；
+ *
+ * 短按按下后触发统一预览流程（TriMailPreview.trigger）：
+ * 战役模式（Vars.state.isCampaign()）→ 剧情邮件预览，自定义游戏 → 模组资讯预览；
  * 长按（0.3 秒）后移动进入拖动模式，可自由移动位置；
  * 默认位置为屏幕左下角（容器左下角贴屏幕左下角）。
  *
@@ -56,7 +56,7 @@ public class TriGameMailButton{
     }
 
     private static void update(){
-        // 游戏内显示：战役地图（isCampaign）→ 剧情收件箱；自定义游戏地图 → 模组资讯
+        // 游戏内显示：战役模式（isCampaign）→ 剧情；自定义游戏 → 资讯
         boolean inGame = Vars.state.isGame();
         if(inGame){
             if(container == null || !container.hasParent()){
@@ -90,7 +90,7 @@ public class TriGameMailButton{
         button.add(new Image(TriIcon.tex("Tmail"))).size(36f).expand().center();
         button.pack();
         // 进一步扩大：内容尺寸基础上四周再扩展，使按钮更醒目
-        button.setSize(button.getPrefWidth() + 8f, button.getPrefHeight() + 12f);
+        button.setSize(button.getPrefWidth() + 16f, button.getPrefHeight() + 24f);
 
         // 角标：独立 Label，置于外层容器右上角（不参与按钮内容）；复用默认按钮字体
         badge = new Label("", new LabelStyle(Styles.defaultt.font, Styles.defaultt.fontColor));
@@ -114,7 +114,8 @@ public class TriGameMailButton{
     }
 
     /**
-     * 长按（0.3 秒）后移动进入拖动模式；未实际移动过（无论按住时长）抬起即视为点击打开收件箱。
+     * 长按（0.3 秒）后移动进入拖动模式；未实际移动过（无论按住时长）抬起即视为点击：
+     * 触发统一预览流程（TriMailPreview.trigger，战役/自定义自动分流）。
      * 拖动判定只看“是否真正进入过拖动模式”，避免长按未移动时既不算点击也不算拖动的死区。
      */
     static class DragListener extends InputListener{
@@ -155,14 +156,10 @@ public class TriGameMailButton{
             boolean wasDragging = dragging;
             down = false;
             dragging = false;
-            // 未实际拖动（无论按住时长）即视为点击：战役地图打开剧情收件箱，自定义游戏打开模组资讯
+            // 未实际拖动（无论按住时长）即视为点击：直接打开对应收件箱
+            // 战役模式（isCampaign）→ 三角邮箱；自定义游戏 → Tmail资讯
             if(!wasDragging){
-                try{
-                    TriMailDialog.show(Vars.state.isCampaign());
-                }catch(Throwable t){
-                    // 防御：打开失败不静默，输出日志便于定位
-                    Log.err("TMail dialog open failed: " + t);
-                }
+                TriMailDialog.show(Vars.state.isCampaign());
             }
         }
     }
