@@ -2,9 +2,11 @@ package triangle.content;
 
 import arc.Events;
 import mindustry.content.Blocks;
+import mindustry.content.Items;
 import mindustry.entities.bullet.BasicBulletType;
 import mindustry.entities.bullet.BulletType;
 import mindustry.entities.bullet.LaserBulletType;
+import mindustry.entities.bullet.RailBulletType;
 import mindustry.game.EventType.ContentInitEvent;
 import mindustry.world.blocks.defense.turrets.ItemTurret;
 import triangle.black.ArmorReactiveBulletType;
@@ -93,5 +95,78 @@ public class ExSerBlocks {
             lheat.load();   // 解析 LHEAT 贴图
             lhesh.load();   // 解析 LHESH 贴图
         });
+
+        // ============ 原版 foreshadow（噩兆）炮塔：射程翻倍 + 新增 BHE/BHEAT/BHESH 三种弹药 ============
+        // foreshadow 是原版 ItemTurret（mindustry.content.Blocks.foreshadow），原版射程 500f
+        ItemTurret foreshadow = (ItemTurret)Blocks.foreshadow;
+
+        // 1) 射程改为原来的两倍（500 → 1000）
+        foreshadow.range = foreshadow.range * 2f;
+
+        // 2) 原版既有弹药是 surgeAlloy 的 RailBulletType（轨道弹，hit-scan），其 length 在构造时按
+        //    「原 range+10=510」固化；翻倍射程后若不改，它仍只会命中到 510，故同步拉长到新射程+10
+        RailBulletType rail = (RailBulletType)foreshadow.ammoTypes.get(Items.surgeAlloy);
+        if(rail != null){
+            rail.length = foreshadow.range + 10f;
+        }
+
+        // 3) 新增三种弹药，类别均为默认 BasicBulletType（数值为占位，可按需调整）
+        //    key 使用模组物品 TriItems.BHE/BHEAT/BHESH，foreshadow 将消耗这些物品作为弹药
+        //    lifetime 手动设为「(新射程+10)/speed」，保证弹种能飞到新射程 1000 而不提前消失
+        //    （不调用 foreshadow.limitRange()，以免误改原版 speed=0 的轨道弹）
+        BulletType bhe = new ArmorReactiveBulletType(10f){{ // 高爆弹
+            ammoMultiplier = 1f;
+            speed = 20f;
+            lifetime = (foreshadow.range + 10f) / 20f;
+            baseArmor = 50f;           // 基准装甲：目标装甲低于此→伤害提升，高于此→降低
+            damageChangeRate = 750f;    // 伤害随装甲变化的倍率
+            splashDamageRadius = 6f;   // 溅射半径（格）
+            splashDamage = 10f;        // 溅射伤害
+            width = 10f;
+            height = 20f;
+            knockback = 20f;
+            sprite = "triangle-205HESH"; // 自定义贴图（图集建好后由下方 ContentInitEvent 解析）
+            drag = 0f;
+            hitSize = 24f;
+            buildingDamageMultiplier = 0.01f;
+        }};
+        foreshadow.ammoTypes.put(TriItems.BHE, bhe);
+
+        BulletType bheat = new BasicBulletType(6f, 55f){{ // 破甲弹
+            splashDamageRadius = 6f;   // 溅射半径（格）
+            splashDamage = 10f;        // 溅射伤害
+            width = 10f;
+            height = 20f;
+            speed = 20f;
+            ammoMultiplier = 1f;       // 每次供弹提供的弹药数
+            knockback = 20f;           // 击退
+            pierce = false;            // 不穿透
+            drag = 0f;
+            hitSize = 24f;
+            pierceArmor = false;       // 不无视护甲
+            buildingDamageMultiplier = 0.2f; // 对建筑伤害倍率
+            fragBullets = 1;           // 命中后分裂出 1 发子弹药
+            fragRandomSpread = 0;      // 分裂散射角度
+            sprite = "triangle-205HEAT";   // 自定义贴图（图集建好后由下方 ContentInitEvent 解析）
+            fragBullet = new LaserBulletType(){{
+                sideAngle = 175f;      // 侧向子弹角度
+                sideWidth = 1f;        // 侧向宽度
+                sideLength = 40f;      // 侧向长度
+                lifetime = 20f;
+                damage = 2750f;         // 激光伤害
+                length = 85f;          // 激光长度
+                pierce = true;         // 穿透
+                pierceArmor = true;    // 无视护甲
+                buildingDamageMultiplier = 0.2f;
+            }};
+            lifetime = (foreshadow.range + 10f) / 20f;
+        }};
+        foreshadow.ammoTypes.put(TriItems.BHEAT, bheat);
+
+        BulletType bhesh = new BasicBulletType(5.5f, 45f){{ // 碎甲弹
+            ammoMultiplier = 1f;
+            lifetime = (foreshadow.range + 10f) / 5.5f;
+        }};
+        foreshadow.ammoTypes.put(TriItems.BHESH, bhesh);
     }
 }

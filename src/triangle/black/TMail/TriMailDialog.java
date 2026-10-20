@@ -45,8 +45,12 @@ public class TriMailDialog{
     private static TriBlurBackground blur;
     /** 收件箱内容整体 Table（供整体滑入动画）。 */
     private static Table lastContent;
+    /** 收件箱内容的“家”位置（滑入目标 = 屏幕右 3/4 处）：打开详情时向右滑出、关闭详情后滑回此处。 */
+    private static float contentHomeX, contentHomeY;
     /** 收件箱内容滑入时长（先快后慢）。 */
     private static final float SLIDE_IN_DURATION = 0.4f;
+    /** 打开/关闭详情时，背景 content 滑出（加速）/滑回（减速）时长（≤0.2s）。 */
+    private static final float CONTENT_SWEEP_DURATION = 0.2f;
 
     private TriMailDialog(){}
 
@@ -94,6 +98,9 @@ public class TriMailDialog{
             // 局部目标 = 屏幕目标 - dialog 左下角(inbox.x/y) - cont 相对 dialog 偏移(inbox.cont.x/y) - content 半宽/半高
             float targetLocalX = targetScreenX - inbox.x - inbox.cont.x - cw / 2f;
             float targetLocalY = targetScreenY - inbox.y - inbox.cont.y - ch / 2f;
+            // 记录“家”位置：打开详情时 content 向右滑出、关闭详情后滑回此处
+            contentHomeX = targetLocalX;
+            contentHomeY = targetLocalY;
             // 起点：content 完全移出 cont 右侧（y 保持目标 y → 水平平行滑入）
             lastContent.setPosition(cw, targetLocalY);
             lastContent.actions(Actions.moveTo(targetLocalX, targetLocalY, SLIDE_IN_DURATION, Interp.pow2Out));
@@ -200,6 +207,13 @@ public class TriMailDialog{
     private static void openMail(TriMail mail){
         TriInbox.markRead(mail);
 
+        // 打开详情：背景 content 卡片组加速移出画面（先慢再快 pow2In，≤0.2s），空出收件箱区域
+        if(lastContent != null){
+            lastContent.clearActions();
+            float sw = Core.graphics.getWidth();
+            lastContent.actions(Actions.moveTo(sw + lastContent.getWidth(), contentHomeY, CONTENT_SWEEP_DURATION, Interp.pow2In));
+        }
+
         BaseDialog dialog = new BaseDialog(mail.subject);
 
         // 统一放入固定宽度的内容表，限制详情页宽度
@@ -252,14 +266,35 @@ public class TriMailDialog{
             readBtn.clicked(() -> {
                 TriInbox.markReadBtnClicked(mail); // 记忆置灰状态
                 readBtn.setDisabled(true);
-                dialog.hide();
-                build(inbox); // 返回并刷新收件箱（已读状态/历史顺序/角标）
+                dialog.hide(); // hidden 统一触发 content 减速滑回右 3/4
+                // 等滑回动画播完（约 0.2s）后再刷新收件箱，避免 build 立即清空重建打断滑回动画；
+                // 重建后把新 content 放回右 3/4（按当前尺寸重算），不会落到屏幕中心
+                Time.runTask(CONTENT_SWEEP_DURATION + 0.05f, () -> {
+                    if(!inbox.isShown()) return;
+                    build(inbox);
+                    if(lastContent != null){
+                        float cw = lastContent.getWidth(), ch = lastContent.getHeight();
+                        float sw = Core.graphics.getWidth(), sh = Core.graphics.getHeight();
+                        lastContent.setPosition(sw * 0.75f - inbox.x - inbox.cont.x - cw / 2f,
+                                                sh / 2f - inbox.y - inbox.cont.y - ch / 2f);
+                    }
+                });
             });
         }
         content.add(readBtn).size(100f, 50f).pad(10);
 
         dialog.cont.add(content).width(DETAIL_WIDTH); // 限定详情页宽度
         dialog.addCloseButton();
+
+        // 关闭详情（esc/空白/关闭键/已读键等任意方式，统一走 hidden 回调）：
+        // 背景 content 减速滑回右 3/4 家位置（先快后慢 pow2Out，≤0.2s）
+        dialog.hidden(() -> {
+            if(lastContent != null){
+                lastContent.clearActions();
+                lastContent.actions(Actions.moveTo(contentHomeX, contentHomeY, CONTENT_SWEEP_DURATION, Interp.pow2Out));
+            }
+        });
+
         dialog.show();
     }
 
