@@ -199,13 +199,18 @@ public class TriMailDialog{
         content.setAlignment(Align.topLeft);
         card.add(content).top().left().width(innerW).height(28).padLeft(14).padRight(14).padBottom(7);
 
-        card.clicked(() -> openMail(mail));
+        card.clicked(() -> openMail(mail, card));
         return card;
     }
 
-    /** 打开一封邮件的正文（自动标记已读并记录阅读时间）。详情页限宽。 */
-    private static void openMail(TriMail mail){
+    /** 打开一封邮件的正文（自动标记已读并记录阅读时间）。
+     *  被点击的信件缩略卡片在列表中隐藏（保留占位），关闭详情后恢复显示。
+     *  详情以画面中心新建的 table 直接显示（限宽、按内容实际高度真正居中）。 */
+    private static void openMail(TriMail mail, Table mailCard){
         TriInbox.markRead(mail);
+
+        // 隐藏被点击的信件缩略图卡片（保留占位，列表布局不移动）
+        if(mailCard != null) mailCard.visible = false;
 
         // 打开详情：背景 content 卡片组加速移出画面（先慢再快 pow2In，≤0.2s），空出收件箱区域
         if(lastContent != null){
@@ -214,12 +219,49 @@ public class TriMailDialog{
             lastContent.actions(Actions.moveTo(sw + lastContent.getWidth(), contentHomeY, CONTENT_SWEEP_DURATION, Interp.pow2In));
         }
 
-        BaseDialog dialog = new BaseDialog(mail.subject);
+        // 画面中心 table：直接显示信件详情
+        float sw = Core.graphics.getWidth(), sh = Core.graphics.getHeight();
+        Table detail = new Table();
+        detail.top().left();
+        detail.background(MultiRecipeFactory.whiteOutlined(Styles.grayPanel)); // 白色描边
+        buildDetailContent(detail, mail, () -> closeDetail(detail, mailCard));
+        // 限定宽度后布局，取内容实际高度（而非期望高度）用于真正居中
+        detail.setSize(DETAIL_WIDTH, 600f);
+        detail.validate();
+        float w = detail.getWidth(), h = Math.min(detail.getHeight(), sh - 120f); // 限高防超屏
+        detail.setSize(w, h);
+        detail.validate();
+        Core.scene.root.addChild(detail);
+        detail.toFront();
+        detail.setPosition(sw / 2f - w / 2f, sh / 2f - h / 2f); // 画面正中心
+    }
 
-        // 统一放入固定宽度的内容表，限制详情页宽度
-        Table content = new Table();
+    /** 关闭画面中心详情 table：移除 table、恢复被隐藏的信件缩略卡片、content 减速滑回右 3/4（先快后慢 pow2Out，≤0.2s）。 */
+    private static void closeDetail(Table detail, Table mailCard){
+        detail.remove(); // 移除画面中心详情 table
+        if(mailCard != null) mailCard.visible = true; // 恢复信件缩略卡片
+        if(lastContent != null){
+            lastContent.clearActions();
+            lastContent.actions(Actions.moveTo(contentHomeX, contentHomeY, CONTENT_SWEEP_DURATION, Interp.pow2Out));
+        }
+    }
+
+    /** 构建信件详情内容：标题（右带关闭按钮）/发件人/分割线/正文/附件/回信区/已读按钮。
+     *  onExit 供关闭按钮与已读按钮共用（关闭详情：恢复卡片 + content 滑回）。 */
+    private static void buildDetailContent(Table content, TriMail mail, Runnable onExit){
         content.top().left();
-        content.add("[accent]" + mail.subject).left().growX().pad(12).row();
+
+        // 顶部：标题（左）+ 关闭按钮 ×（右）——按钮放大便于点按
+        Table head = new Table();
+        head.left();
+        head.add("[accent]" + mail.subject).left().growX();
+        TextButton close = new TextButton("×");
+        close.clicked(() -> {
+            if(onExit != null) onExit.run();
+        });
+        head.add(close).size(56f, 48f).pad(8);
+        content.add(head).growX().pad(12).row();
+
         content.add("[accent]" + mail.sender).left().growX().pad(12).row();
 
         // 分割线：发件人与正文之间
@@ -266,7 +308,7 @@ public class TriMailDialog{
             readBtn.clicked(() -> {
                 TriInbox.markReadBtnClicked(mail); // 记忆置灰状态
                 readBtn.setDisabled(true);
-                dialog.hide(); // hidden 统一触发 content 减速滑回右 3/4
+                if(onExit != null) onExit.run(); // 关闭详情（恢复卡片 + content 滑回）
                 // 等滑回动画播完（约 0.2s）后再刷新收件箱，避免 build 立即清空重建打断滑回动画；
                 // 重建后把新 content 放回右 3/4（按当前尺寸重算），不会落到屏幕中心
                 Time.runTask(CONTENT_SWEEP_DURATION + 0.05f, () -> {
@@ -282,20 +324,6 @@ public class TriMailDialog{
             });
         }
         content.add(readBtn).size(100f, 50f).pad(10);
-
-        dialog.cont.add(content).width(DETAIL_WIDTH); // 限定详情页宽度
-        dialog.addCloseButton();
-
-        // 关闭详情（esc/空白/关闭键/已读键等任意方式，统一走 hidden 回调）：
-        // 背景 content 减速滑回右 3/4 家位置（先快后慢 pow2Out，≤0.2s）
-        dialog.hidden(() -> {
-            if(lastContent != null){
-                lastContent.clearActions();
-                lastContent.actions(Actions.moveTo(contentHomeX, contentHomeY, CONTENT_SWEEP_DURATION, Interp.pow2Out));
-            }
-        });
-
-        dialog.show();
     }
 
     /**
