@@ -15,6 +15,7 @@ import arc.scene.ui.ScrollPane;
 import arc.scene.ui.TextButton;
 import arc.scene.ui.layout.Table;
 import arc.scene.event.Touchable;
+import arc.struct.ObjectMap;
 import arc.struct.Seq;
 import arc.util.Align;
 import arc.util.Time;
@@ -49,6 +50,13 @@ public class TriMailDialog{
     private static Table activeDetail, activeDetailCard;
     /** 详情背后的全屏透明按钮：点击详情卡片外的部分 → 触发关闭详情（置于收件箱之上、详情之下）。 */
     private static Table activeBackdrop;
+    /** 分类栏四个按钮引用（按 ALL/READ/UNREAD/HISTORY 顺序），供 refreshReadState 更新未读角标。 */
+    private static final TextButton[] catButtons = new TextButton[4];
+    private static final Filter[] CATS = { Filter.ALL, Filter.READ, Filter.UNREAD, Filter.HISTORY };
+    /** 当前邮件列表 Table（scroll 内容），供“未读”分类下移除已读卡片（轻量刷新，不重建收件箱）。 */
+    private static Table listTable;
+    /** 已构建卡片的发件人 Label 引用（mail → sender Label），供 refreshReadState 局部更新未读/已读高亮（方案B）。 */
+    private static final ObjectMap<TriMail, Label> senderLabels = new ObjectMap<>();
     /** 收件箱内容的“家”位置（滑入目标 = 屏幕右 3/4 处）：打开详情时向右滑出、关闭详情后滑回此处。 */
     private static float contentHomeX, contentHomeY;
     /** 收件箱内容滑入时长（先快后慢）。 */
@@ -123,6 +131,7 @@ public class TriMailDialog{
     /** 重建收件箱内容（清空后重绘分类栏 + 邮件列表）。整个内容包成一个 Table 供整体滑入动画。 */
     private static void build(BaseDialog dlg){
         dlg.cont.clearChildren();
+        senderLabels.clear(); // 旧卡片引用作废（即将全量重建）
 
         // 一次解锁遍历，供分类角标与列表共用（避免每个分类各自 new Seq + 重复遍历全部邮件）
         Seq<TriMail> all = TriInbox.unlocked(storyScope);
@@ -140,6 +149,11 @@ public class TriMailDialog{
         addCategory(dlg, bar, group, Filter.READ, "tri.mail.cat.read", all);
         addCategory(dlg, bar, group, Filter.UNREAD, "tri.mail.cat.unread", all);
         addCategory(dlg, bar, group, Filter.HISTORY, "tri.mail.cat.history", all);
+        // 刷新按钮（方案B）：手动刷新已读/未读状态（角标 + 未读列表），样式同分类按钮；不入 ButtonGroup（非分类切换）
+        // 【暂时注释】待用户决定是否恢复
+        // TextButton refreshBtn = new TextButton(bundle("tri.mail.refresh"));
+        // refreshBtn.clicked(() -> refreshReadState());
+        // bar.add(refreshBtn).size(96f, 42f).pad(3);
         content.add(bar).padTop(8).padBottom(4).row();
 
         // 竖直向下的邮件列表（居中），可滚动
@@ -158,6 +172,7 @@ public class TriMailDialog{
         ScrollPane scroll = new ScrollPane(list);
         scroll.setOverscroll(false, false);
         content.add(scroll).grow().pad(4);
+        listTable = list; // 记录列表引用，供 refreshReadState 在“未读”分类下移除已读卡片
 
         dlg.cont.add(content).grow();
         // 先让父布局（cont）把 content 排到正确尺寸/位置（grow 填满），再让 content 子元素布局，
@@ -194,6 +209,50 @@ public class TriMailDialog{
             build(dlg);
         });
         bar.add(b).size(96f, 42f).pad(3);
+        catButtons[catIndex(f)] = b; // 记录引用，供 refreshReadState 更新未读角标
+    }
+
+    /** 分类栏按钮下标（ALL/READ/UNREAD/HISTORY 顺序）。 */
+    private static int catIndex(Filter f){
+        for(int i = 0; i < 4; i++) if(CATS[i] == f) return i;
+        return 0;
+    }
+
+    /** 仅刷新已读/未读状态：更新分类栏未读角标；局部更新已存在卡片的发件人高亮（方案B）；若当前是“未读”分类，将已读信件从列表移除。
+     *  不重建整个收件箱（不 clearChildren cont），因此不会打断 content 的滑回动画。 */
+    private static void refreshReadState(){
+        if(inbox == null || !inbox.isShown()) return;
+        Seq<TriMail> all = TriInbox.unlocked(storyScope);
+        // 更新四个分类按钮的未读角标
+        for(int i = 0; i < 4; i++){
+            TextButton b = catButtons[i];
+            if(b == null) continue;
+            int unread = unreadIn(all, CATS[i]);
+            String text = bundle("tri.mail.cat." + CATS[i].name().toLowerCase());
+            if(unread > 0) text += " [accent](" + unread + ")";
+            b.setText(text);
+        }
+        // 方案B：局部更新已存在卡片的发件人高亮（已读 → 普通色，未读 → accent），不动卡片布局
+        for(ObjectMap.Entry<TriMail, Label> e : senderLabels){
+            TriMail m = e.key;
+            Label lbl = e.value;
+            lbl.setText(TriInbox.isRead(m) ? m.sender : "[accent]" + m.sender);
+        }
+        // “未读”分类：移除已读信件（重建列表内容；不影响 content 滑回动画）
+        if(filter == Filter.UNREAD && listTable != null){
+            listTable.clearChildren();
+            boolean any = false;
+            for(TriMail m : all){
+                if(!TriInbox.isRead(m)){
+                    listTable.row();
+                    listTable.add(card(m)).size(CARD_WIDTH, CARD_HEIGHT).pad(3);
+                    any = true;
+                }
+            }
+            if(!any){
+                listTable.add("[#7f8c8d]" + bundle("tri.mail.empty")).pad(30);
+            }
+        }
     }
 
     /** 单封邮件的固定大小卡片：圆角矩形包裹，上发件人、中分割线、下内容（省略）。整卡可点击阅读。 */
@@ -213,6 +272,7 @@ public class TriMailDialog{
         sender.setEllipsis(true);
         sender.setAlignment(Align.topLeft);
         card.add(sender).top().left().width(innerW).height(32).padLeft(14).padRight(14).padTop(7).row();
+        senderLabels.put(mail, sender); // 记录引用，供 refreshReadState 局部刷新未读/已读高亮（方案B）
 
         // 分割线：发件人与内容之间
         Image divider = new Image(Tex.whiteui, Color.gray);
@@ -302,6 +362,8 @@ public class TriMailDialog{
             lastContent.clearActions();
             lastContent.actions(Actions.moveTo(contentHomeX, contentHomeY, CONTENT_SWEEP_DURATION, Interp.pow2Out));
         }
+        // 方案A：所有退出路径（× / 透明按钮 / 已读）统一刷新已读/未读状态（角标 + 发件人高亮 + 未读列表）
+        refreshReadState();
     }
 
     /** 构建信件详情内容：标题（右带关闭按钮）/发件人/分割线/正文/附件/回信区/已读按钮。
@@ -348,6 +410,7 @@ public class TriMailDialog{
                 TriInbox.collectAttachment(mail);
                 collect.setText(bundle("tri.mail.collected"));
                 collect.setDisabled(true);
+                refreshReadState(); // 方案A/E：附件收取后刷新已读/未读状态（角标 + 列表）
             });
             content.add(collect).size(130f, 44f).pad(8).row();
         }
@@ -357,30 +420,19 @@ public class TriMailDialog{
             content.add(replySection(mail)).left().row();
         }
 
-        // “已读”按钮：点击后置灰并禁用（详情页已有右上角返回键，无需再次返回操作）；
-        // 置灰状态持久化记忆，重新打开详情页时保持置灰
+        // “已读”按钮：被按下时与退出按钮/透明按钮一样触发退出（关闭详情：恢复卡片 + content 滑回）；
+        // 已读状态时按钮 disabled（不可按下），文字置灰（回归改动前：仅文字置灰，不整体着色）
         TextButton readBtn = new TextButton(bundle("tri.mail.back"));
         if(TriInbox.isReadBtnClicked(mail)){
-            readBtn.setDisabled(true);
-        }else{
-            readBtn.clicked(() -> {
-                TriInbox.markReadBtnClicked(mail); // 记忆置灰状态
-                readBtn.setDisabled(true);
-                if(onExit != null) onExit.run(); // 关闭详情（恢复卡片 + content 滑回）
-                // 等滑回动画播完（约 0.2s）后再刷新收件箱，避免 build 立即清空重建打断滑回动画；
-                // 重建后把新 content 放回右 3/4（按当前尺寸重算），不会落到屏幕中心
-                Time.runTask(CONTENT_SWEEP_DURATION + 0.05f, () -> {
-                    if(!inbox.isShown()) return;
-                    build(inbox);
-                    if(lastContent != null){
-                        float cw = lastContent.getWidth(), ch = lastContent.getHeight();
-                        float sw = Core.graphics.getWidth(), sh = Core.graphics.getHeight();
-                        lastContent.setPosition(sw * 0.75f - inbox.x - inbox.cont.x - cw / 2f,
-                                                sh / 2f - inbox.y - inbox.cont.y - ch / 2f);
-                    }
-                });
-            });
+            readBtn.setDisabled(true); // 已读：disabled 不可按下
+            readBtn.getLabel().setColor(Color.gray); // 文字置灰（回归改动前）
         }
+        readBtn.clicked(() -> {
+            TriInbox.markReadBtnClicked(mail); // 记忆置灰状态
+            readBtn.setDisabled(true); // 置灰 + 不可按下
+            readBtn.getLabel().setColor(Color.gray); // 文字置灰（回归改动前）
+            if(onExit != null) onExit.run(); // 触发同退出的行为：关闭详情（closeDetail 内已统一调用 refreshReadState）
+        });
         content.add(readBtn).size(100f, 50f).pad(10);
     }
 
@@ -529,6 +581,7 @@ public class TriMailDialog{
             if(mail.onReply != null) mail.onReply.run();
             TriInbox.markReplied(mail);
             buildReplyFull(box, mail, text, true, null);
+            refreshReadState(); // 方案E：回信发送完成后刷新已读/未读状态（角标 + 列表）
         });
 
         if(text.isEmpty()){

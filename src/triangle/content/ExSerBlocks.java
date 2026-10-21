@@ -116,8 +116,8 @@ public class ExSerBlocks {
         //    （不调用 foreshadow.limitRange()，以免误改原版 speed=0 的轨道弹）
         BulletType bhe = new ArmorReactiveBulletType(10f){{ // 高爆弹
             ammoMultiplier = 1f;
-            speed = 20f;
-            lifetime = (foreshadow.range + 10f) / 20f;
+            speed = 40f;
+            lifetime = (foreshadow.range + 10f) / 40f;
             baseArmor = 50f;           // 基准装甲：目标装甲低于此→伤害提升，高于此→降低
             damageChangeRate = 750f;    // 伤害随装甲变化的倍率
             splashDamageRadius = 6f;   // 溅射半径（格）
@@ -137,7 +137,7 @@ public class ExSerBlocks {
             splashDamage = 10f;        // 溅射伤害
             width = 10f;
             height = 20f;
-            speed = 20f;
+            speed = 40f;
             ammoMultiplier = 1f;       // 每次供弹提供的弹药数
             knockback = 20f;           // 击退
             pierce = false;            // 不穿透
@@ -159,7 +159,7 @@ public class ExSerBlocks {
                 pierceArmor = true;    // 无视护甲
                 buildingDamageMultiplier = 0.2f;
             }};
-            lifetime = (foreshadow.range + 10f) / 20f;
+            lifetime = (foreshadow.range + 10f) / 40f;
         }};
         foreshadow.ammoTypes.put(TriItems.BHEAT, bheat);
 

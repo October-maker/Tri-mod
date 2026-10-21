@@ -1,10 +1,13 @@
 package triangle;
 
+import arc.Events;
 import arc.util.*;
 import mindustry.*;
+import mindustry.game.EventType.ClientLoadEvent;
 import mindustry.mod.*;
 import triangle.black.ArmorReactiveBulletType;
 import triangle.black.TriArmorTurret;
+import triangle.black.TriContentInfoDialog;
 import triangle.black.TMail.TriGameMailButton;
 import triangle.black.TMail.TriInbox;
 import triangle.black.TMail.TriMainMenuButton;
@@ -57,5 +60,12 @@ public class triangle extends Mod{
         // 战役地图内“收到新邮件”提示（解锁时弹黑框 3 秒）
         TriInbox.hookNewMailToast();
         TriGameMailButton.init();
+        // 客户端加载完成后，把内容详情对话框替换为 TriContentInfoDialog，使原版炮塔（无法改类/覆写 setStats）
+        // 也能在详情页对 ArmorReactiveBulletType 追加自定义横向伤害表（在 UI 层 show 后注入）。
+        Events.on(ClientLoadEvent.class, e -> {
+            if(!(Vars.ui.content instanceof TriContentInfoDialog)){
+                Vars.ui.content = new TriContentInfoDialog();
+            }
+        });
     }
 }
