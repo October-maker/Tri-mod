@@ -45,6 +45,10 @@ public class TriMailDialog{
     private static TriBlurBackground blur;
     /** 收件箱内容整体 Table（供整体滑入动画）。 */
     private static Table lastContent;
+    /** 当前打开的信件详情 table（画面中心），以及其对应的缩略卡片（用于关闭时恢复显示）。 */
+    private static Table activeDetail, activeDetailCard;
+    /** 详情背后的全屏透明按钮：点击详情卡片外的部分 → 触发关闭详情（置于收件箱之上、详情之下）。 */
+    private static Table activeBackdrop;
     /** 收件箱内容的“家”位置（滑入目标 = 屏幕右 3/4 处）：打开详情时向右滑出、关闭详情后滑回此处。 */
     private static float contentHomeX, contentHomeY;
     /** 收件箱内容滑入时长（先快后慢）。 */
@@ -65,8 +69,17 @@ public class TriMailDialog{
         if(inbox == null){
             inbox = new BaseDialog("");
             inbox.addCloseButton();
-            // 收件箱关闭时移除毛玻璃背景
+            // 收件箱关闭时移除毛玻璃背景，并同步关闭可能仍打开的信件详情与透明按钮（避免悬浮残留）
             inbox.hidden(() -> {
+                if(activeDetail != null){
+                    activeDetail.remove();
+                    activeDetail = null;
+                    activeDetailCard = null;
+                }
+                if(activeBackdrop != null){
+                    activeBackdrop.remove();
+                    activeBackdrop = null;
+                }
                 if(blur != null){
                     blur.remove();
                     blur = null;
@@ -153,6 +166,18 @@ public class TriMailDialog{
         content.validate();
         content.setLayoutEnabled(false);
         lastContent = content;
+
+        // 详情页存在时，点击 Tmail 主界面（收件箱区域）→ 触发详情页关闭（避免叠加次序问题）。
+        // 用 touchDown（按下瞬间）：先于子元素（卡片）的 touchUp/clicked 触发，
+        // 因此点卡片时先关闭旧详情、随后卡片再打开新详情，不会误关新开的详情。
+        content.addListener(new ClickListener(){
+            @Override public boolean touchDown(InputEvent event, float x, float y, int pointer, KeyCode button){
+                if(activeDetail != null){
+                    closeDetail(activeDetail, activeDetailCard);
+                }
+                return false; // 不拦截事件，继续向子元素传播
+            }
+        });
     }
 
     private static void addCategory(BaseDialog dlg, Table bar, ButtonGroup<TextButton> group, Filter f, String key, Seq<TriMail> all){
@@ -209,6 +234,13 @@ public class TriMailDialog{
     private static void openMail(TriMail mail, Table mailCard){
         TriInbox.markRead(mail);
 
+        // 打开新详情前关闭已有详情（避免多个详情叠加；同时移除旧的全屏透明按钮）
+        if(activeDetail != null) closeDetail(activeDetail, activeDetailCard);
+        if(activeBackdrop != null){
+            activeBackdrop.remove();
+            activeBackdrop = null;
+        }
+
         // 隐藏被点击的信件缩略图卡片（保留占位，列表布局不移动）
         if(mailCard != null) mailCard.visible = false;
 
@@ -231,13 +263,39 @@ public class TriMailDialog{
         float w = detail.getWidth(), h = Math.min(detail.getHeight(), sh - 120f); // 限高防超屏
         detail.setSize(w, h);
         detail.validate();
+        // 详情背后的全屏透明按钮（先于详情加入场景 → 在详情之下、收件箱之上）：
+        // 点击详情卡片外的部分 → 统一触发关闭详情；按钮本体不可见，随详情关闭一并移除
+        Table backdrop = new Table();
+        backdrop.touchable = Touchable.enabled; // 全屏可触摸（拦截详情外点击）
+        backdrop.clicked(() -> {
+            if(activeDetail != null) closeDetail(activeDetail, activeDetailCard);
+        });
+        Core.scene.root.addChild(backdrop);
+        backdrop.setFillParent(true); // 填满整个场景
+        activeBackdrop = backdrop;
+
+        // 再挂详情（在透明按钮之上）
         Core.scene.root.addChild(detail);
         detail.toFront();
         detail.setPosition(sw / 2f - w / 2f, sh / 2f - h / 2f); // 画面正中心
+
+        // 记录当前详情（供透明按钮/主界面点击时关闭；并关联缩略卡片用于恢复）
+        activeDetail = detail;
+        activeDetailCard = mailCard;
     }
 
-    /** 关闭画面中心详情 table：移除 table、恢复被隐藏的信件缩略卡片、content 减速滑回右 3/4（先快后慢 pow2Out，≤0.2s）。 */
+    /** 关闭画面中心详情 table：移除 table、移除背后的全屏透明按钮、恢复被隐藏的信件缩略卡片、content 减速滑回右 3/4（先快后慢 pow2Out，≤0.2s）。
+     *  可重复调用（幂等）：详情已不在场景时直接返回。 */
     private static void closeDetail(Table detail, Table mailCard){
+        if(detail == null || !detail.hasParent()) return; // 已关闭
+        if(activeDetail == detail){
+            activeDetail = null;
+            activeDetailCard = null;
+        }
+        if(activeBackdrop != null){ // 移除全屏透明按钮
+            activeBackdrop.remove();
+            activeBackdrop = null;
+        }
         detail.remove(); // 移除画面中心详情 table
         if(mailCard != null) mailCard.visible = true; // 恢复信件缩略卡片
         if(lastContent != null){
