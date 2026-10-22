@@ -103,39 +103,24 @@ public class TriMailDialog{
         }
 
         inbox.show();
-        build(inbox);
-
-        // 内容整体滑入：收件箱内容 Table 从右侧滑入到屏幕右半屏中心（右 3/4 处），空出左半屏（用于 logo）。
-        // 延迟到下一帧触发，避免与 Dialog.show() 内部流程同帧竞争；
-        // content 布局已冻结（setLayoutEnabled(false)），位置手动控制，不会被 Table 布局覆盖。
-        Time.runTask(1f, () -> {
-            if(!inbox.isShown() || lastContent == null) return;
-            float cw = lastContent.getWidth(), ch = lastContent.getHeight();
-            if(cw <= 0f || ch <= 0f) return;
-            float sw = Core.graphics.getWidth(), sh = Core.graphics.getHeight();
-            // 目标：content 中心位于屏幕右半屏中心（右 3/4 处）
-            float targetScreenX = sw * 0.75f, targetScreenY = sh / 2f;
-            // content 坐标是相对 cont 的局部坐标：
-            // 局部目标 = 屏幕目标 - dialog 左下角(inbox.x/y) - cont 相对 dialog 偏移(inbox.cont.x/y) - content 半宽/半高
-            float targetLocalX = targetScreenX - inbox.x - inbox.cont.x - cw / 2f;
-            float targetLocalY = targetScreenY - inbox.y - inbox.cont.y - ch / 2f;
-            // 记录“家”位置：打开详情时 content 向右滑出、关闭详情后滑回此处
-            contentHomeX = targetLocalX;
-            contentHomeY = targetLocalY;
-            // 起点：content 完全移出 cont 右侧（y 保持目标 y → 水平平行滑入）
-            lastContent.setPosition(cw, targetLocalY);
-            lastContent.actions(Actions.moveTo(targetLocalX, targetLocalY, SLIDE_IN_DURATION, Interp.pow2Out));
-        });
+        build(inbox); // 删除旧 content + rebuildContent（新建 content 并从屏幕右外侧滑入右 3/4 处）
     }
 
-    /** 重建收件箱内容（清空后重绘分类栏 + 邮件列表）。整个内容包成一个 Table 供整体滑入动画。 */
+    /** 重建收件箱内容（删除旧 content 后，新建 content 并从屏幕右外侧滑入右 3/4 处）。
+     *  删除旧 content 的逻辑不内置在本方法——调用方须在调用前自行移除旧 content
+     *  （不同调用方可按不同样式删除：直接清空、淡出、滑出等）。 */
     private static void build(BaseDialog dlg){
+        // 删除旧 content：这里直接清空 cont（如需其他删除样式，可在调用 rebuildContent 前自行处理）
         dlg.cont.clearChildren();
-        senderLabels.clear(); // 旧卡片引用作废（即将全量重建）
-
-        // 一次解锁遍历，供分类角标与列表共用（避免每个分类各自 new Seq + 重复遍历全部邮件）
+        senderLabels.clear(); // 旧卡片引用作废（即将重建）
         Seq<TriMail> all = TriInbox.unlocked(storyScope);
+        rebuildContent(dlg, all);
+    }
 
+    /** 新建收件箱 content 卡片列表：在屏幕右外侧新建（分类栏 + 卡片列表），随后滑入右 3/4 处。
+     *  不内置删除旧 content 的逻辑——调用方须在调用前自行移除旧 content（可按不同样式删除）。
+     *  @param dlg 收件箱对话框；@param all 已解锁邮件列表快照 */
+    private static void rebuildContent(BaseDialog dlg, Seq<TriMail> all){
         // 整个收件箱内容包成一个 Table（便于整体滑入动画与后续改进）
         Table content = new Table();
         content.top();
@@ -192,6 +177,26 @@ public class TriMailDialog{
                 }
                 return false; // 不拦截事件，继续向子元素传播
             }
+        });
+
+        // 在屏幕右外侧新建后，滑入右 3/4 处（先快后慢 pow2Out，SLIDE_IN_DURATION）。
+        // 延迟一帧执行，避开 Dialog.show() 内部流程同帧竞争；布局已冻结，位置不会被 Table 布局覆盖。
+        Time.runTask(1f, () -> {
+            if(!dlg.isShown() || lastContent == null || lastContent.getWidth() <= 0f) return;
+            float sw = Core.graphics.getWidth(), sh = Core.graphics.getHeight();
+            float cw = lastContent.getWidth(), ch = lastContent.getHeight();
+            // 目标：content 中心位于屏幕右半屏中心（右 3/4 处）
+            float targetScreenX = sw * 0.75f, targetScreenY = sh / 2f;
+            // content 坐标是相对 cont 的局部坐标：
+            // 局部目标 = 屏幕目标 - dialog 左下角(inbox.x/y) - cont 相对 dialog 偏移(inbox.cont.x/y) - content 半宽/半高
+            float targetLocalX = targetScreenX - dlg.x - dlg.cont.x - cw / 2f;
+            float targetLocalY = targetScreenY - dlg.y - dlg.cont.y - ch / 2f;
+            // 记录“家”位置：打开详情时 content 向右滑出、关闭详情后滑回此处
+            contentHomeX = targetLocalX;
+            contentHomeY = targetLocalY;
+            // 起点：content 在屏幕右外侧（y 保持目标 y → 水平平行滑入）
+            lastContent.setPosition(sw + cw, targetLocalY);
+            lastContent.actions(Actions.moveTo(targetLocalX, targetLocalY, SLIDE_IN_DURATION, Interp.pow2Out));
         });
     }
 
