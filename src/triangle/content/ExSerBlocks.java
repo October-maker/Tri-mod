@@ -9,7 +9,7 @@ import mindustry.entities.bullet.LaserBulletType;
 import mindustry.entities.bullet.RailBulletType;
 import mindustry.game.EventType.ContentInitEvent;
 import mindustry.world.blocks.defense.turrets.ItemTurret;
-import triangle.black.ArmorReactiveBulletType;
+import triangle.black.ArmorBullet.ArmorReactiveBulletType;
 
 /**
  * 对原版（Serpulo）方块做运行时修改。

@@ -3,11 +3,11 @@ package triangle;
 import arc.Events;
 import arc.util.*;
 import mindustry.*;
-import mindustry.game.EventType.ClientLoadEvent;
+import mindustry.game.EventType.Trigger;
 import mindustry.mod.*;
-import triangle.black.ArmorReactiveBulletType;
-import triangle.black.TriArmorTurret;
-import triangle.black.TriContentInfoDialog;
+import triangle.black.ArmorBullet.ArmorReactiveBulletType;
+import triangle.black.ArmorBullet.TriArmorTurret;
+import triangle.black.ArmorBullet.TriContentInfoDialog;
 import triangle.black.TMail.TriGameMailButton;
 import triangle.black.TMail.TriInbox;
 import triangle.black.TMail.TriMainMenuButton;
@@ -60,10 +60,11 @@ public class triangle extends Mod{
         // 战役地图内“收到新邮件”提示（解锁时弹黑框 3 秒）
         TriInbox.hookNewMailToast();
         TriGameMailButton.init();
-        // 客户端加载完成后，把内容详情对话框替换为 TriContentInfoDialog，使原版炮塔（无法改类/覆写 setStats）
-        // 也能在详情页对 ArmorReactiveBulletType 追加自定义横向伤害表（在 UI 层 show 后注入）。
-        Events.on(ClientLoadEvent.class, e -> {
-            if(!(Vars.ui.content instanceof TriContentInfoDialog)){
+        // 惰性自愈安装：每帧检查并把内容详情对话框替换为 TriContentInfoDialog，不再依赖 ClientLoadEvent 时机
+        // （Vars.ui 可能尚未初始化，故带空保护；替换成功后 instanceof 判空使其退化为空操作）
+        // 使原版炮塔（无法改类/覆写 setStats）也能在详情页对 ArmorReactiveBulletType 追加自定义横向伤害表。
+        Events.run(Trigger.update, () -> {
+            if(Vars.ui != null && Vars.ui.content != null && !(Vars.ui.content instanceof TriContentInfoDialog)){
                 Vars.ui.content = new TriContentInfoDialog();
             }
         });

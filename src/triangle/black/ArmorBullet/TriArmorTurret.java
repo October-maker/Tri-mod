@@ -1,4 +1,4 @@
-package triangle.black;
+package triangle.black.ArmorBullet;
 
 import arc.struct.ObjectMap;
 import arc.struct.Seq;
@@ -6,7 +6,6 @@ import mindustry.entities.bullet.BulletType;
 import mindustry.type.Item;
 import mindustry.world.blocks.defense.turrets.ItemTurret;
 import mindustry.world.meta.Stat;
-import mindustry.world.meta.StatValue;
 import mindustry.world.meta.StatValues;
 
 /**

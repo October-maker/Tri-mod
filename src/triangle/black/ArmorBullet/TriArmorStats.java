@@ -1,4 +1,4 @@
-package triangle.black;
+package triangle.black.ArmorBullet;
 
 import arc.Core;
 import arc.graphics.Color;
