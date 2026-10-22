@@ -114,13 +114,13 @@ public class TriMailDialog{
         dlg.cont.clearChildren();
         senderLabels.clear(); // 旧卡片引用作废（即将重建）
         Seq<TriMail> all = TriInbox.unlocked(storyScope);
-        rebuildContent(dlg, all);
+        rebuildContent(dlg, all, SLIDE_IN_DURATION);
     }
 
     /** 新建收件箱 content 卡片列表：在屏幕右外侧新建（分类栏 + 卡片列表），随后滑入右 3/4 处。
      *  不内置删除旧 content 的逻辑——调用方须在调用前自行移除旧 content（可按不同样式删除）。
-     *  @param dlg 收件箱对话框；@param all 已解锁邮件列表快照 */
-    private static void rebuildContent(BaseDialog dlg, Seq<TriMail> all){
+     *  @param dlg 收件箱对话框；@param all 已解锁邮件列表快照；@param slideDuration 滑入时长（秒），可定制效果 */
+    private static void rebuildContent(BaseDialog dlg, Seq<TriMail> all, float slideDuration){
         // 整个收件箱内容包成一个 Table（便于整体滑入动画与后续改进）
         Table content = new Table();
         content.top();
@@ -179,24 +179,24 @@ public class TriMailDialog{
             }
         });
 
-        // 在屏幕右外侧新建后，滑入右 3/4 处（先快后慢 pow2Out，SLIDE_IN_DURATION）。
-        // 延迟一帧执行，避开 Dialog.show() 内部流程同帧竞争；布局已冻结，位置不会被 Table 布局覆盖。
+        // 布局冻结后同步定位到屏幕右外侧（本帧即不可见 → 消除“延迟一帧”期间 content 显示在默认位置的画面闪烁）；
+        // 延迟一帧仅注册滑入动画（避开 Dialog.show() 内部流程同帧竞争；起点已定好，无需再次定位）。
+        float sw = Core.graphics.getWidth(), sh = Core.graphics.getHeight();
+        float cw = content.getWidth(), ch = content.getHeight();
+        // 目标：content 中心位于屏幕右半屏中心（右 3/4 处）
+        float targetScreenX = sw * 0.75f, targetScreenY = sh / 2f;
+        // content 坐标是相对 cont 的局部坐标：
+        // 局部目标 = 屏幕目标 - dialog 左下角(dlg.x/y) - cont 相对 dialog 偏移(dlg.cont.x/y) - content 半宽/半高
+        float targetLocalX = targetScreenX - dlg.x - dlg.cont.x - cw / 2f;
+        float targetLocalY = targetScreenY - dlg.y - dlg.cont.y - ch / 2f;
+        contentHomeX = targetLocalX; // 记录“家”位置：打开详情时 content 向右滑出、关闭详情后滑回此处
+        contentHomeY = targetLocalY;
+        content.setPosition(sw + cw, targetLocalY); // 起点：屏幕右外侧（同步定位，本帧起不可见）
         Time.runTask(1f, () -> {
-            if(!dlg.isShown() || lastContent == null || lastContent.getWidth() <= 0f) return;
-            float sw = Core.graphics.getWidth(), sh = Core.graphics.getHeight();
-            float cw = lastContent.getWidth(), ch = lastContent.getHeight();
-            // 目标：content 中心位于屏幕右半屏中心（右 3/4 处）
-            float targetScreenX = sw * 0.75f, targetScreenY = sh / 2f;
-            // content 坐标是相对 cont 的局部坐标：
-            // 局部目标 = 屏幕目标 - dialog 左下角(inbox.x/y) - cont 相对 dialog 偏移(inbox.cont.x/y) - content 半宽/半高
-            float targetLocalX = targetScreenX - dlg.x - dlg.cont.x - cw / 2f;
-            float targetLocalY = targetScreenY - dlg.y - dlg.cont.y - ch / 2f;
-            // 记录“家”位置：打开详情时 content 向右滑出、关闭详情后滑回此处
-            contentHomeX = targetLocalX;
-            contentHomeY = targetLocalY;
-            // 起点：content 在屏幕右外侧（y 保持目标 y → 水平平行滑入）
-            lastContent.setPosition(sw + cw, targetLocalY);
-            lastContent.actions(Actions.moveTo(targetLocalX, targetLocalY, SLIDE_IN_DURATION, Interp.pow2Out));
+            // 若延迟期间 content 已被重建（lastContent 换新），跳过本次旧滑入任务，由新 build 自己的滑入处理
+            if(!dlg.isShown() || lastContent != content) return;
+            lastContent.clearActions();
+            lastContent.actions(Actions.moveTo(targetLocalX, targetLocalY, slideDuration, Interp.pow2Out));
         });
     }
 
