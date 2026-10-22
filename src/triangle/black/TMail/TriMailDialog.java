@@ -179,22 +179,25 @@ public class TriMailDialog{
             }
         });
 
-        // 布局冻结后同步定位到屏幕右外侧（本帧即不可见 → 消除“延迟一帧”期间 content 显示在默认位置的画面闪烁）；
-        // 延迟一帧仅注册滑入动画（避开 Dialog.show() 内部流程同帧竞争；起点已定好，无需再次定位）。
-        float sw = Core.graphics.getWidth(), sh = Core.graphics.getHeight();
-        float cw = content.getWidth(), ch = content.getHeight();
-        // 目标：content 中心位于屏幕右半屏中心（右 3/4 处）
-        float targetScreenX = sw * 0.75f, targetScreenY = sh / 2f;
-        // content 坐标是相对 cont 的局部坐标：
-        // 局部目标 = 屏幕目标 - dialog 左下角(dlg.x/y) - cont 相对 dialog 偏移(dlg.cont.x/y) - content 半宽/半高
-        float targetLocalX = targetScreenX - dlg.x - dlg.cont.x - cw / 2f;
-        float targetLocalY = targetScreenY - dlg.y - dlg.cont.y - ch / 2f;
-        contentHomeX = targetLocalX; // 记录“家”位置：打开详情时 content 向右滑出、关闭详情后滑回此处
-        contentHomeY = targetLocalY;
-        content.setPosition(sw + cw, targetLocalY); // 起点：屏幕右外侧（同步定位，本帧起不可见）
+        // 方案1：延迟期间隐藏 content（本帧完全不可见，杜绝“中间闪现/闪烁”）；
+        // 延迟一帧后（此时 Dialog.show()/父布局已稳定）在回调内定位屏幕右外侧 + 注册滑入动画——
+        // 定位动作发生在布局稳定之后，不会再被父级 cont 的布局 validate 覆盖（setLayoutEnabled 只冻结 content 自身布局，不阻止父重排）。
+        content.visible = false;
         Time.runTask(1f, () -> {
             // 若延迟期间 content 已被重建（lastContent 换新），跳过本次旧滑入任务，由新 build 自己的滑入处理
             if(!dlg.isShown() || lastContent != content) return;
+            float sw = Core.graphics.getWidth(), sh = Core.graphics.getHeight();
+            float cw = lastContent.getWidth(), ch = lastContent.getHeight();
+            // 目标：content 中心位于屏幕右半屏中心（右 3/4 处）
+            float targetScreenX = sw * 0.75f, targetScreenY = sh / 2f;
+            // content 坐标是相对 cont 的局部坐标：
+            // 局部目标 = 屏幕目标 - dialog 左下角(dlg.x/y) - cont 相对 dialog 偏移(dlg.cont.x/y) - content 半宽/半高
+            float targetLocalX = targetScreenX - dlg.x - dlg.cont.x - cw / 2f;
+            float targetLocalY = targetScreenY - dlg.y - dlg.cont.y - ch / 2f;
+            contentHomeX = targetLocalX; // 记录“家”位置：打开详情时 content 向右滑出、关闭详情后滑回此处
+            contentHomeY = targetLocalY;
+            lastContent.setPosition(sw + cw, targetLocalY); // 起点：屏幕右外侧（布局已稳定，定位生效）
+            lastContent.visible = true; // 恢复可见，随即滑入
             lastContent.clearActions();
             lastContent.actions(Actions.moveTo(targetLocalX, targetLocalY, slideDuration, Interp.pow2Out));
         });
