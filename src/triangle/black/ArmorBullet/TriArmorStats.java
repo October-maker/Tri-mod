@@ -64,6 +64,12 @@ public final class TriArmorStats {
                     iconName.image(item.uiIcon).size(24f).padRight(4f).right().scaling(Scaling.fit).top();
                     iconName.add(item.localizedName).padRight(10f).left().top();
                 });
+                // 护甲反应范围伤害：范围伤害范围显示 armorSplashRadius（格）（二次衰减，伤害随装甲变化故不显示单一数值）
+                // 放在弹药名称下、伤害表前，compact 与原版路径、full 自定义路径均可见
+                if(a.armorSplashRadius > 0f){
+                    t.row();
+                    sep(t, Core.bundle.format("bullet.armorsplashradius", Strings.fixed(a.armorSplashRadius / tilesize, 1)));
+                }
                 if(!compact){
                     // 弹药专属说明行：bundle 存在 block.<炮塔名>.<弹药名>.info 键时才显示（等价原版 StatValues.tableInfo）
                     String infoKey = "block." + blockName + "." + item.name + ".info";
@@ -71,10 +77,12 @@ public final class TriArmorStats {
                         t.row();
                         tableInfo(t, infoKey);
                     }
-                    // 原版条件数值行（排除被隐藏条目：伤害/穿透/穿甲/护甲修正/压制/伤害上限）
-                    t.row();
-                    addAmmoStats(t, a, item);
                 }
+                // 原版条件数值行（排除被隐藏条目：伤害/穿透/穿甲/护甲修正/压制/伤害上限）：
+                // compact(原版炮塔注入)与 full(自定义炮塔)均渲染，确保建筑伤害倍率/击退/护盾修正等条目
+                // 在护甲自定义面板内可见（原版 StatValues 弹药行可能与之重复，属预期，可按需后续隐藏原版行）
+                t.row();
+                addAmmoStats(t, a, item);
                 // 描述头：使用原版 bundle 键 stat.damage（中文“伤害”/英文“Damage”，随语言本地化），
                 // 加冒号作为横向伤害表的标题行，明确框中数字为“伤害”数值
                 t.row();
@@ -116,8 +124,10 @@ public final class TriArmorStats {
         if(a.shieldDamageMultiplier != 1){
             sep(parent, Core.bundle.format("bullet.shielddamage", ammoStat((int)(a.shieldDamageMultiplier * 100 - 100))));
         }
-        // 【条目4】溅射伤害 + 半径（格）：原版条件 splashDamage > 0
-        if(a.splashDamage > 0){
+        // 【条目4】溅射伤害 + 半径（格）：原版条件 splashDamage > 0。
+        // 启用护甲反应范围伤害时（armorSplashRadius>0）原生溅射已归零，改由 displayArmor 顶部的
+        // “范围伤害范围”行显示 armorSplashRadius，此处跳过避免显示已被归零的原版行
+        if(a.splashDamage > 0 && (!(a instanceof ArmorReactiveBulletType armor) || armor.armorSplashRadius <= 0f)){
             sep(parent, Core.bundle.format("bullet.splashdamage", (int)a.splashDamage, Strings.fixed(a.splashDamageRadius / tilesize, 1)));
         }
         // 【条目5】弹药倍率（弹药/物品）：原版条件 statLiquidConsumed<=0 且 ammoMultiplier!=1 且 displayAmmoMultiplier

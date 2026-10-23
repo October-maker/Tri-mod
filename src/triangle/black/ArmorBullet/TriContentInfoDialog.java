@@ -1,6 +1,10 @@
 package triangle.black.ArmorBullet;
 
+import java.util.HashSet;
+import java.util.Set;
+
 import arc.scene.Element;
+import arc.scene.Group;
 import arc.scene.ui.Label;
 import arc.scene.ui.ScrollPane;
 import arc.scene.ui.layout.Table;
@@ -24,8 +28,9 @@ import mindustry.world.meta.Stat;
  *   <li>确认 ammoTypes 中存在 ArmorReactiveBulletType，否则保持原版详情页原样；</li>
  *   <li>遍历 cont 子节点找到承载统计表的 ScrollPane（不只取 first，更稳健），经 {@code getWidget()} 拿到
  *       Stats 表；</li>
- *   <li>定位“弹药(Stat.ammo)”统计的 inset 子表，把伤害表<b>追加到该弹药统计内部</b>（紧跟该弹药的原版
- *       弹药行之后，即“该弹药的详情位置”）；若找不到则兜底追加到统计表末尾。</li>
+ *   <li>定位“弹药(Stat.ammo)”统计的 inset 子表，把自定义护甲面板<b>追加到该弹药统计内部</b>（即“该弹药的
+ *       详情位置”），并<b>移除原版 StatValues.ammo 渲染的、属于护甲反应弹药的原版 grayPanel</b>，避免同一弹药
+ *       在原版行与自定义面板间重复显示；若找不到弹药 inset 则兜底追加到统计表末尾。</li>
  * </ol>
  *
  * <p>整段注入包在 try/catch 中并记录日志，避免任一异常破坏详情页显示或静默吞掉。
@@ -55,7 +60,8 @@ public class TriContentInfoDialog extends ContentInfoDialog {
     }
 
     /**
-     * 对含护甲反应弹药的原版炮塔，把自定义横向伤害表注入到“弹药”统计行内部。
+     * 对含护甲反应弹药的原版炮塔，把自定义护甲面板注入到“弹药”统计行内部，并移除原版对应的 grayPanel，
+     * 避免同一弹药在原版行与自定义面板之间重复显示。
      * 全部操作都是幂等的：每次 show 都会重建统计表，故不会叠加。
      */
     private void inject(UnlockableContent content){
@@ -63,10 +69,14 @@ public class TriContentInfoDialog extends ContentInfoDialog {
         // TriArmorTurret 已在 setStats 内正确渲染护甲伤害表，跳过避免重复显示
         if(turret instanceof TriArmorTurret) return;
 
-        // 确认存在护甲反应弹药（没有则不注入，保持原版详情页原样）
+        // 收集护甲反应弹药的物品显示名（供识别原版 grayPanel 以移除重复行）；同时确认存在护甲反应弹药
+        Set<String> armorNames = new HashSet<>();
         boolean hasArmor = false;
         for(var e : turret.ammoTypes){
-            if(e.value instanceof ArmorReactiveBulletType){ hasArmor = true; break; }
+            if(e.value instanceof ArmorReactiveBulletType){
+                hasArmor = true;
+                armorNames.add(e.key.localizedName);
+            }
         }
         if(!hasArmor) return;
 
@@ -77,14 +87,57 @@ public class TriContentInfoDialog extends ContentInfoDialog {
         }
         if(pane == null || !(pane.getWidget() instanceof Table statsTable)) return;
 
-        // 优先追加到“弹药”统计行内部（紧跟该弹药的原版弹药行之后，即“该弹药的详情位置”）
+        // 优先注入到“弹药”统计行内部（紧跟该弹药的原版弹药行之后，即“该弹药的详情位置”）
         Table ammoInset = findAmmoInset(statsTable);
         if(ammoInset != null){
+            // 移除弹药统计行里属于护甲反应弹药的原版 grayPanel，改由下方注入的完整自定义面板（含条件数值行+伤害表）统一显示
+            removeVanillaArmorPanels(ammoInset, armorNames);
             TriArmorStats.displayArmor(ammoInset, turret.ammoTypes, turret.name, true);
         }else{
             // 兜底：找不到弹药统计行时追加到统计表末尾
             TriArmorStats.displayArmor(statsTable, turret.ammoTypes, turret.name, true);
         }
+    }
+
+    /**
+     * 从弹药统计行中移除原版 StatValues.ammo 渲染的、属于护甲反应弹药的 grayPanel（表），
+     * 避免与新注入的完整自定义面板重复。识别依据：面板内存在其物品显示名（localizedName）的 Label。
+     */
+    private static void removeVanillaArmorPanels(Table ammoInset, Set<String> armorNames){
+        var children = ammoInset.getChildren();
+        // 倒序遍历移除：被移除项后的索引不受影响
+        for(int i = children.size - 1; i >= 0; i--){
+            Element child = children.get(i);
+            if(child instanceof Table panel && isArmorPanel(panel, armorNames)){
+                panel.remove();
+            }
+        }
+    }
+
+    /**
+     * 判断某个 grayPanel 是否属于护甲反应弹药：递归遍历面板子树（含嵌套的标题子表），
+     * 任一 Label 文本（去掉颜色标记后）命中护甲弹药物品显示名即视为匹配。
+     * 原版 StatValues.ammo 的物品名称 Label 嵌在标题子表内，故必须递归，不能只看直接子节点。
+     */
+    private static boolean isArmorPanel(Table panel, Set<String> armorNames){
+        return matchesName(panel, armorNames);
+    }
+
+    /** 递归：节点自身若是 Label 且文本命中护甲名则 true；否则下钻其子节点（Group/Table）。 */
+    private static boolean matchesName(Element root, Set<String> armorNames){
+        if(root instanceof Label label){
+            String text = label.getText().toString();
+            if(text.startsWith("[") && text.indexOf(']') != -1){
+                text = text.substring(text.indexOf(']') + 1);
+            }
+            if(armorNames.contains(text.trim())) return true;
+        }
+        if(root instanceof Group group){
+            for(Element child : group.getChildren()){
+                if(matchesName(child, armorNames)) return true;
+            }
+        }
+        return false;
     }
 
     /**

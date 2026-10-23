@@ -1,13 +1,17 @@
 package triangle.content;
 
 import arc.Events;
+import arc.graphics.Color;
 import mindustry.content.Blocks;
+import mindustry.content.Fx;
 import mindustry.content.Items;
 import mindustry.entities.bullet.BasicBulletType;
 import mindustry.entities.bullet.BulletType;
 import mindustry.entities.bullet.LaserBulletType;
 import mindustry.entities.bullet.RailBulletType;
+import mindustry.entities.effect.MultiEffect;
 import mindustry.game.EventType.ContentInitEvent;
+import mindustry.graphics.Pal;
 import mindustry.world.blocks.defense.turrets.ItemTurret;
 import triangle.black.ArmorBullet.ArmorReactiveBulletType;
 
@@ -96,7 +100,7 @@ public class ExSerBlocks {
             lhesh.load();   // 解析 LHESH 贴图
         });
 
-        // ============ 原版 foreshadow（噩兆）炮塔：射程翻倍 + 新增 BHE/BHEAT/BHESH 三种弹药 ============
+// ============ 原版 foreshadow（噩兆）炮塔：射程翻倍 + 新增 BHE/BHEAT/BHESH 三种弹药 ============
         // foreshadow 是原版 ItemTurret（mindustry.content.Blocks.foreshadow），原版射程 500f
         ItemTurret foreshadow = (ItemTurret)Blocks.foreshadow;
 
@@ -120,15 +124,16 @@ public class ExSerBlocks {
             lifetime = (foreshadow.range + 10f) / 40f;
             baseArmor = 50f;           // 基准装甲：目标装甲低于此→伤害提升，高于此→降低
             damageChangeRate = 750f;    // 伤害随装甲变化的倍率
-            splashDamageRadius = 6f;   // 溅射半径（格）
-            splashDamage = 10f;        // 溅射伤害
+            armorSplashRadius = 48f;    // 护甲反应范围伤害半径：>0 即启用——对命中点周围敌方单位/建筑按各自护甲
             width = 10f;
             height = 20f;
             knockback = 20f;
-            sprite = "triangle-205HESH"; // 自定义贴图（图集建好后由下方 ContentInitEvent 解析）
+            sprite = "triangle-205HE"; // 自定义贴图（图集建好后由下方 ContentInitEvent 解析）
             drag = 0f;
             hitSize = 24f;
-            buildingDamageMultiplier = 0.01f;
+            buildingDamageMultiplier = 0.1f;
+            hitEffect = despawnEffect = new MultiEffect(Fx.titanExplosion, Fx.titanSmoke);
+            hitColor = Color.valueOf("ea8878").lerp(Pal.redLight, 0.5f);
         }};
         foreshadow.ammoTypes.put(TriItems.BHE, bhe);
 
@@ -157,15 +162,25 @@ public class ExSerBlocks {
                 length = 85f;          // 激光长度
                 pierce = true;         // 穿透
                 pierceArmor = true;    // 无视护甲
-                buildingDamageMultiplier = 0.2f;
+                buildingDamageMultiplier = 0.05f;
             }};
             lifetime = (foreshadow.range + 10f) / 40f;
         }};
         foreshadow.ammoTypes.put(TriItems.BHEAT, bheat);
 
-        BulletType bhesh = new BasicBulletType(5.5f, 45f){{ // 碎甲弹
+        BulletType bhesh = new ArmorReactiveBulletType(1000f){{ // 高爆弹
             ammoMultiplier = 1f;
-            lifetime = (foreshadow.range + 10f) / 5.5f;
+            speed = 40f;
+            lifetime = (foreshadow.range + 10f) / 40f;
+            baseArmor = 100f;           // 基准装甲：目标装甲低于此→伤害提升，高于此→降低
+            damageChangeRate = 250f;    // 伤害随装甲变化的倍率
+            width = 10f;
+            height = 20f;
+            knockback = 20f;
+            sprite = "triangle-205HE"; // 自定义贴图（图集建好后由下方 ContentInitEvent 解析）
+            drag = 0f;
+            hitSize = 24f;
+            buildingDamageMultiplier = 0.2f;
         }};
         foreshadow.ammoTypes.put(TriItems.BHESH, bhesh);
     }

@@ -3,6 +3,8 @@ package triangle.black.ArmorBullet;
 import arc.graphics.Color;
 import arc.graphics.g2d.Draw;
 import arc.graphics.g2d.Fill;
+import arc.math.Mathf;
+import mindustry.entities.Units;
 import mindustry.entities.bullet.BasicBulletType;
 import mindustry.gen.Building;
 import mindustry.gen.Bullet;
@@ -28,6 +30,12 @@ import mindustry.gen.Unit;
  *   <li>正向加值可设上限 maxBonus，限制极端低甲时的数值；</li>
  *   <li>总伤害被钳制不低于 minTotalDamage，防止高护甲负加值把伤害变成“治疗”。</li>
  * </ul>
+ *
+ * <p>可选范围伤害：{@link #armorSplashRadius} 设置为 &gt;0 时启用——命中后会对命中点周围<b>所有敌方单位与建筑</b>
+ * 按各自护甲独立结算同样的护甲反应伤害（totalDamage(自身护甲)），伤害随距离按<b>二次衰减</b>
+ * (1 - d/armorSplashRadius)²；<b>直接命中目标本身不参与范围结算</b>（中心目标只吃一次直接伤害）。
+ * 启用时原版平顶溅射（splashDamage/splashDamageRadius）视同并实际归零，避免双重范围伤害。
+ * 0 / 未设置为禁用。
  */
 
 public class ArmorReactiveBulletType extends BasicBulletType {
@@ -46,6 +54,10 @@ public class ArmorReactiveBulletType extends BasicBulletType {
     public float maxBonus = 0f;
     /** 总伤害下限，防止高护甲负加值使总伤害为负（避免变成治疗/溢出）。 */
     public float minTotalDamage = 0f;
+    /** 护甲反应范围伤害半径（世界单位）：>0 时启用——命中后对命中点周围所有敌方单位与建筑按各自护甲独立结算
+     *  护甲反应伤害，随距离二次衰减 (1-d/R)²（直接命中目标本身不参与，中心目标只吃一次直接伤害）；
+     *  启用时原生 splashDamage/splashDamageRadius 归零。0 / 未设置为禁用。 */
+    public float armorSplashRadius = 0f;
 
     public ArmorReactiveBulletType(float baseDamage){
         this.baseDamage = baseDamage;
@@ -91,6 +103,49 @@ public class ArmorReactiveBulletType extends BasicBulletType {
         return 0f; // 未知目标按 0 甲处理，由 safeFloor 兜底，不会溢出
     }
 
+    /**
+     * 护甲反应范围伤害：仅当 {@link #armorSplashRadius} &gt; 0 时启用。
+     * 遍历命中点半径内<b>所有敌方单位与建筑</b>，对每个目标按<b>其自身护甲</b>独立结算护甲反应伤害
+     * （totalDamage(目标护甲)），并随距离按二次衰减 {@link #splashFalloff}。
+     * 直接命中目标通过 {@code exclude} 排除，中心目标只吃一次直接伤害，不会被范围重复结算。
+     */
+    private void armorSplash(Bullet b, Object exclude){
+        if(armorSplashRadius <= 0f) return;
+        // 敌方单位（nearbyEnemies 自动排除友军与 derelict；再排除直接命中目标）
+        Units.nearbyEnemies(b.team, b.x, b.y, armorSplashRadius, unit -> {
+            if(unit.dead() || unit == exclude) return;
+            float dmg = totalDamage(unit.armor()) * splashFalloff(Mathf.dst(b.x, b.y, unit.x(), unit.y()));
+            if(dmg > 0) unit.damagePierce(dmg);
+        });
+        // 敌方建筑（nearbyBuildings 不按队伍过滤，手动排除友军与直接命中目标）
+        Units.nearbyBuildings(b.x, b.y, armorSplashRadius, build -> {
+            if(build.dead() || build == exclude || build.team == b.team) return;
+            float dmg = totalDamage(build.block.armor) * splashFalloff(Mathf.dst(b.x, b.y, build.x, build.y));
+            if(dmg > 0) build.damagePierce(dmg);
+        });
+    }
+
+    /** 二次衰减系数 (1 - d/armorSplashRadius)²：贴脸(距离 0)=1，边缘(距离 R)=0。d 由遍历范围保证 ≤ R。 */
+    private float splashFalloff(float d){
+        float t = 1f - d / armorSplashRadius;
+        return t * t;
+    }
+
+    /**
+     * 禁用原版平顶溅射：启用护甲反应范围伤害时（armorSplashRadius>0），把原生 splashDamage/splashDamageRadius
+     * 实际归零，并跳过原生 Damage.damage 的溅射结算，避免与原版溅射产生双重范围伤害；
+     * 同时原生字段为 0 后，详情页 StatValues 的原版“范围伤害范围”行也会隐藏，改由自定义显示 armorSplashRadius。
+     */
+    @Override
+    public void createSplashDamage(Bullet b, float x, float y){
+        if(armorSplashRadius > 0f){
+            splashDamage = 0f;
+            splashDamageRadius = 0f;
+            return;
+        }
+        super.createSplashDamage(b, x, y);
+    }
+
     @Override
     public void hitEntity(Bullet b, Hitboxc entity, float health){
         // 队伍门控（防御性）：默认碰撞已过滤友军，但 JSON 一旦配置 collidesTeam=true
@@ -101,6 +156,8 @@ public class ArmorReactiveBulletType extends BasicBulletType {
             float dmg = totalDamage(armorOf(entity));
             if(dmg > 0) h.damagePierce(dmg);
         }
+        // 可选范围伤害：命中点周围所有敌方单位与建筑按各自护甲结算（armorSplashRadius>0 时启用）；排除直接命中目标
+        armorSplash(b, entity);
     }
 
     @Override
@@ -110,6 +167,8 @@ public class ArmorReactiveBulletType extends BasicBulletType {
             hit(b, x, y); // 命中特效/音效
             float dmg = totalDamage(build.block.armor);
             if(dmg > 0) build.damagePierce(dmg);
+            // 可选范围伤害：命中点周围所有敌方单位与建筑按各自护甲结算（armorSplashRadius>0 时启用）；排除直接命中建筑
+            armorSplash(b, build);
         }
     }
 
