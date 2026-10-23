@@ -124,7 +124,7 @@ public class ExSerBlocks {
             lifetime = (foreshadow.range + 10f) / 40f;
             baseArmor = 50f;           // 基准装甲：目标装甲低于此→伤害提升，高于此→降低
             damageChangeRate = 750f;    // 伤害随装甲变化的倍率
-            armorSplashRadius = 48f;    // 护甲反应范围伤害半径：>0 即启用——对命中点周围敌方单位/建筑按各自护甲
+            armorSplashRadius = 60f;    // 护甲反应范围伤害半径：>0 即启用——对命中点周围敌方单位/建筑按各自护甲
             width = 10f;
             height = 20f;
             knockback = 20f;
