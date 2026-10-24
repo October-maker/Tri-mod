@@ -8,6 +8,8 @@ import mindustry.mod.*;
 import triangle.black.ArmorBullet.ArmorReactiveBulletType;
 import triangle.black.ArmorBullet.TriArmorTurret;
 import triangle.black.ArmorBullet.TriContentInfoDialog;
+import triangle.black.PIBulletType;
+import triangle.black.TriCIWS;
 import triangle.black.TMail.TriGameMailButton;
 import triangle.black.TMail.TriInbox;
 import triangle.black.TMail.TriMainMenuButton;
@@ -32,7 +34,7 @@ public class triangle extends Mod{
      * 加载模组内容。
      *
      * <p>调用顺序即内容依赖顺序：物品/液体 → 工厂/核心/状态/炮塔/天气/单位 → 原版扩展 → 科技树 → 邮件。
-     * 其中两种自定义类型先注册进 {@link ClassMap}，供 JSON 内容按类名解析。
+     * 其中若干自定义类型先注册进 {@link ClassMap}，供 JSON 内容按类名解析。
      */
     @Override
     public void loadContent(){
@@ -40,6 +42,11 @@ public class triangle extends Mod{
         ClassMap.classes.put("ArmorReactiveBulletType", ArmorReactiveBulletType.class);
         // 注册自定义炮塔类，用于在炮台详情页隐藏护甲反应弹药的默认伤害/穿甲并追加自定义横向伤害表。
         ClassMap.classes.put("TriArmorTurret", TriArmorTurret.class);
+        // CIWS 近防炮：以敌方子弹为目标的 ItemTurret；近炸拦截弹作为其可搭配弹药。
+        ClassMap.classes.put("TriCIWS", TriCIWS.class);
+        ClassMap.classes.put("PIBulletType", PIBulletType.class);
+        // 旧名称兼容别名（如旧 JSON/存档仍使用 ProximityInterceptorBulletType，可取消下一行注释）：
+        // ClassMap.classes.put("ProximityInterceptorBulletType", PIBulletType.class);
 
         TriItems.load();
         TriLiquids.load();

@@ -2,6 +2,7 @@ package triangle.content;
 
 import arc.Events;
 import arc.util.Log;
+import mindustry.Vars;
 import mindustry.content.Blocks;
 import mindustry.content.TechTree;
 import mindustry.ctype.UnlockableContent;
@@ -27,6 +28,7 @@ public class SerTriTechTree {
         Events.on(EventType.ContentInitEvent.class, e -> addNode(TriFactory.TiRollingMill, TriFactory.BulletFactory));
         Events.on(EventType.ContentInitEvent.class, e -> addNode(TriFactory.boiler, TriFactory.Condenser));
         Events.on(EventType.ContentInitEvent.class, e -> addNode(Blocks.wave, TriTurret.solubilize));
+        Events.on(EventType.ContentInitEvent.class, e -> addNode(Blocks.salvo, TriTurret.ciws430));
         Events.on(EventType.ContentInitEvent.class, e -> addNode(TriFactory.saltDistillationFurnace, TriFactory.liquidFillingMachine));
         Events.on(EventType.ContentInitEvent.class, e -> addNode(TriFactory.liquidFillingMachine, TriFactory.liquidPourer));
 
