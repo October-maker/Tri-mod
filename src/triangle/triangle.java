@@ -14,6 +14,7 @@ import triangle.black.TMail.TriMainMenuButton;
 import triangle.black.TMail.TriPlanetMailButton;
 import triangle.black.TMail.TriSettingsDataButton;
 import triangle.black.TriSetting;
+import triangle.black.TriWelcome;
 import triangle.content.*;
 import tmi.RecipeEntryPoint;
 import triangle.tmi.TriRecipeEntry;
@@ -49,7 +50,8 @@ public class triangle extends Mod{
     }
 
     public triangle(){
-        // 欢迎弹窗与设置页逻辑集中在 TriSetting
+        // 启动欢迎弹窗（入场动画 + 欢迎内容）与设置页分别由 TriWelcome / TriSetting 负责
+        TriWelcome.init();
         TriSetting.init();
         // 战役星球界面“收件箱”按钮
         TriPlanetMailButton.init();
