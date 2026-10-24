@@ -11,8 +11,22 @@ import mindustry.world.Block;
 import mindustry.world.consumers.Consume;
 import mindustry.world.meta.StatValues;
 
+/**
+ * 多配方工厂的动态输入消费器。
+ *
+ * <p>不同配方需要的物品种类不同，无法像原版那样在方块初始化时静态声明消费者，
+ * 因此由本类在运行时读取当前配方：
+ * <ul>
+ *   <li>{@link #update(Building)}：按帧扣除液体输入；</li>
+ *   <li>{@link #trigger(Building)}：每个生产周期扣除物品与载荷输入；</li>
+ *   <li>{@link #efficiency(Building)}：返回输入满足度（0~1），驱动生产速度；</li>
+ *   <li>{@link #build(Building, Table)}：在配置面板中按当前配方重建需求图标。</li>
+ * </ul>
+ */
 class ConsumeRecipe extends Consume {
+    /** 当前生效配方（用于实际结算）。 */
     public final Func<Building, Recipe> recipe;
+    /** 用于界面展示的配方（可回退到首个配方）。 */
     public final Func<Building, Recipe> display;
 
     @SuppressWarnings("unchecked")
@@ -27,6 +41,7 @@ class ConsumeRecipe extends Consume {
         this.display = (Func<Building, Recipe>) recipe;
     }
 
+    /** 声明该方块需要物品、液体与载荷输入。 */
     @Override
     public void apply(Block block) {
         block.hasItems = true;
@@ -35,6 +50,7 @@ class ConsumeRecipe extends Consume {
         block.acceptsPayload = true;
     }
 
+    /** 每帧按效率倍率扣除当前配方的液体输入。 */
     @Override
     public void update(Building build) {
         Recipe r = recipe.get(build);
@@ -45,6 +61,7 @@ class ConsumeRecipe extends Consume {
         }
     }
 
+    /** 每个生产周期开始时扣除物品与载荷输入（液体已在 update 中按帧扣除）。 */
     @Override
     public void trigger(Building build) {
         Recipe r = recipe.get(build);
@@ -58,6 +75,10 @@ class ConsumeRecipe extends Consume {
         }
     }
 
+    /**
+     * 计算输入满足度：取物品、载荷、液体的最紧缺项作为效率（0~1）。
+     * 液体按“当前存量 / 本帧需求”折算，任一输入缺失即返回 0。
+     */
     @Override
     public float efficiency(Building build) {
         float ed = build.edelta() * build.efficiencyScale();
@@ -98,11 +119,14 @@ class ConsumeRecipe extends Consume {
         return min;
     }
 
+    /**
+     * 在配置面板中显示当前配方所需的输入图标。
+     * 通过 update 回调监听配方切换，仅在配方变化时重建，避免每帧 clear + 新建 ReqImage。
+     */
     @Override
     public void build(Building build, Table table) {
         if (display.get(build) == null) return;
-        // 缓存上一次渲染的配方；仅当配方切换时才重建需求表，
-        // 避免配置面板打开期间每帧 clear + 新建 ReqImage（原实现每帧全量重建）。
+        // 缓存上一次渲染的配方；仅当配方切换时才重建需求表
         Recipe[] lastShown = {null};
         table.update(() -> {
             Recipe current = display.get(build);

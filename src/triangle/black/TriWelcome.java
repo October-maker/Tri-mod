@@ -44,7 +44,7 @@ public class TriWelcome{
     private static final float SLIDE_ANGLE = 60f;
     /** 滑动发生的时机（秒）：进程进行到该时刻时，TriLogo 盖住组合体并开始滑向欢迎页 logo 位置。
      *  注意：该时刻必须 ≥ 组合体最末到位时刻（ASSEMBLE_DURATION + STAGGER_SPAN），
-     *  否则组合体在 TriLogo 出现前消失，屏幕中央会出现几帧空白闪动（历史 bug）。 */
+     *  否则组合体在 TriLogo 出现前消失，屏幕中央会出现数帧空白闪动。 */
     private static final float SLIDE_AT = ASSEMBLE_DURATION + STAGGER_SPAN + 0.15f;
     /** TriLogo 从屏幕中央滑动到欢迎页 logo 位置的时长（秒），先慢后快（pow2In）。 */
     private static final float FLY_TO_DIALOG_DURATION = 0.3f;
@@ -149,7 +149,7 @@ public class TriWelcome{
 
             // ============ 3) 组合体全部到位后保持展示，进程进行到 SLIDE_AT 时刻：TriLogo 覆盖替代组合体并滑向停靠位 ============
             // 覆盖、隐藏组合体、开始滑动必须在同一时刻执行（单条定时）：若先移除组合体再等 TriLogo 出现，
-            // 期间屏幕中央会空白闪动（历史 bug）；SLIDE_AT ≥ 最末到位时刻，组合体完整展示后才被替换。
+            // 期间屏幕中央会空白闪动；SLIDE_AT ≥ 最末到位时刻，保证组合体完整展示后才被替换。
             intro.actions(Actions.delay(SLIDE_AT), Actions.run(() -> {
                 // 后加入容器 → 绘制在最上层，盖住组合体
                 Image cover = new Image(triLogo);
@@ -228,7 +228,7 @@ public class TriWelcome{
 
         // ---------- 按钮 table：控制按钮们滑入 ----------
         // 两行结构：第一行“下次启动不再显示”开关，第二行两按钮（邮件、知道了）；
-        // 开关样式与写入逻辑复用旧弹窗（见第 1 段注释块 100~105 行）；
+        // 开关样式与写入逻辑与设置页共用 STARTUP_DIALOG_KEY（勾选状态 = 设置值的反相）；
         // 两按钮固定在 table 内（不各自移动），按钮 table 整体从屏幕下方外先快后慢滑入正确位置
         Table buttons = new Table();
         intro.add(buttons);

@@ -24,9 +24,9 @@ import triangle.black.TriDraw;
  * 背景为原版默认灰色按钮（Styles.defaultt）；
  * 未读角标为独立 Label 置于外层容器右上角。
  *
- * 短按按下后触发统一预览流程（TriMailPreview.trigger）：
- * 战役模式（Vars.state.isCampaign()）→ 剧情邮件预览，自定义游戏 → 模组资讯预览；
- * 长按（0.3 秒）后移动进入拖动模式，可自由移动位置；
+ * 短按抬起后打开收件箱（{@link TriMailDialog#show(boolean)}）：
+ * 战役模式（{@code Vars.state.isCampaign()}）打开剧情邮件，自定义游戏打开模组资讯；
+ * 长按（{@link #LONG_PRESS} 秒）后移动进入拖动模式，可自由移动位置；
  * 默认位置为屏幕左下角（容器左下角贴屏幕左下角）。
  *
  * 仅当玩家处于游戏内（state.isGame()）时显示；离开地图时移除；
@@ -114,8 +114,8 @@ public class TriGameMailButton{
     }
 
     /**
-     * 长按（0.3 秒）后移动进入拖动模式；未实际移动过（无论按住时长）抬起即视为点击：
-     * 触发统一预览流程（TriMailPreview.trigger，战役/自定义自动分流）。
+     * 长按（{@link #LONG_PRESS} 秒）后移动进入拖动模式；未实际移动过（无论按住时长）抬起即视为点击，
+     * 打开收件箱（战役/自定义自动分流）。
      * 拖动判定只看“是否真正进入过拖动模式”，避免长按未移动时既不算点击也不算拖动的死区。
      */
     static class DragListener extends InputListener{
@@ -156,8 +156,8 @@ public class TriGameMailButton{
             boolean wasDragging = dragging;
             down = false;
             dragging = false;
-            // 未实际拖动（无论按住时长）即视为点击：直接打开对应收件箱
-            // 战役模式（isCampaign）→ 三角邮箱；自定义游戏 → Tmail资讯
+            // 未实际拖动（无论按住时长）即视为点击：按当前模式打开对应收件箱
+            // 战役模式 → 剧情邮件；自定义游戏 → 模组资讯
             if(!wasDragging){
                 TriMailDialog.show(Vars.state.isCampaign());
             }

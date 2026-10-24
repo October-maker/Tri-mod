@@ -12,6 +12,7 @@ import tmi.TooManyItems;
  */
 public class TriRecipeEntry implements RecipeEntry {
 
+    /** 注册多配方工厂的配方解析器。 */
     @Override
     public void init() {
         // 注册多配方工厂的配方解析器
@@ -19,6 +20,7 @@ public class TriRecipeEntry implements RecipeEntry {
         Log.info("Triangle: TMI recipe entry init");
     }
 
+    /** 后初始化钩子；当前无需额外操作。 */
     @Override
     public void afterInit() {
         // 可选的后初始化，暂无操作

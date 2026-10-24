@@ -10,7 +10,7 @@ import arc.util.Log;
 import mindustry.gen.Tex;
 
 /**
- * 全屏毛玻璃背景：截取当前场景到 FBO + 高斯模糊 shader 渲染，透明度随时间渐深（上限 0.75）。
+ * 全屏毛玻璃背景：截取当前场景到 FBO + 高斯模糊 shader 渲染，透明度随时间渐深（上限 0.85）。
  * 供收件箱等界面打开时作为背景使用；关闭时直接 remove()。
  *
  * 注意：arc 的 Shader 构造自带 preprocessor 处理 GL_ES 精度，源码里禁止写 #ifdef GL_ES，

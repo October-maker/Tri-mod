@@ -23,8 +23,10 @@ import triangle.black.MRFactory.MultiRecipeFactory;
  */
 public class TriFactoryParser extends RecipeParser<MultiRecipeFactory> {
 
-    // MultiRecipeFactory 继承自 GenericCrafter，需排除 TMI 默认的 GenericCrafterParser，
-    // 使该类型方块只由本解析器处理。
+    /**
+     * 排除 TMI 默认的 {@link GenericCrafterParser}，使 {@link MultiRecipeFactory} 只由本解析器处理，
+     * 避免被当作原版单配方工厂重复解析。
+     */
     @Override
     public @NotNull Seq<Class<? extends RecipeParser<?>>> getExcludes() {
         Seq<Class<? extends RecipeParser<?>>> excludes = new Seq<>();
@@ -32,11 +34,17 @@ public class TriFactoryParser extends RecipeParser<MultiRecipeFactory> {
         return excludes;
     }
 
+    /** 仅解析多配方工厂。 */
     @Override
     public boolean isTarget(@NotNull Block content) {
         return content instanceof MultiRecipeFactory;
     }
 
+    /**
+     * 把工厂的每条 {@link triangle.black.MRFactory.Recipe} 转换为一条 TMI 配方。
+     * 物品/载荷按整数批量显示，液体与电力按每秒显示；热量使用 HeatMark 归入 POWER 区，
+     * 与 TMI 原生 HeatCrafter/HeatProducer 的解析惯例一致。
+     */
     @Override
     public @NotNull Seq<Recipe> parse(@NotNull MultiRecipeFactory factory) {
         Seq<Recipe> out = new Seq<>();

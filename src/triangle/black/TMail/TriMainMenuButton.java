@@ -15,7 +15,7 @@ import triangle.black.TriDraw;
 /**
  * 在主菜单（MenuFragment）添加 TMail 按钮入口，点击显示固定的模组资讯。
  *
- * v150 的主菜单在 UI.init() 时一次性 build（读取 desktopButtons/customButtons 渲染），
+ * 原版主菜单在 UI.init() 时一次性 build（读取 desktopButtons/customButtons 渲染），
  * mod 加载早于 UI，无法在其 build 前注入；因此这里自愈注入：
  * 常态下每帧只做 O(1) 的 hasParent() 检查（按钮仍在场景树中则无事可做）；
  * 仅当按钮被菜单重建移除（hasParent() == false）或缓存表失效时，
@@ -24,6 +24,7 @@ import triangle.black.TriDraw;
  */
 public class TriMainMenuButton{
 
+    /** 当前注入的按钮实例；用于判断是否仍需注入。 */
     private static TextButton injected;
     /** 缓存已注入的按钮表；仅在表被移除（菜单重建）时才重新扫描场景树。 */
     private static Table buttons;

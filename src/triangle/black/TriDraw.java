@@ -24,16 +24,15 @@ import triangle.triangle;
 /**
  * 三角模组统一绘制 / UI 工具集。
  *
- * 汇集了多个文件共用的复杂绘制方法：
+ * <p>汇集多个界面共用的复杂绘制方法：
  * <ul>
- *   <li>模组 UI 图标纹理加载（原 TriIcon）：Mindustry 打包模组 sprites 时，atlas 键 =
- *       "&lt;modName&gt;-&lt;文件名无扩展名&gt;"（如 mod.hjson name 为 "triangle" 时，
- *       sprites/ui/Tmail.png 的键为 "triangle-Tmail"，参考 NewHorizon 模组）。
- *       本类依次尝试：直接文件名键 → ui/ 路径键 → 模组名前缀键（引擎标准）→
- *       从模组文件直接读取（root/file 多候选路径），成功后以引擎标准键注册进 atlas。</li>
- *   <li>白色描边圆角背景（原 MultiRecipeFactory.whiteOutlined）：把任意 Drawable 包装为带
- *       #FFFFFF 圆角描边的版本，按 base 缓存复用。</li>
- *   <li>打字机 Label（原 TriMailDialog 回信框内联实现）：挂在宿主 update 上按字符/秒刷新文本。</li>
+ *   <li>模组 UI 图标纹理加载：Mindustry 打包模组 sprites 时，atlas 键为
+ *       "&lt;modName&gt;-&lt;文件名无扩展名&gt;"（如 mod.hjson 的 name 为 "triangle" 时，
+ *       sprites/ui/Tmail.png 的键为 "triangle-Tmail"）。本类依次尝试：直接文件名键 → ui/ 路径键 →
+ *       模组名前缀键（引擎标准）→ 从模组文件直接读取（root/file 多候选路径），
+ *       成功后以引擎标准键注册进 atlas。</li>
+ *   <li>白色描边圆角背景：把任意 Drawable 包装为带 #FFFFFF 圆角描边的版本，按 base 缓存复用。</li>
+ *   <li>打字机 Label：挂在宿主 update 上按字符/秒刷新文本。</li>
  * </ul>
  */
 public class TriDraw{
@@ -105,7 +104,7 @@ public class TriDraw{
         return null;
     }
 
-    // 将 Drawable 包装为带白色(#FFFFFF)描边的版本（按 base 缓存复用，避免每次 new 匿名对象）
+    /** 将 Drawable 包装为带白色（#FFFFFF）描边的版本，按 base 缓存复用，避免每次 new 匿名对象。 */
     private static final ObjectMap<Drawable, Drawable> outlinedCache = new ObjectMap<>();
 
     public static Drawable whiteOutlined(Drawable base){
@@ -149,7 +148,7 @@ public class TriDraw{
         return cached;
     }
 
-    // 绘制圆角矩形描边（四个角用弧线采样，直边由相邻弧线端点自然连成）
+    /** 绘制圆角矩形描边（四个角用弧线采样，直边由相邻弧线端点自然连成）。 */
     private static void roundRectStroke(float x, float y, float w, float h, float r){
         r = Math.min(r, Math.min(w, h) / 2f);
         int segs = 8; // 每个角四分一圆弧的采样段数
@@ -162,7 +161,7 @@ public class TriDraw{
         Lines.polyline(pts, true);
     }
 
-    // 向点集追加一段圆弧上的采样点（角度为度，0° 指向 +x，顺时针增加）
+    /** 向点集追加一段圆弧上的采样点（角度为度，0° 指向 +x，顺时针增加）。 */
     private static void addArc(FloatSeq pts, float cx, float cy, float r, float a0, float a1, int segs){
         for(int i = 0; i <= segs; i++){
             float a = Mathf.lerp(a0, a1, i / (float) segs);
@@ -176,7 +175,7 @@ public class TriDraw{
         return typewriter(host, text, speed, Align.center, null, null);
     }
 
-    /** 打字机：挂在宿主 update 上按字符/秒刷新文本（原 TriMailDialog 回信框内联实现）。
+    /** 打字机：挂在宿主 update 上按字符/秒刷新文本。
      *  @param host 场景中的宿主（其 update 回调将被本方法接管；host 始终在场景中 update 才会执行）
      *  @param text 完整文本
      *  @param speed 字符/秒

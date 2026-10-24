@@ -2,16 +2,40 @@ package triangle.content;
 
 import arc.graphics.*;
 import mindustry.type.Item;
-//import arc.struct.*;
 
+/**
+ * 三角模组的物品注册表。
+ *
+ * <p>物品实例在此创建；显示名与描述来自 {@code assets/bundles}，物性参数（硬度、爆炸性、
+ * 研究前置等）由 {@code assets/content/items/*.json} 按内容名覆盖，贴图按内容名从
+ * {@code assets/sprites/item/} 自动加载。构造函数中的颜色仅作为图标底色/占位。
+ *
+ * <p>命名沿用化学符号或工艺缩写，常见对照：
+ * I=碘，Ti=钛（纯钛板），Al=铝，Cu=精炼铜，FeSteel=碳素钢，SSteel=特种钢，TiAlloy=钛合金，
+ * WSteel=钨钢，WC=碳化钨，V=钒，V2O5=五氧化二钒，VTiFe=钒钛磁铁矿，Cr=铬，chromite=铬铁矿，
+ * Ni=镍，NiOre=镍原矿，Co=钴，copperCo=铜钴矿，CoPrecipitation=钴沉淀，Pt=铂，
+ * bauxite=铝土矿，kaolin=高岭土，Fe2O3=氧化铁，FeSO4=绿矾（七水硫酸亚铁），
+ * NaHSO4=硫酸氢钠，NaCl=盐（氯化钠），NaOH=烧碱（氢氧化钠），S=硫磺，TNT=三硝基甲苯，
+ * SiSand=石英砂，MonocrystallineSi=单晶硅棒，USY=超稳 Y 型分子筛，USYmolecularSieve=USY 分子筛，
+ * PE=聚乙烯，chip4004=基本集成电路。
+ */
 public class TriItems {
+
+    // ---- 矿物、中间产物与合金 ----
     public static Item I,Ti,chip4004,S,VTiFe,NaHSO4,bauxite,Al,Fe2O3,FeSteel,SSteel,FeSO4,V2O5,V,TiAlloy,WSteel,SiSand,MonocrystallineSi,Pt,kaolin,USYmolecularSieve,USY,TNT,NaCl,Cu,Co,Cr,copperCo,NaOH,Ni,NiOre,CoPrecipitation,WC,chromite,PE;
-    //bullet
+
+    // ---- 弹药与爆炸物（供炮塔及多配方工厂使用） ----
+    // LHESH=小口径碎甲弹，LHEAT=小口径破甲弹，BHE=大口径高爆弹，BHEAT=大口径破甲弹，
+    // BHESH=大口径碎甲弹，TGW=炮射导弹，EMPB=电磁脉冲弹，WBullet=轨道钨芯弹，thermite=铝热剂。
     public static Item LHESH,LHEAT,thermite,BHE,BHEAT,BHESH,TGW,EMPB,WBullet;
-    //bucket
+
+    // ---- 桶装液体（装桶/倒桶配方的中间物品） ----
     public static Item barrel,saltwaterBucket;
-    //node
-    public  static Item SerTri;
+
+    /** 预留的物品节点，当前未使用（保留给后续科技树/数据库内容）。 */
+    public static Item SerTri;
+
+    /** 创建全部物品（由 {@code triangle.loadContent()} 调用）。 */
     public static void load(){
         I = new Item("I" , Color.valueOf("380066")){{}};
         Ti = new Item("Ti",Color.valueOf("0073FF")){{}};
@@ -57,7 +81,8 @@ public class TriItems {
         WC = new Item("WC",Color.valueOf("9F9F9F")){{}};
         chromite = new Item("chromite",Color.valueOf("707070")){{}};
         PE = new Item("PE",Color.valueOf("E0E0E0")){{}};
-        //bucket
+
+        // 桶装液体
         barrel = new Item("barrel",Color.valueOf("FFFFFF")){{}};
         saltwaterBucket = new Item("saltwaterBucket",Color.valueOf("FFFFFF")){{}};
     };

@@ -59,6 +59,9 @@ public class ArmorReactiveBulletType extends BasicBulletType {
      *  启用时原生 splashDamage/splashDamageRadius 归零。0 / 未设置为禁用。 */
     public float armorSplashRadius = 0f;
 
+    /**
+     * @param baseDamage 基础伤害；同时写入 {@code damage} 供统计页显示，实际结算以护甲公式为准
+     */
     public ArmorReactiveBulletType(float baseDamage){
         this.baseDamage = baseDamage;
         this.damage = baseDamage; // 供统计/显示使用；实际结算以 hitEntity/hitTile 为准
@@ -97,6 +100,7 @@ public class ArmorReactiveBulletType extends BasicBulletType {
         return Math.max(total, minTotalDamage);
     }
 
+    /** 目标护甲值：单位取当前护甲，建筑取方块护甲；未知目标按 0 甲处理。 */
     private float armorOf(Hitboxc entity){
         if(entity instanceof Unit unit) return unit.armor();
         if(entity instanceof Building building) return building.block.armor;

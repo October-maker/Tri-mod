@@ -5,21 +5,35 @@ import arc.util.Log;
 import mindustry.ctype.UnlockableContent;
 import mindustry.type.*;
 
+/**
+ * 多配方工厂的一条生产配方。
+ *
+ * <p>分别声明物品、液体、载荷的输入/输出，以及生产时间、电力与热量参数。
+ * 既可直接给字段赋值，也可用 {@code new Recipe(资源, 数量, "键", 值, ...)} 的成对参数写法，
+ * 支持的字符串键见 {@link #Recipe(Object...)}。
+ */
 public class Recipe {
+    /** 每周期消耗的物品。 */
     public Seq<ItemStack> inputItem = new Seq<>();
+    /** 每周期消耗的液体。 */
     public Seq<LiquidStack> inputLiquid = new Seq<>();
+    /** 每周期消耗的载荷。 */
     public Seq<PayloadStack> inputPayload = new Seq<>();
 
+    /** 每周期产出的物品。 */
     public Seq<ItemStack> outputItem = new Seq<>();
+    /** 每周期产出的液体。 */
     public Seq<LiquidStack> outputLiquid = new Seq<>();
+    /** 每周期产出的载荷。 */
     public Seq<PayloadStack> outputPayload = new Seq<>();
 
+    /** 生产一个周期所需时间（tick，60 = 1 秒）。 */
     public float craftTime = 60f;
-    /** 单位：每 tick（1/60 秒）。每秒消耗 = powerUse × 60；如 20f/60f = 20/秒。 */
+    /** 电力消耗，单位：每 tick（1/60 秒）。每秒消耗 = powerUse × 60；如 20f/60f = 20/秒。 */
     public float powerUse = 0.0f;
-    /** 是否需要研究解锁生产（默认 false=无需研究；由原 enabled 重命名而来）。 */
+    /** 是否需要研究解锁生产（默认 false = 无需研究）。 */
     public boolean requiresResearch = false;
-    /** 研究条目：requiresResearch=true 时在工厂 init 中创建并挂载。 */
+    /** 研究条目：requiresResearch = true 时在工厂 init 中创建并挂载。 */
     public UnlockableContent research;
     /** 可选：显式研究消耗，覆盖默认的 inputItem。 */
     public ItemStack[] researchCost;
@@ -28,16 +42,32 @@ public class Recipe {
     public boolean stopUndervoltage = false;
     /** 热量不足时是否立刻停止生产。 */
     public boolean stopLowTemperature = false;
-    
-    // 热量相关
-    public boolean heatEnabled = false; // 是否启用热量功能
-    public float heatRequirement = 0f; // 热量需求（消耗）
-    public float heatOutput = 0f; // 热量产出
+
+    // ---- 热量相关 ----
+    /** 是否启用热量功能（参与供热/耗热）。 */
+    public boolean heatEnabled = false;
+    /** 热量需求（每 tick 消耗）。 */
+    public float heatRequirement = 0f;
+    /** 热量产出。 */
+    public float heatOutput = 0f;
+    /** 热量充足时的最大效率倍率（超过需求的热量可继续提升效率）。 */
     public float recipeMaxEfficiency = 4f;
 
+    /**
+     * 以成对参数构造配方。
+     *
+     * <p>每两个参数为一组：
+     * <ul>
+     *   <li>{@code Item + Integer} → 物品输入；</li>
+     *   <li>{@code Liquid + Float} → 液体输入；</li>
+     *   <li>{@code UnlockableContent + Integer} → 载荷输入；</li>
+     *   <li>{@code String + 数值/布尔} → 设置字段，支持 {@code "power"}、{@code "time"}、
+     *       {@code "heatReq"}、{@code "heatOut"}、{@code "heatEnabled"}、{@code "stopLowTemperature"}、
+     *       {@code "stopUndervoltage"}、{@code "requiresResearch"}、{@code "recipeMaxEfficiency"}。</li>
+     * </ul>
+     * 参数个数为奇数说明配置笔误，最后一个参数会被忽略，同时输出警告。
+     */
     public Recipe(Object... objects) {
-        // 参数必须成对（键:值 或 资源:数量）；奇数长度说明配置笔误，最后一个参数会被静默丢弃，
-        // 提前告警避免配方配置错误静默失效
         if(objects.length % 2 != 0){
             Log.warn("[triangle] Recipe 构造器收到奇数个参数（@ 个），最后一个参数 '@' 被忽略；配方参数应为成对的 键:值 或 资源:数量。",
                     objects.length, String.valueOf(objects[objects.length - 1]));
@@ -50,7 +80,7 @@ public class Recipe {
             } else if (objects[i * 2] instanceof UnlockableContent payload && objects[i * 2 + 1] instanceof Integer count) {
                 inputPayload.add(new PayloadStack(payload, count));
             } else if (objects[i * 2] instanceof String key) {
-                // 支持通过字符串键设置 powerUse 和 craftTime
+                // 字符串键：设置电力、时间与热量等标量参数
                 Object val = objects[i * 2 + 1];
                 float value = (val instanceof Number) ? ((Number) val).floatValue() : 0f;
                 if (key.equals("power")) {

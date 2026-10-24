@@ -222,8 +222,8 @@ public class TriInbox{
     }
 
     /**
-     * 注册默认叙事邮件（演示：随科技/占领进度解锁）。
-     * 在 Mod.loadContent() 中调用（此时 vanilla 内容已创建，可直接引用 Items 等）。
+     * 注册默认叙事邮件（随科技/占领进度解锁）。
+     * 在 Mod.loadContent() 中调用（此时原版内容已创建，可直接引用 Items 等）。
      *
      * 邮件文本统一走 bundle（键 tri.mail.&lt;key&gt;.&lt;field&gt;，中英双份），支持本地化；
      * 此处处于 Mod.loadContent()，模组 bundle 已在 Mods.load() 的 buildFiles() 中并入

@@ -27,6 +27,7 @@ import triangle.black.ArmorBullet.ArmorReactiveBulletType;
  */
 public class ExSerBlocks {
     public static void load(){
+        // ============ 原版 spectre（幽灵）炮塔：射程 280 + 新增 LHEAT/LHESH ============
         // 原版 spectre 是 ItemTurret（mindustry.content.Blocks.spectre）
         ItemTurret spectre = (ItemTurret)Blocks.spectre;
 
@@ -114,7 +115,7 @@ public class ExSerBlocks {
             rail.length = foreshadow.range + 10f;
         }
 
-        // 3) 新增三种弹药，类别均为默认 BasicBulletType（数值为占位，可按需调整）
+        // 3) 新增三种弹药：BHE/BHESH 为护甲反应弹（ArmorReactiveBulletType），BHEAT 为普通破甲弹
         //    key 使用模组物品 TriItems.BHE/BHEAT/BHESH，foreshadow 将消耗这些物品作为弹药
         //    lifetime 手动设为「(新射程+10)/speed」，保证弹种能飞到新射程 1000 而不提前消失
         //    （不调用 foreshadow.limitRange()，以免误改原版 speed=0 的轨道弹）
@@ -168,7 +169,7 @@ public class ExSerBlocks {
         }};
         foreshadow.ammoTypes.put(TriItems.BHEAT, bheat);
 
-        BulletType bhesh = new ArmorReactiveBulletType(1000f){{ // 高爆弹
+        BulletType bhesh = new ArmorReactiveBulletType(1000f){{ // 碎甲弹（护甲反应型）
             ammoMultiplier = 1f;
             speed = 40f;
             lifetime = (foreshadow.range + 10f) / 40f;

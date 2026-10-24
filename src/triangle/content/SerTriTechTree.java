@@ -7,11 +7,22 @@ import mindustry.content.TechTree;
 import mindustry.ctype.UnlockableContent;
 import mindustry.game.EventType;
 
+/**
+ * 把 Java 注册的方块接入赛普罗（Serpulo）科技树。
+ *
+ * <p>模组方块大多没有在 JSON 中声明 {@code research}，因此需要在此手动挂载。
+ * 挂载必须等到 {@link EventType.ContentInitEvent}：此时 JSON 内容与其生成的科技树节点、
+ * 以及完整科技树均已加载完成，能可靠地找到父节点。
+ */
 public class SerTriTechTree {
+
+    /** 注册科技树节点（由 {@code triangle.loadContent()} 调用）。 */
     public static void load(){
-        // 将 child 挂载到 Serpulo 科技树必须延迟到 ContentInitEvent：
+        // 将 child 挂载到赛普罗科技树必须延迟到 ContentInitEvent：
         // 此时 JSON 内容（含模组 json 经 research 生成的科技树节点）与完整科技树均已加载完成，
         // 可避免在 loadContent 阶段直接调用 addNode 时因父节点尚未生成而被跳过。
+
+        // ---- 基础工业与多配方工厂 ----
         Events.on(EventType.ContentInitEvent.class, e -> addNode(TriFactory.TiRollingMill, TriFactory.boiler));
         Events.on(EventType.ContentInitEvent.class, e -> addNode(TriFactory.TiRollingMill, TriFactory.BulletFactory));
         Events.on(EventType.ContentInitEvent.class, e -> addNode(TriFactory.boiler, TriFactory.Condenser));
@@ -19,7 +30,7 @@ public class SerTriTechTree {
         Events.on(EventType.ContentInitEvent.class, e -> addNode(TriFactory.saltDistillationFurnace, TriFactory.liquidFillingMachine));
         Events.on(EventType.ContentInitEvent.class, e -> addNode(TriFactory.liquidFillingMachine, TriFactory.liquidPourer));
 
-        // 石油化工
+        // ---- 石油化工 ----
         // 注意依赖顺序：addNode 要求父节点已在科技树中
         Events.on(EventType.ContentInitEvent.class, e -> addNode(TriFactory.IodinationPurificationFurnace, TriFactory.oilElectricDesaltingTank));
         Events.on(EventType.ContentInitEvent.class, e -> addNode(TriFactory.oilElectricDesaltingTank, TriFactory.USYHydrothermalReactor));
@@ -37,9 +48,11 @@ public class SerTriTechTree {
         Events.on(EventType.ContentInitEvent.class, e -> addNode(TriFactory.oilAromaticHydrocarbonComplex, TriFactory.ExplosiveMixer));
     }
 
-    /*
-     * content 已在科技树中的父内容
-     * child   要挂载的 Java 子内容
+    /**
+     * 把子内容挂到指定父内容之后。
+     *
+     * @param content 已在科技树中的父内容
+     * @param child   要挂载的 Java 子内容
      */
     public static void addNode(UnlockableContent content, UnlockableContent child){
         TechTree.TechNode context = TechTree.all.find(t -> t.content == content);

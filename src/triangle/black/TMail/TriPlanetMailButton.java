@@ -17,8 +17,8 @@ import triangle.black.TriDraw;
  * 注入原版底栏表（planet.buttons，rebuildButtons() 的布局为
  * [返回] … [sectorTop] … [科技树]，追加的 cell 落在最右，即科技树右侧）。
  * cell 必须带 .bottom()（与原版 addBack/addTech 一致）：选中区块后中间 sectorTop 表
- * 变高、底栏行高随之变化，bottom 对齐保证按钮始终贴住行底，不会像旧实现（无 bottom
- * 对齐、cell 默认居中）那样随行高变化而“向上移动”。
+ * 变高、底栏行高随之变化，bottom 对齐保证按钮始终贴住行底，避免无 bottom
+ * 对齐、cell 默认居中时随行高变化而“向上移动”。
  *
  * 自愈：rebuildButtons() 用 buttons.clearChildren() 清空重建、PlanetDialog.show()/
  * viewPlanet() 用 clearChildren() 重建整树——被移除按钮的 parent 链断裂。这里每帧沿
@@ -27,6 +27,7 @@ import triangle.black.TriDraw;
  */
 public class TriPlanetMailButton{
 
+    /** 当前注入的底栏按钮；被原版重建清掉后重新创建。 */
     private static TextButton button;
     /** 上次展示的未读数，用于仅在数值变化时更新角标文本。 */
     private static int lastUnread = -1;

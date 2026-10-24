@@ -8,8 +8,18 @@ import mindustry.type.Weather;
 import mindustry.type.weather.ParticleWeather;
 import mindustry.world.meta.Attribute;
 
+/**
+ * 三角模组的天气注册表。
+ *
+ * <p>目前仅包含粒子风暴 {@code sporestorm}：低温、强风、降低光照，并附带冻结状态，
+ * 单次持续 10 分钟。
+ */
 public class TriWeather {
+
+    /** 粒子风暴天气（内容名 {@code sporestorm}）。 */
     public static Weather storm;
+
+    /** 创建天气内容（由 {@code triangle.loadContent()} 调用）。 */
     public static void load(){
         storm = new ParticleWeather("sporestorm"){{
             color = noiseColor = Color.valueOf("FFFFFF");

@@ -18,20 +18,36 @@ import triangle.black.MRFactory.Recipe;
 
 import static mindustry.type.ItemStack.with;
 
+/**
+ * 三角模组的工厂方块注册表。
+ *
+ * <p>普通工厂只在此创建空实例，具体数值与配方由
+ * {@code assets/content/blocks/factory/**} 下的同名 JSON 覆盖；
+ * 多配方工厂（{@link MultiRecipeFactory}）的配方则在 {@link #load()} 内用 Java 声明。
+ */
 public class TriFactory {
+
+    // ---- 常规单配方工厂（物品/液体加工） ----
     public static GenericCrafter
             electrolyticCell,oxygenReductionFurnace,IExtractor,IodinationPurificationFurnace,bauxiteElectrolyticCell,VBlastFurnace,VBlastFurnaceBlowing,VacuumAluminothermicGenerator,CoSulfationRoaster,WSteelMixingFurnace,WCarbideFurnace,
             FeBlastFurnace,TiRollingMill,SCombustionVessel,AcidReactionKettle,AcidResistantHeater,saltDistillationFurnace,SaltMixingPool,CuElectrolyticRefiningPool,NickelDiaphragmElectrolyzer,alkalineElectrolyzer,CopperConcentrator,CoElectrolyticCell,
             CrThermiteReactionChamber,armoredSinteringFurnace,Condenser;
+
+    // ---- 热量相关工厂（产热 / 耗热） ----
     public static HeatProducer SAbsorptionTower,FeMixingPool;
     public static HeatCrafter GreenVitriolRoastingFurnace,electricArcFurnaceFluidizedBedReactor,SiReductionFurnace,sandRefiningPool;
-    //N
+
+    // ---- 氮化工线 ----
     public static GenericCrafter NCollector,NCatalyticChamber,NOxidationPlantGroup,NAbsorptionTower,NClMixedPool,ExplosiveMixer;
-    //oil
+
+    // ---- 石油化工线 ----
     public static GenericCrafter oilElectricDesaltingTank,oilPrimaryAtmosphericDistillationTower,oilSecondaryAtmosphericDistillationTower,oilVacuumDistillationColumn,
             oilCatalyticCrackingTower,USYHydrothermalReactor,USYMixer,oilHydrocrackingTower,oilCatalyticReformingTower,oilAromaticHydrocarbonComplex,oilCokingHydrogenationTower,oilSteamCrackingTower,oilTubularReactor;
-    //special
-    public static MultiRecipeFactory BulletFactory,liquidFillingMachine,liquidPourer,boiler;/*ComprehensiveProcessingFactory*/
+
+    // ---- 多配方工厂（配方在 Java 中声明） ----
+    public static MultiRecipeFactory BulletFactory,liquidFillingMachine,liquidPourer,boiler;
+
+    /** 创建全部工厂方块并声明多配方工厂的配方（由 {@code triangle.loadContent()} 调用）。 */
     public static void load(){
         oxygenReductionFurnace = new GenericCrafter("oxygenReductionFurnace"){{}};
         electrolyticCell = new GenericCrafter("electrolyticCell"){{}};
@@ -51,14 +67,16 @@ public class TriFactory {
         AcidResistantHeater = new GenericCrafter("AcidResistantHeater"){{}};
         electricArcFurnaceFluidizedBedReactor = new HeatCrafter("electricArcFurnaceFluidizedBedReactor"){{}};
         SiReductionFurnace = new HeatCrafter("SiReductionFurnace"){{}};
-        //N
+
+        // 氮化工线
         NCollector = new GenericCrafter("NCollector"){{}};
         NCatalyticChamber = new GenericCrafter("NCatalyticChamber"){{}};
         NOxidationPlantGroup = new GenericCrafter("NOxidationPlantGroup"){{}};
         NAbsorptionTower = new GenericCrafter("NAbsorptionTower"){{}};
         NClMixedPool = new GenericCrafter("NClMixedPool"){{}};
         ExplosiveMixer = new GenericCrafter("ExplosiveMixer"){{}};
-        //oil
+
+        // 石油化工线
         oilElectricDesaltingTank = new GenericCrafter("oilElectricDesaltingTank"){{}};
         oilPrimaryAtmosphericDistillationTower = new GenericCrafter("oilPrimaryAtmosphericDistillationTower"){{}};
         oilSecondaryAtmosphericDistillationTower = new GenericCrafter("oilSecondaryAtmosphericDistillationTower"){{}};
@@ -87,7 +105,9 @@ public class TriFactory {
         CrThermiteReactionChamber = new GenericCrafter("CrThermiteReactionChamber"){{}};
         armoredSinteringFurnace = new GenericCrafter("armoredSinteringFurnace"){{}};
         Condenser = new GenericCrafter("Condenser"){{}};
-        //special
+
+        // ---- 多配方工厂 ----
+        // 子弹工厂：四条弹药配方（LHEAT / thermite / WBullet / LHESH）
         BulletFactory = new MultiRecipeFactory("BulletFactory"){{
             size = 4;
             health = 20;
@@ -96,7 +116,8 @@ public class TriFactory {
             requirements(Category.crafting, with(TriItems.Cu,10,TriItems.TiAlloy,30,TriItems.FeSteel,20,TriItems.MonocrystallineSi,10));
             drawer = new DrawMulti(new DrawDefault(), new DrawFlame(Color.valueOf("E58760")));
             recipes.add(
-                    // 说明：powerUse 单位为“每 tick（1/60 秒）”，每秒消耗 = powerUse×60（如 20f/60f = 20/秒）
+                    // 说明：powerUse 单位为“每 tick（1/60 秒）”，每秒消耗 = powerUse × 60（如 20f/60f = 20/秒）
+                    // 破甲弹 LHEAT：铜 + 钢 + TNT
                     new Recipe() {{
                         inputItem.add(new ItemStack(TriItems.Cu, 2));
                         inputItem.add(new ItemStack(TriItems.FeSteel,1));
@@ -105,6 +126,7 @@ public class TriFactory {
                         craftTime = 15f;
                         powerUse = 20f/60f;
                     }},
+                    // 铝热剂：铝土矿 + 钢 + 氧化铁
                     new Recipe() {{
                         inputItem.add(new ItemStack(TriItems.bauxite, 1));
                         inputItem.add(new ItemStack(TriItems.FeSteel,1));
@@ -113,6 +135,7 @@ public class TriFactory {
                         craftTime = 10f;
                         powerUse = 10f/60f;
                     }},
+                    // 钨芯弹：钨钢 + 镍
                     new Recipe() {{
                         inputItem.add(new ItemStack(TriItems.WSteel,2));
                         inputItem.add(new ItemStack(TriItems.Ni,1));
@@ -120,6 +143,7 @@ public class TriFactory {
                         craftTime = 60f;
                         powerUse = 1f;
                     }},
+                    // 碎甲弹 LHESH：聚乙烯 + 钢 + TNT（需研究）
                     new Recipe() {{
                         inputItem.add(new ItemStack(TriItems.PE,2));
                         inputItem.add(new ItemStack(TriItems.FeSteel,4));
@@ -131,6 +155,7 @@ public class TriFactory {
                     }}
             );
         }};
+        // 液体装桶机：水/卤水 + 玻璃 → 对应桶装物品
         liquidFillingMachine = new MultiRecipeFactory("liquidFillingMachine"){{
             size = 3;
             health = 50;
@@ -162,6 +187,7 @@ public class TriFactory {
                 }}
             );
         }};
+        // 液体倒桶机：桶装物品 → 对应液体，与装桶机互为逆过程
         liquidPourer = new MultiRecipeFactory("liquidPourer"){{
             size = 3;
             health = 50;
@@ -191,6 +217,8 @@ public class TriFactory {
                     }}
             );
         }};
+        // 锅炉：燃烧油品加热水生成蒸汽；最后一条为需要外部热量的纯水蒸发配方。
+        // 热量需求 heatRequirement 单位与 HeatCrafter 一致，recipeMaxEfficiency 为超供热的效率上限。
         boiler = new MultiRecipeFactory("boiler"){{
             size = 5;
             health = 67;
@@ -251,6 +279,9 @@ public class TriFactory {
 //                    }}
             );
         }};
+        // ---- 已停用的旧方案（保留作配方数值参考，未注册进游戏） ----
+        // 原“综合加工厂”草案：把碘化提纯、铝电解、钒渣冶炼等工序合并到一台 7×7 工厂中。
+        // 因数值与工序耦合过强、维护困难而停用，后续若恢复可参考下方配方。
 //        ComprehensiveProcessingFactory = new MultiRecipeFactory("ComprehensiveProcessingFactory"){{
 //            size = 7;
 //            health = 30;

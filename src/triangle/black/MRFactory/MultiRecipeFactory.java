@@ -45,19 +45,43 @@ import mindustry.world.blocks.production.GenericCrafter;
 import mindustry.world.meta.*;
 import triangle.black.TriDraw;
 
+/**
+ * 多配方工厂：一台方块内置多条 {@link Recipe}，可按输入自动匹配，也可手动锁定配方。
+ *
+ * <p>核心机制：
+ * <ul>
+ *   <li>配方存放在 {@link #recipes}，输入过滤与输出列表在 {@link #init()} 中根据配方汇总；</li>
+ *   <li>动态消费器 {@link ConsumeRecipe} 与动态电力消费器 {@link ConsumePowerRecipe} 按当前配方结算；</li>
+ *   <li>自动模式（{@code auto=true}）优先严格匹配；无结果时按配方的“欠压/低温即停”开关放宽条件；</li>
+ *   <li>手动模式锁定 {@code selectedIndex}，输入不足时效率归零而不是切换配方；</li>
+ *   <li>配方可声明 {@code requiresResearch}，在 {@link #setBars()} 中生成隐藏的科技树研究节点；</li>
+ *   <li>配置通过 {@link MultiRecipeFactoryBuild#configured} 同步，并随存档/蓝图序列化。</li>
+ * </ul>
+ *
+ * <p>子类化方式：在 {@code triangle.content.TriFactory} 中 new 出实例后直接向 {@link #recipes} 追加配方。
+ */
 public class MultiRecipeFactory extends GenericCrafter{
+    /** 本工厂的全部配方，顺序即编号顺序。 */
     public Seq<Recipe> recipes = new Seq<>();
 
+    /** 全部物品输出种类（用于统一物流输出）。 */
     public Seq<Item> itemOutput = new Seq<>();
+    /** 全部液体输出种类。 */
     public Seq<Liquid> liquidOutput = new Seq<>();
+    /** 全部载荷输出种类。 */
     public Seq<UnlockableContent> payloadOutput = new Seq<>();
 
+    /** 输出物品达到容量上限时是否停止生产。 */
     public boolean checkItemOutputFullness = true;
+    /** 输出液体达到容量上限时是否停止生产。 */
     public boolean checkLiquidOutputFullness = true;
 
-    // 动态电力消耗器（保存引用，供欠压跳闸判定与效率控制使用）
+    /** 动态电力消耗器（保留引用，供欠压跳闸判定与效率控制使用）。 */
     public ConsumePowerRecipe powerConsumer;
 
+    /**
+     * 创建多配方工厂；注册动态输入消费器与电力消费器，并启用旋转与配置面板。
+     */
     public MultiRecipeFactory(String name) {
         super(name);
         // 注册自定义消费器
@@ -77,6 +101,10 @@ public class MultiRecipeFactory extends GenericCrafter{
         configurable = true; // 允许打开配置面板（手动选定配方 / 自动匹配开关）
     }
 
+    /**
+     * 根据配方表汇总输入过滤与输出列表，并设置父类所需的输出占位。
+     * 配方为空时使用铜/水作为零数量占位，避免原版生产逻辑出现空数组。
+     */
     @Override
     public void init() {
         super.init();
@@ -122,6 +150,9 @@ public class MultiRecipeFactory extends GenericCrafter{
         return !itemOutput.isEmpty() || !liquidOutput.isEmpty();
     }
 
+    /**
+     * 移除原版单配方的输入/输出/时间/热量/电力统计，改为用 {@link #displayRecipes()} 统一展示全部配方。
+     */
     @Override
     public void setStats() {
         super.setStats();
@@ -133,10 +164,12 @@ public class MultiRecipeFactory extends GenericCrafter{
         stats.add(Stat.input, displayRecipes());
     }
 
-    // 白色描边圆角背景 whiteOutlined 及私有辅助（roundRectStroke/addArc）已迁移至 triangle.black.TriDraw
+    // 圆角描边等共用绘制工具见 triangle.black.TriDraw
 
-    // 进度条：禁用 Bar 自带的值平滑（value 逐渐逼近 fraction），
-    // 每次绘制前 snap() 使填充严格等于 fraction，保证按时长从左到右循环填充
+    /**
+     * 圆形进度条：禁用原版 Bar 的数值平滑（value 逐渐逼近 fraction），
+     * 每次绘制前 {@code snap()} 使填充严格等于 fraction，保证按生产时长从左到右循环填充。
+     */
     public static class LoopingBar extends Bar {
         public LoopingBar(String name, Color color, Floatp fraction) {
             super(name, color, fraction);
@@ -149,7 +182,9 @@ public class MultiRecipeFactory extends GenericCrafter{
         }
     }
 
-    // 显示所有配方
+    /**
+     * 构建“全部配方”统计表：每条配方一行，依次展示输入、电力/热量、生产时间与输出。
+     */
     public StatValue displayRecipes() {
         return table -> {
             table.row();
@@ -227,7 +262,13 @@ public class MultiRecipeFactory extends GenericCrafter{
         };
     }
 
-    // 创建物品/液体显示
+    /**
+     * 创建单个资源的显示单元：图标 + 数量 + 名称 + 每秒速率。
+     *
+     * @param content    物品/液体/载荷
+     * @param amount     每周期数量
+     * @param timePeriod 周期时长（tick），用于换算每秒速率
+     */
     public static Table display(UnlockableContent content, float amount, float timePeriod) {
         Table table = new Table();
         Stack stack = new Stack();
@@ -255,7 +296,7 @@ public class MultiRecipeFactory extends GenericCrafter{
         return table;
     }
 
-    // 仅显示资源贴图（用于配置面板中的配方行），悬停仍显示资源名
+    /** 仅显示资源贴图（用于配置面板中的配方行），悬停仍显示资源名。 */
     public static Table displayIcon(UnlockableContent content) {
         Table table = new Table();
         Stack stack = new Stack();
@@ -268,6 +309,10 @@ public class MultiRecipeFactory extends GenericCrafter{
         return table;
     }
 
+    /**
+     * 为配方涉及的液体添加状态条，并按当前配方显示热量输入/输出条；
+     * 同时创建需研究配方的隐藏研究条目，并在内容初始化完成后挂到科技树。
+     */
     @Override
     public void setBars() {
         super.setBars();
@@ -320,8 +365,11 @@ public class MultiRecipeFactory extends GenericCrafter{
         });
     }
 
-    // 研究条目：配方所需的 UnlockableContent（用于科技树研究与解锁判断）
+    /**
+     * 配方研究条目：承载研究消耗与名称，不进入数据库，只通过科技树节点展示。
+     */
     public static class RecipeResearch extends UnlockableContent {
+        /** 研究消耗。 */
         public ItemStack[] cost;
         public RecipeResearch(String name) {
             super(name);
@@ -336,7 +384,11 @@ public class MultiRecipeFactory extends GenericCrafter{
         }
     }
 
-    // 为单个配方创建研究条目（研究消耗默认 inputItem，可 researchCost 覆盖；图标可用"工厂名-配方编号.png"覆盖）
+    /**
+     * 为单个配方创建研究条目。
+     * 研究消耗默认取 {@code inputItem}，可由 {@link Recipe#researchCost} 覆盖；
+     * 图标可用 atlas 中的“工厂名-配方编号.png”覆盖，否则回退到首个产出物图标。
+     */
     public static UnlockableContent createResearch(UnlockableContent factory, Recipe r, int index) {
         String rname = factory.name + "-" + index;
         RecipeResearch c = new RecipeResearch(rname);
@@ -366,7 +418,7 @@ public class MultiRecipeFactory extends GenericCrafter{
         return factory.uiIcon;
     }
 
-    // 将研究条目节点挂到工厂科技树节点之后（参考 addNode 改进，增加工厂节点缺失的防御）
+    /** 将研究条目节点挂到工厂科技树节点之后；工厂节点缺失时输出警告并跳过。 */
     public static void addResearchNode(UnlockableContent parent, UnlockableContent child) {
         TechTree.TechNode context = TechTree.all.find(t -> t.content == parent);
         if (context == null) {
@@ -381,7 +433,7 @@ public class MultiRecipeFactory extends GenericCrafter{
         node.planet = context.planet;
     }
 
-    // 配方是否处于未解锁（需研究且未研究）
+    /** 配方是否因“需要研究且尚未解锁”而处于锁定状态；沙盒模式视为已解锁。 */
     public static boolean isLocked(Recipe r) {
         if (r == null) return false;
         // 沙盒模式（无限资源/自由建造）下，需研究的配方视为已解锁（其他情况保持需研究解锁）
@@ -389,21 +441,30 @@ public class MultiRecipeFactory extends GenericCrafter{
         return r.requiresResearch && (r.research == null || !r.research.unlocked());
     }
 
-    // 建筑实体类
+    /** 工厂实体：维护当前配方、热量、自动/手动模式与配置序列化。 */
     public class MultiRecipeFactoryBuild extends GenericCrafterBuild implements HeatConsumer, HeatBlock {
+        /** 当前生效的配方索引；-1 表示无可用配方。 */
         public int recipeIndex = -1;
-        public float[] sideHeat = new float[4]; // 四面热量输入
-        public float heat = 0f; // 当前热量值（有效热量，供可用性/消耗检查使用）
-        public float rawHeat = 0f; // 实际接收的热量（供效率计算与显示使用）
-        public float warmup = 0f; // 预热值（用于热量产出）
-        public boolean auto = true; // true=自动匹配配方；false=手动选定 selectedIndex 配方制作
-        public int selectedIndex = -1; // 手动模式下选定的配方索引（-1 表示未选定）
+        /** 四面热量输入。 */
+        public float[] sideHeat = new float[4];
+        /** 当前有效热量（供可用性/消耗检查使用）。 */
+        public float heat = 0f;
+        /** 实际接收的热量（供效率计算与显示使用）。 */
+        public float rawHeat = 0f;
+        /** 预热值（用于热量产出）。 */
+        public float warmup = 0f;
+        /** true = 自动匹配配方；false = 手动使用 {@link #selectedIndex}。 */
+        public boolean auto = true;
+        /** 手动模式选定的配方索引；-1 表示未选定。 */
+        public int selectedIndex = -1;
 
+        /** 当前生效配方；索引越界时返回 null。 */
         public Recipe getRecipe() {
             if (recipeIndex < 0 || recipeIndex >= recipes.size) return null;
             return recipes.get(recipeIndex);
         }
 
+        /** 用于界面展示的配方：尚未选中时回退到第一条配方。 */
         public Recipe getDisplayRecipe() {
             if (recipeIndex < 0 && recipes.size > 0) {
                 return recipes.first();
@@ -411,14 +472,16 @@ public class MultiRecipeFactory extends GenericCrafter{
             return getRecipe();
         }
 
-        // 配置序列化：自动模式编码为 -1，手动模式编码为选中的配方索引（供蓝图复制/粘贴）
+        /** 配置序列化：自动模式编码为 -1，手动模式编码为选中的配方索引（供蓝图复制/粘贴）。 */
         @Override
         public Object config() {
             return auto ? -1 : selectedIndex;
         }
 
-        // 真正的配置处理入口：蓝图粘贴(configureAny)、UI(configure)都会经 Call.tileConfig 触发本方法。
-        // 注意 configure()/configureAny() 本身只广播，不应用配置。
+        /**
+         * 配置处理入口：蓝图粘贴（configureAny）与 UI 配置（configure）都会经 Call.tileConfig 触发本方法。
+         * 负数表示切回自动模式，其余值作为手动配方索引。
+         */
         @Override
         public void configured(Unit unit, Object value) {
             if (value instanceof Integer v) {
@@ -434,18 +497,20 @@ public class MultiRecipeFactory extends GenericCrafter{
             }
         }
 
-        // 存档读写：保存自动模式 / 选中配方索引（version 1 起包含该额外数据，旧存档自动用默认值）
+        /** 存档版本：1 起额外保存自动/手动配方状态。 */
         @Override
         public byte version() {
             return 1;
         }
 
+        /** 写入自动/手动配方状态。 */
         @Override
         public void write(Writes write) {
             super.write(write);
             write.i(auto ? -1 : selectedIndex);
         }
 
+        /** 读取配方状态；旧存档（revision < 1）保持默认的自动模式。 */
         @Override
         public void read(Reads read, byte revision) {
             super.read(read, revision);
@@ -462,12 +527,13 @@ public class MultiRecipeFactory extends GenericCrafter{
             }
         }
 
-        // HeatConsumer 接口实现
+        /** 四面热量输入数组（HeatConsumer）。 */
         @Override
         public float[] sideHeat() {
             return sideHeat;
         }
 
+        /** 当前配方的热量需求；未启用热量时返回 0。 */
         @Override
         public float heatRequirement() {
             Recipe recipe = getRecipe();
@@ -477,7 +543,7 @@ public class MultiRecipeFactory extends GenericCrafter{
             return 0f;
         }
 
-        // HeatBlock 接口实现
+        /** 当前配方的热量产出（HeatBlock）。 */
         @Override
         public float heat() {
             Recipe recipe = getRecipe();
@@ -487,6 +553,7 @@ public class MultiRecipeFactory extends GenericCrafter{
             return 0f;
         }
 
+        /** 热量产出进度（0~1），供状态条显示。 */
         @Override
         public float heatFrac() {
             Recipe recipe = getRecipe();
@@ -496,7 +563,7 @@ public class MultiRecipeFactory extends GenericCrafter{
             return 0f;
         }
 
-        // 热量效率计算（使用实际接收热量 rawHeat，低热时按比例降速）
+        /** 热量效率：以实际接收热量 rawHeat 计算，低热时按比例降速，超热按 recipeMaxEfficiency 封顶。 */
         @Override
         public float efficiencyScale() {
             Recipe recipe = getRecipe();
@@ -507,7 +574,7 @@ public class MultiRecipeFactory extends GenericCrafter{
             return Math.min(Mathf.clamp(rawHeat / recipe.heatRequirement) + over / recipe.heatRequirement, recipe.recipeMaxEfficiency);
         }
 
-        // 返回用于drawer的warmup值
+        /** 返回绘制器使用的预热目标值。 */
         @Override
         public float warmupTarget() {
             Recipe recipe = getRecipe();
@@ -518,7 +585,10 @@ public class MultiRecipeFactory extends GenericCrafter{
             return efficiency;
         }
 
-        // 更新配方 - 寻找可用配方
+        /**
+         * 严格配方检索：从后往前寻找输入（物品/液体/载荷）、热量、电力均满足且输出未满的配方。
+         * 热量/电力只要低于需求即排除；找不到时 recipeIndex 置 -1。
+         */
         public void updateRecipe() {
             for (int i = recipes.size - 1; i >= 0; i--) {
                 if (isLocked(recipes.get(i))) continue; // 跳过未解锁（需研究未研究）配方
@@ -575,8 +645,10 @@ public class MultiRecipeFactory extends GenericCrafter{
             recipeIndex = -1;
         }
 
-        // 宽松配方检索：仅当严格检索(updateRecipe)无结果时使用。
-        // 热量/电力不足的配方，仅在其“即停”布尔值为 true 时排除；为 false 时仍可选（以低效率继续工作）。
+        /**
+         * 宽松配方检索：仅当严格检索无结果时使用。
+         * 热量/电力不足的配方，仅在其“即停”开关为 true 时排除；为 false 时仍可选（以低效率继续工作）。
+         */
         public void trySelectRelaxed() {
             for (int i = recipes.size - 1; i >= 0; i--) {
                 Recipe recipe = recipes.get(i);
@@ -634,7 +706,7 @@ public class MultiRecipeFactory extends GenericCrafter{
             // 无可用配方时不改动 recipeIndex（保持 -1）
         }
 
-        // 检查特定配方的输出是否可用
+        /** 检查该配方的物品/液体输出是否还有足够容量。 */
         public boolean canOutputForRecipe(Recipe recipe) {
             // 检查物品输出容量
             if (checkItemOutputFullness) {
@@ -657,7 +729,7 @@ public class MultiRecipeFactory extends GenericCrafter{
             return true;
         }
 
-        // 检查当前配方是否有效
+        /** 当前配方是否仍可用：输入充足、未锁定，且未触发低温/欠压跳闸。 */
         public boolean validRecipe() {
             if (recipeIndex < 0) return false;
             if (isLocked(recipes.get(recipeIndex))) return false; // 未解锁配方视为无效
@@ -692,6 +764,10 @@ public class MultiRecipeFactory extends GenericCrafter{
             return true;
         }
 
+        /**
+         * 每帧逻辑：先确定配方（自动模式下严格检索，失败后宽松检索；手动模式锁定 selectedIndex），
+         * 再更新热量并交给父类推进生产，最后补充液体输出与物品容量钳制。
+         */
         @Override
         public void updateTile() {
             if (auto) {
@@ -752,6 +828,7 @@ public class MultiRecipeFactory extends GenericCrafter{
             });
         }
 
+        /** 输出物品、载荷与液体；物品/载荷按统一计时器投放。 */
         @Override
         public void dumpOutputs() {
             boolean timer = timer(timerDump, dumpTime / timeScale);
@@ -766,6 +843,7 @@ public class MultiRecipeFactory extends GenericCrafter{
             liquidOutput.each(output -> dumpLiquid(output, 2f, -1));
         }
 
+        /** 是否允许消耗输入：无配方、断电、低温跳闸或液体输出已满时停止。 */
         @Override
         public boolean shouldConsume() {
             if (getRecipe() == null) return false;
@@ -805,6 +883,7 @@ public class MultiRecipeFactory extends GenericCrafter{
             return enabled;
         }
 
+        /** 按当前配方的 craftTime 缩放生产进度。 */
         @Override
         public float getProgressIncrease(float baseTime) {
             float scl = 1f;
@@ -812,6 +891,7 @@ public class MultiRecipeFactory extends GenericCrafter{
             return super.getProgressIncrease(baseTime) / scl;
         }
 
+        /** 完成一个生产周期：消耗输入、输出物品，并在自动模式下重新匹配配方。 */
         @Override
         public void craft() {
             if (getRecipe() == null) return;
@@ -835,7 +915,10 @@ public class MultiRecipeFactory extends GenericCrafter{
             // 手动模式：保持锁定 selectedIndex，不重新选择配方
         }
 
-        // 配置界面：自动匹配开关 + 手动选定配方（一行一个配方，仅贴图；点触按钮 + 选中指示灯）
+        /**
+         * 配置界面：顶部 AUTO 开关，下方一行一个配方（输入图标 → 输出图标 + 选中指示灯）。
+         * 点击已选中的配方会取消选择并恢复自动模式；打开面板时刷新一次，之后仅在状态变化时刷新。
+         */
         @Override
         public void buildConfiguration(Table table) {
             // AUTO 按钮样式：自动模式(激活)=button-over，手动模式(未激活)=button-trans
@@ -948,6 +1031,7 @@ public class MultiRecipeFactory extends GenericCrafter{
             });
         }
 
+        /** 方块状态：无配方或断电时显示“缺少输入”，其余沿用父类逻辑。 */
         @Override
         public BlockStatus status() {
             if (enabled && getRecipe() == null) {return BlockStatus.noInput;}
