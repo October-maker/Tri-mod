@@ -5,6 +5,7 @@ import arc.graphics.Color;
 import arc.graphics.g2d.TextureRegion;
 import arc.input.KeyCode;
 import arc.math.Interp;
+import arc.math.geom.Vec2;
 import arc.scene.Element;
 import arc.scene.actions.Actions;
 import arc.scene.event.ClickListener;
@@ -16,6 +17,7 @@ import arc.scene.ui.ScrollPane;
 import arc.scene.ui.TextButton;
 import arc.scene.ui.layout.Table;
 import arc.scene.event.Touchable;
+import arc.scene.style.TextureRegionDrawable;
 import arc.struct.ObjectMap;
 import arc.struct.Seq;
 import arc.util.Align;
@@ -58,8 +60,14 @@ public class TriMailDialog{
     private static final float LOGO_MAX_WIDTH = 1000f;
     /** TmailLogo 停靠 x 比例：屏幕左侧 1/4 处（右侧 3/4 留给收件箱内容）。 */
     private static final float LOGO_TARGET_X_RATIO = 0.25f;
+    /** 打开/关闭信件详情时，TmailLogo 移动到屏幕中央/返回左侧的时长（秒）。 */
+    private static final float LOGO_DETAIL_MOVE_DURATION = 0.3f;
     /** 当前 TmailLogo 层：动画结束后保留为页面左侧品牌标识，关闭页面时移除。 */
     private static Table logoIntro;
+    /** 最终 TmailLogo 所在的 Table（可整体移动，供详情打开时移到屏幕中央）。 */
+    private static Table tmailLogoTable;
+    /** TmailLogo 的左侧停靠位与中央位（相对 inbox.cont 的局部坐标）。 */
+    private static float logoHomeX, logoHomeY, logoCenterX, logoCenterY;
 
     private static BaseDialog inbox;
     private static Filter filter = Filter.ALL;
@@ -71,6 +79,16 @@ public class TriMailDialog{
     private static Table lastContent;
     /** 当前打开的信件详情 table（画面中心），以及其对应的缩略卡片（用于关闭时恢复显示）。 */
     private static Table activeDetail, activeDetailCard;
+    /** 详情卡片背后 / 返回缩略图时的全屏灰色半透明背景。 */
+    private static Table activeDetailBg;
+    /** 详情打开/关闭的形变动画时长（秒）。 */
+    private static final float MORPH_DURATION = 0.45f;
+    /** 当前详情对应的邮件（关闭动画中途重建缩略图外观时使用）。 */
+    private static TriMail activeDetailMail;
+    /** 对应缩略图在屏幕上的起始位置/尺寸（关闭时 morph table 回到这里）。 */
+    private static float detailStartX, detailStartY, detailStartW, detailStartH;
+    /** 防止关闭动画期间重复触发关闭。 */
+    private static boolean closingDetail;
     /** 详情背后的全屏透明按钮：点击详情卡片外的部分 → 触发关闭详情（置于收件箱之上、详情之下）。 */
     private static Table activeBackdrop;
     /** 分类栏四个按钮引用（按 ALL/READ/UNREAD/HISTORY 顺序），供 refreshReadState 更新未读角标。 */
@@ -141,10 +159,9 @@ public class TriMailDialog{
                     activeDetail = null;
                     activeDetailCard = null;
                 }
-                if(activeBackdrop != null){
-                    activeBackdrop.remove();
-                    activeBackdrop = null;
-                }
+                activeDetailMail = null;
+                closingDetail = false;
+                removeDetailOverlays();
                 if(blur != null){
                     blur.remove();
                     blur = null;
@@ -239,31 +256,52 @@ public class TriMailDialog{
         layer.actions(Actions.delay(assembleAt), Actions.run(() -> {
             if(logoIntro != layer) return;
 
-            // 完整 TmailLogo 覆盖并替换两片分帧
+            // 完整 TmailLogo 覆盖并替换两片分帧；放入独立 Table，便于详情打开时整体移动
             Image cover = new Image(coverTex);
             cover.setSize(logoW, logoH);
             cover.setOrigin(Align.center);
             cover.setScale(LOGO_ASSEMBLE_SCALE);
-            cover.setPosition(pieceX, pieceY);
-            layer.addChild(cover);
+
+            Table logoTable = new Table();
+            logoTable.add(cover).size(logoW, logoH);
+            logoTable.pack();
+            logoTable.setOrigin(Align.center);
+            logoTable.setPosition(pieceX, pieceY);
+            layer.addChild(logoTable);
+            tmailLogoTable = logoTable;
+
             piece1.remove();
             piece2.remove();
             dim.remove();
 
+            // 记录停靠位/中央位（相对 inbox.cont 的局部坐标）
+            logoHomeX = targetX - logoW / 2f;
+            logoHomeY = targetY - logoH / 2f;
+            logoCenterX = pieceX;
+            logoCenterY = pieceY;
+
             // 类似 TriWelcome：先慢后快滑入停靠位，同时缩放回正常大小
-            cover.actions(
-                Actions.parallel(
-                    Actions.moveTo(targetX - logoW / 2f, targetY - logoH / 2f, LOGO_COVER_MOVE_DURATION, Interp.pow2In),
-                    Actions.scaleTo(1f, 1f, LOGO_COVER_MOVE_DURATION, Interp.pow2In)
-                ),
+            logoTable.actions(
+                Actions.moveTo(logoHomeX, logoHomeY, LOGO_COVER_MOVE_DURATION, Interp.pow2In),
                 Actions.run(() -> {
                     if(logoIntro != layer) return;
                     layer.touchable = Touchable.disabled;
-                    if(inbox != null && inbox.isShown()){
+                    // 兜底：正常情况下 content 已在下面提前构建；若因关闭等原因未构建，则这里补一次
+                    if(inbox != null && inbox.isShown() && lastContent == null){
                         build(inbox);
                     }
                 })
             );
+            cover.actions(Actions.scaleTo(1f, 1f, LOGO_COVER_MOVE_DURATION, Interp.pow2In));
+
+            // 调整 content 入场时机：content 滑入（SLIDE_IN_DURATION）结束 + 1 tick 延迟
+            // 恰好与 Logo 滑到停靠位（LOGO_COVER_MOVE_DURATION）同一时刻。
+            float contentStartDelay = Math.max(0f, LOGO_COVER_MOVE_DURATION - SLIDE_IN_DURATION - 1f / 60f);
+            layer.actions(Actions.delay(contentStartDelay), Actions.run(() -> {
+                if(logoIntro == layer && inbox != null && inbox.isShown() && lastContent == null){
+                    build(inbox);
+                }
+            }));
         }));
 
         logoIntro = layer;
@@ -275,6 +313,16 @@ public class TriMailDialog{
             logoIntro.remove();
             logoIntro = null;
         }
+        tmailLogoTable = null;
+    }
+
+    /** 打开/关闭信件详情时，把 TmailLogo 移到屏幕中央或移回左侧停靠位。 */
+    private static void moveLogoToDetail(boolean centered){
+        if(tmailLogoTable == null) return;
+        float x = centered ? logoCenterX : logoHomeX;
+        float y = centered ? logoCenterY : logoHomeY;
+        tmailLogoTable.clearActions();
+        tmailLogoTable.actions(Actions.moveTo(x, y, LOGO_DETAIL_MOVE_DURATION, Interp.pow2Out));
     }
 
     /** 打开收件箱并立即构建内容（不播放 Logo 动画；供程序化刷新使用）。story=true 剧情 / false 资讯。 */
@@ -490,82 +538,230 @@ public class TriMailDialog{
         return card;
     }
 
-    /** 打开一封邮件的正文（自动标记已读并记录阅读时间）。
-     *  被点击的信件缩略卡片在列表中隐藏（保留占位），关闭详情后恢复显示。
-     *  详情以画面中心新建的 table 直接显示（限宽、按内容实际高度真正居中）。 */
+    /** 构建与缩略图一致的卡片外观（不注册点击、不覆盖 senderLabels），供详情形变动画使用。 */
+    private static void buildCardContent(Table card, TriMail mail){
+        buildCardContent(card, mail, TriInbox.isRead(mail));
+    }
+
+    private static void buildCardContent(Table card, TriMail mail, boolean read){
+        card.top().left();
+        card.background(TriDraw.whiteOutlined(Styles.grayPanel));
+
+        float innerW = CARD_WIDTH - 28;
+
+        Label sender = new Label(read ? mail.sender : "[accent]" + mail.sender);
+        sender.setEllipsis(true);
+        sender.setAlignment(Align.topLeft);
+        card.add(sender).top().left().width(innerW).height(32).padLeft(14).padRight(14).padTop(7).row();
+
+        Image divider = new Image(Tex.whiteui, Color.gray);
+        card.add(divider).growX().height(2).padLeft(14).padRight(14).row();
+
+        Label content = new Label(mail.body.replace('\n', ' '));
+        content.setEllipsis(true);
+        content.setAlignment(Align.topLeft);
+        card.add(content).top().left().width(innerW).height(28).padLeft(14).padRight(14).padBottom(7);
+    }
+
+    /**
+     * 打开一封邮件：从被点击缩略卡片的屏幕位置生成一个 morph table，
+     * 先保持卡片外观移动到画面中央，途中切换为详情内容。
+     */
     private static void openMail(TriMail mail, Table mailCard){
+        // 先记录点击时的已读外观，确保 morph 初始缩略图与用户看到的卡片一致
+        boolean wasRead = TriInbox.isRead(mail);
         TriInbox.markRead(mail);
 
-        // 打开新详情前关闭已有详情（避免多个详情叠加；同时移除旧的全屏透明按钮）
-        if(activeDetail != null) closeDetail(activeDetail, activeDetailCard);
+        // 打开新详情前立即结束旧详情（避免两个形变 table 叠加）
+        if(activeDetail != null){
+            closeDetail(activeDetail, activeDetailCard, true);
+        }
+        removeDetailOverlays();
+        closingDetail = false;
+
+        float sw = Core.graphics.getWidth(), sh = Core.graphics.getHeight();
+        Vec2 cardPos = mailCard != null
+            ? mailCard.localToStageCoordinates(new Vec2(0f, 0f))
+            : new Vec2(sw / 2f, sh / 2f);
+        detailStartX = cardPos.x;
+        detailStartY = cardPos.y;
+        // 缩略图卡片统一由 list.add(card(m)).size(CARD_WIDTH, CARD_HEIGHT) 布局。
+        // 不读取 Table.getWidth()/getHeight()：Table 的实测尺寸可能包含布局/内边距差异，
+        // 会导致 morph Table 初始高度与缩略图对不上。
+        detailStartW = CARD_WIDTH;
+        detailStartH = CARD_HEIGHT;
+
+        // 隐藏被点击的缩略卡片（保留占位，关闭动画结束前不恢复）
+        if(mailCard != null) mailCard.visible = false;
+
+        // content 卡片组加速移出画面，空出收件箱区域
+        if(lastContent != null){
+            lastContent.clearActions();
+            lastContent.actions(Actions.moveTo(sw + lastContent.getWidth(), contentHomeY, CONTENT_SWEEP_DURATION, Interp.pow2In));
+        }
+
+        // 全屏透明点击层 + 灰色半透明背景
+        Table backdrop = new Table();
+        backdrop.touchable = Touchable.enabled;
+        backdrop.clicked(() -> {
+            if(activeDetail != null && !closingDetail) closeDetail(activeDetail, activeDetailCard);
+        });
+        Core.scene.root.addChild(backdrop);
+        backdrop.setFillParent(true);
+        activeBackdrop = backdrop;
+
+        Table detailBg = new Table();
+        detailBg.background(((TextureRegionDrawable)Tex.whiteui).tint(Color.valueOf("10101080")));
+        detailBg.touchable = Touchable.disabled;
+        Core.scene.root.addChild(detailBg);
+        detailBg.setFillParent(true);
+        activeDetailBg = detailBg;
+
+        // 先测量详情内容的最终尺寸（用临时 table，避免隐藏内容参与 morph 初始布局）
+        Table measure = new Table();
+        measure.top().left();
+        measure.background(TriDraw.whiteOutlined(Styles.grayPanel));
+        buildDetailContent(measure, mail, () -> {});
+        measure.setSize(DETAIL_WIDTH, 600f);
+        measure.validate();
+        float dw = measure.getWidth();
+        float dh = Math.min(measure.getHeight(), sh - 120f);
+        measure.setSize(dw, dh);
+        measure.validate();
+
+        // morph table 初始只放缩略图内容，不再包含隐藏的详情内容，避免其行高/换行影响初始高度
+        Table morph = new Table();
+        buildCardContent(morph, mail, wasRead);
+        morph.setBounds(detailStartX, detailStartY, detailStartW, detailStartH);
+        Core.scene.root.addChild(morph);
+        morph.toFront();
+
+        activeDetail = morph;
+        activeDetailCard = mailCard;
+        activeDetailMail = mail;
+
+        float targetX = sw / 2f - dw / 2f;
+        float targetY = sh / 2f - dh / 2f;
+
+        // 位置/尺寸同步过渡；正好在中点时替换为详情内容
+        morph.actions(Actions.parallel(
+            Actions.moveTo(targetX, targetY, MORPH_DURATION, Interp.pow2Out),
+            Actions.sizeTo(dw, dh, MORPH_DURATION, Interp.pow2Out)
+        ));
+        morph.addAction(Actions.sequence(
+            Actions.delay(MORPH_DURATION / 2f),
+            Actions.run(() -> {
+                if(activeDetail != morph) return;
+                morph.clearChildren();
+                morph.background(TriDraw.whiteOutlined(Styles.grayPanel));
+                buildDetailContent(morph, mail, () -> {
+                    if(activeDetail != null) closeDetail(activeDetail, activeDetailCard);
+                });
+                morph.validate();
+            })
+        ));
+        morph.addAction(Actions.sequence(
+            Actions.delay(MORPH_DURATION),
+            Actions.run(() -> {
+                if(activeDetail == morph){
+                    morph.setBounds(targetX, targetY, dw, dh);
+                }
+            })
+        ));
+
+        // 有信件详情时，把 TmailLogo 移到屏幕中央（位于详情背后）
+        moveLogoToDetail(true);
+    }
+
+    /** 关闭详情：默认播放“详情 → 缩略卡片”的返回形变动画。 */
+    private static void closeDetail(Table detail, Table mailCard){
+        closeDetail(detail, mailCard, false);
+    }
+
+    /**
+     * 关闭详情。
+     *
+     * @param immediate true 时立即移除（用于打开另一封信前清理旧详情）；
+     *                  false 时播放返回动画：morph table 回到原缩略图位置，途中切回卡片外观，
+     *                  content 卡片组同时回移；二者到位后再恢复缩略图并删除 morph table。
+     */
+    private static void closeDetail(Table detail, Table mailCard, boolean immediate){
+        if(detail == null || !detail.hasParent()) return;
+        if(activeDetail != detail) return;
+        if(closingDetail && !immediate) return;
+
+        if(immediate){
+            detail.clearActions();
+            detail.remove();
+            removeDetailOverlays();
+            activeDetail = null;
+            activeDetailCard = null;
+            activeDetailMail = null;
+            closingDetail = false;
+            if(mailCard != null) mailCard.visible = true;
+            moveLogoToDetail(false);
+            if(lastContent != null){
+                lastContent.clearActions();
+                lastContent.actions(Actions.moveTo(contentHomeX, contentHomeY, CONTENT_SWEEP_DURATION, Interp.pow2Out));
+            }
+            refreshReadState();
+            return;
+        }
+
+        closingDetail = true;
+        TriMail mail = activeDetailMail;
+
+        // content 卡片组同步回移，与 morph table 同时到位
+        if(lastContent != null){
+            lastContent.clearActions();
+            lastContent.actions(Actions.moveTo(contentHomeX, contentHomeY, MORPH_DURATION, Interp.pow2Out));
+        }
+        // Logo 返回左侧
+        moveLogoToDetail(false);
+
+        detail.clearActions();
+        detail.actions(Actions.parallel(
+            Actions.moveTo(detailStartX, detailStartY, MORPH_DURATION, Interp.pow2In),
+            Actions.sizeTo(detailStartW, detailStartH, MORPH_DURATION, Interp.pow2In)
+        ));
+        // 中途切回缩略图外观
+        detail.addAction(Actions.sequence(
+            Actions.delay(MORPH_DURATION / 2f),
+            Actions.run(() -> {
+                if(activeDetail != detail || mail == null) return;
+                detail.clearChildren();
+                detail.background(TriDraw.whiteOutlined(Styles.grayPanel));
+                buildCardContent(detail, mail);
+                detail.validate();
+            })
+        ));
+        // 双方到位：删除 morph table，恢复原缩略图
+        detail.addAction(Actions.sequence(
+            Actions.delay(MORPH_DURATION),
+            Actions.run(() -> {
+                if(activeDetail != detail) return;
+                detail.remove();
+                removeDetailOverlays();
+                activeDetail = null;
+                activeDetailCard = null;
+                activeDetailMail = null;
+                closingDetail = false;
+                if(mailCard != null) mailCard.visible = true;
+                refreshReadState();
+            })
+        ));
+    }
+
+    /** 移除详情相关的全屏点击层与灰色背景。 */
+    private static void removeDetailOverlays(){
         if(activeBackdrop != null){
             activeBackdrop.remove();
             activeBackdrop = null;
         }
-
-        // 隐藏被点击的信件缩略图卡片（保留占位，列表布局不移动）
-        if(mailCard != null) mailCard.visible = false;
-
-        // 打开详情：背景 content 卡片组加速移出画面（先慢再快 pow2In，≤0.2s），空出收件箱区域
-        if(lastContent != null){
-            lastContent.clearActions();
-            float sw = Core.graphics.getWidth();
-            lastContent.actions(Actions.moveTo(sw + lastContent.getWidth(), contentHomeY, CONTENT_SWEEP_DURATION, Interp.pow2In));
+        if(activeDetailBg != null){
+            activeDetailBg.remove();
+            activeDetailBg = null;
         }
-
-        // 画面中心 table：直接显示信件详情
-        float sw = Core.graphics.getWidth(), sh = Core.graphics.getHeight();
-        Table detail = new Table();
-        detail.top().left();
-        detail.background(TriDraw.whiteOutlined(Styles.grayPanel)); // 白色描边
-        buildDetailContent(detail, mail, () -> closeDetail(detail, mailCard));
-        // 限定宽度后布局，取内容实际高度（而非期望高度）用于真正居中
-        detail.setSize(DETAIL_WIDTH, 600f);
-        detail.validate();
-        float w = detail.getWidth(), h = Math.min(detail.getHeight(), sh - 120f); // 限高防超屏
-        detail.setSize(w, h);
-        detail.validate();
-        // 详情背后的全屏透明按钮（先于详情加入场景 → 在详情之下、收件箱之上）：
-        // 点击详情卡片外的部分 → 统一触发关闭详情；按钮本体不可见，随详情关闭一并移除
-        Table backdrop = new Table();
-        backdrop.touchable = Touchable.enabled; // 全屏可触摸（拦截详情外点击）
-        backdrop.clicked(() -> {
-            if(activeDetail != null) closeDetail(activeDetail, activeDetailCard);
-        });
-        Core.scene.root.addChild(backdrop);
-        backdrop.setFillParent(true); // 填满整个场景
-        activeBackdrop = backdrop;
-
-        // 再挂详情（在透明按钮之上）
-        Core.scene.root.addChild(detail);
-        detail.toFront();
-        detail.setPosition(sw / 2f - w / 2f, sh / 2f - h / 2f); // 画面正中心
-
-        // 记录当前详情（供透明按钮/主界面点击时关闭；并关联缩略卡片用于恢复）
-        activeDetail = detail;
-        activeDetailCard = mailCard;
-    }
-
-    /** 关闭画面中心详情 table：移除 table、移除背后的全屏透明按钮、恢复被隐藏的信件缩略卡片、content 减速滑回右 3/4（先快后慢 pow2Out，≤0.2s）。
-     *  可重复调用（幂等）：详情已不在场景时直接返回。 */
-    private static void closeDetail(Table detail, Table mailCard){
-        if(detail == null || !detail.hasParent()) return; // 已关闭
-        if(activeDetail == detail){
-            activeDetail = null;
-            activeDetailCard = null;
-        }
-        if(activeBackdrop != null){ // 移除全屏透明按钮
-            activeBackdrop.remove();
-            activeBackdrop = null;
-        }
-        detail.remove(); // 移除画面中心详情 table
-        if(mailCard != null) mailCard.visible = true; // 恢复信件缩略卡片
-        if(lastContent != null){
-            lastContent.clearActions();
-            lastContent.actions(Actions.moveTo(contentHomeX, contentHomeY, CONTENT_SWEEP_DURATION, Interp.pow2Out));
-        }
-        // 所有退出路径（× / 透明按钮 / 已读）统一刷新已读/未读状态（角标 + 发件人高亮 + 未读列表）
-        refreshReadState();
     }
 
     /** 构建信件详情内容：标题（右带关闭按钮）/发件人/分割线/正文/附件/回信区/已读按钮。
