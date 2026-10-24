@@ -43,6 +43,7 @@ import mindustry.world.blocks.heat.HeatConsumer;
 import mindustry.world.blocks.payloads.BuildPayload;
 import mindustry.world.blocks.production.GenericCrafter;
 import mindustry.world.meta.*;
+import triangle.black.TriDraw;
 
 public class MultiRecipeFactory extends GenericCrafter{
     public Seq<Recipe> recipes = new Seq<>();
@@ -132,71 +133,7 @@ public class MultiRecipeFactory extends GenericCrafter{
         stats.add(Stat.input, displayRecipes());
     }
 
-    // 将 Drawable 包装为带白色(#FFFFFF)描边的版本（按 base 缓存复用，避免每次 new 匿名对象）
-    private static final ObjectMap<Drawable, Drawable> outlinedCache = new ObjectMap<>();
-
-    public static Drawable whiteOutlined(Drawable base) {
-        Drawable cached = outlinedCache.get(base);
-        if (cached == null) {
-            cached = new Drawable() {
-                @Override
-                public void draw(float x, float y, float width, float height) {
-                    base.draw(x, y, width, height);
-                    stroke(x, y, width, height);
-                }
-
-                @Override
-                public void draw(float x, float y, float width, float height, float color, float u1, float v1, float u2, float v2) {
-                    base.draw(x, y, width, height, color, u1, v1, u2, v2);
-                    stroke(x, y, width, height);
-                }
-
-                private void stroke(float x, float y, float width, float height) {
-                    Draw.color(Color.white);
-                    Lines.stroke(2.5f);
-                    roundRectStroke(x, y, width, height, 8f);
-                    Draw.reset();
-                }
-
-                @Override public float getLeftWidth() { return base.getLeftWidth(); }
-                @Override public void setLeftWidth(float leftWidth) { base.setLeftWidth(leftWidth); }
-                @Override public float getRightWidth() { return base.getRightWidth(); }
-                @Override public void setRightWidth(float rightWidth) { base.setRightWidth(rightWidth); }
-                @Override public float getTopHeight() { return base.getTopHeight(); }
-                @Override public void setTopHeight(float topHeight) { base.setTopHeight(topHeight); }
-                @Override public float getBottomHeight() { return base.getBottomHeight(); }
-                @Override public void setBottomHeight(float bottomHeight) { base.setBottomHeight(bottomHeight); }
-                @Override public float getMinWidth() { return base.getMinWidth(); }
-                @Override public void setMinWidth(float minWidth) { base.setMinWidth(minWidth); }
-                @Override public float getMinHeight() { return base.getMinHeight(); }
-                @Override public void setMinHeight(float minHeight) { base.setMinHeight(minHeight); }
-            };
-            outlinedCache.put(base, cached);
-        }
-        return cached;
-    }
-
-    // 绘制圆角矩形描边（四个角用弧线采样，直边由相邻弧线端点自然连成）
-    private static void roundRectStroke(float x, float y, float w, float h, float r) {
-        r = Math.min(r, Math.min(w, h) / 2f);
-        int segs = 8; // 每个角四分一圆弧的采样段数
-        FloatSeq pts = new FloatSeq();
-        // 顺时针依次画出四个圆角
-        addArc(pts, x + w - r, y + r, r, 270f, 360f, segs); // 右下角
-        addArc(pts, x + w - r, y + h - r, r, 0f, 90f, segs); // 右上角
-        addArc(pts, x + r, y + h - r, r, 90f, 180f, segs); // 左上角
-        addArc(pts, x + r, y + r, r, 180f, 270f, segs); // 左下角
-        Lines.polyline(pts, true);
-    }
-
-    // 向点集追加一段圆弧上的采样点（角度为度，0° 指向 +x，顺时针增加）
-    private static void addArc(FloatSeq pts, float cx, float cy, float r, float a0, float a1, int segs) {
-        for (int i = 0; i <= segs; i++) {
-            float a = Mathf.lerp(a0, a1, i / (float) segs);
-            pts.add(cx + Mathf.cosDeg(a) * r);
-            pts.add(cy + Mathf.sinDeg(a) * r);
-        }
-    }
+    // 白色描边圆角背景 whiteOutlined 及私有辅助（roundRectStroke/addArc）已迁移至 triangle.black.TriDraw
 
     // 进度条：禁用 Bar 自带的值平滑（value 逐渐逼近 fraction），
     // 每次绘制前 snap() 使填充严格等于 fraction，保证按时长从左到右循环填充
@@ -223,7 +160,7 @@ public class MultiRecipeFactory extends GenericCrafter{
                     cont.table(t -> {
                         t.left().marginLeft(12f).add("[accent][" + (finalI + 1) + "]:[]").width(48f);
                         t.table(inner -> { // 加小背景
-                            inner.table(whiteOutlined(Styles.grayPanel), rec -> { // 输入框背景（带白色描边）
+                            inner.table(TriDraw.whiteOutlined(Styles.grayPanel), rec -> { // 输入框背景（带白色描边）
                                 rec.left();
                                 recipe.inputItem.each(stack -> rec.add(display(stack.item, stack.amount, recipe.craftTime)).row());
                                 recipe.inputLiquid.each(stack -> rec.add(display(stack.liquid, stack.amount * 60, 60f)).row());
@@ -272,7 +209,7 @@ public class MultiRecipeFactory extends GenericCrafter{
                                 }
                             }).pad(6);
 
-                            inner.table(whiteOutlined(Styles.grayPanel), rec -> {
+                            inner.table(TriDraw.whiteOutlined(Styles.grayPanel), rec -> {
                                 recipe.outputItem.each(stack -> rec.add(display(stack.item, stack.amount, recipe.craftTime)).row());
                                 recipe.outputLiquid.each(stack -> rec.add(display(stack.liquid, stack.amount * 60, 60f)).row());
                                 recipe.outputPayload.each(stack -> rec.add(display(stack.item, stack.amount, recipe.craftTime)).row());

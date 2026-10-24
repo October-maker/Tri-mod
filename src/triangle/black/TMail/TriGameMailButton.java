@@ -16,7 +16,7 @@ import arc.util.Time;
 import mindustry.Vars;
 import mindustry.game.EventType;
 import mindustry.ui.Styles;
-import triangle.black.TriIcon;
+import triangle.black.TriDraw;
 
 /**
  * 战役地图内的悬浮 TMail 入口：
@@ -87,7 +87,7 @@ public class TriGameMailButton{
         // 按钮：仅 Tmail 图标（居中），背景为原版默认灰色按钮
         button = new TextButton("", Styles.defaultt);
         button.clearChildren();
-        button.add(new Image(TriIcon.tex("Tmail"))).size(36f).expand().center();
+        button.add(new Image(TriDraw.tex("Tmail"))).size(36f).expand().center();
         button.pack();
         // 进一步扩大：内容尺寸基础上四周再扩展，使按钮更醒目
         button.setSize(button.getPrefWidth() + 16f, button.getPrefHeight() + 24f);

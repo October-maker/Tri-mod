@@ -23,7 +23,7 @@ import mindustry.world.meta.StatValues;
 
 import static mindustry.Vars.headless;
 import static mindustry.Vars.tilesize;
-import static triangle.black.MRFactory.MultiRecipeFactory.whiteOutlined;
+import static triangle.black.TriDraw.whiteOutlined;
 
 /**
  * 护甲反应弹药的炮台详情页表格组件（复用组件）。

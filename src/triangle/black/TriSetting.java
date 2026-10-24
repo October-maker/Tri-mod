@@ -28,7 +28,7 @@ public class TriSetting{
             settingsAdded = true;
             // 设置→三角 分类：图标置于分类标题前（与原版“游戏”等分类前的齿轮图标排版一致）
             Vars.ui.settings.addCategory(Core.bundle.get("triSettings"),
-                new TextureRegionDrawable(TriIcon.tex("TriSetting")), t -> {
+                new TextureRegionDrawable(TriDraw.tex("TriSetting")), t -> {
                 // checkPref 的第一参既是“设置存储键”又是“bundle 显示文案键”。
                 // STARTUP_DIALOG_KEY(=tri.startupDialogToggle) 即 bundle 键，故显示文本自动本地化；
                 // 且与弹窗内勾选框读写同一个键，状态保持同步（键为跨语言稳定的标识符）。

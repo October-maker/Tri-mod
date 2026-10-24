@@ -10,7 +10,7 @@ import arc.scene.ui.layout.Table;
 import mindustry.Vars;
 import mindustry.game.EventType;
 import mindustry.ui.Styles;
-import triangle.black.TriIcon;
+import triangle.black.TriDraw;
 
 /**
  * 在主菜单（MenuFragment）添加 TMail 按钮入口，点击显示固定的模组资讯。
@@ -56,7 +56,7 @@ public class TriMainMenuButton{
         TextButton b = new TextButton(bundle("tri.mail.button"), Styles.cleart);
         b.clearChildren();
         // 图标与文字之间留出恰当间距（arc 的 button(text,icon,...) 重载内部无右间距）
-        b.add(new Image(TriIcon.tex("Tmail"))).size(32f).padRight(8);
+        b.add(new Image(TriDraw.tex("Tmail"))).size(32f).padRight(8);
         b.add(b.getLabel());
         b.clicked(TriMainMenuButton::showInfo);
 

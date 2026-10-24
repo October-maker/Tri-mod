@@ -61,7 +61,7 @@ public class TriWelcome{
         // TriLogo-1 沿相对水平 60° 斜线滑入，TriLogo-2 与其中心对称（-60°）；
         // 各帧到位时间从左到右依次延后（最始与最末之差 = STAGGER_SPAN，形成从左到右组合效果）；组合体全部到位后保持展示；
         // 进程进行到滑动时机（SLIDE_AT，≥ 最末到位时刻）时 TriLogo 覆盖并替代组合体，先慢后快滑向停靠位（欢迎界面 logo 槽位）；
-        // TriLogo 到位后保留其所在 table 不消失，在其下方依次添加文本 table（打字机效果）与按钮 table（按钮滑入）。
+        // TriLogo 到位后保留其所在 table 不消失，在其下方依次添加文本 table（打字机效果）与按钮 table（第一行“下次启动不再显示”开关 + 按钮整组滑入）。
         // 关闭后可从 设置→三角 页重新开启。
         Events.on(ClientLoadEvent.class, e -> {
             if(!Core.settings.getBool(STARTUP_DIALOG_KEY, true)) return;
@@ -73,21 +73,22 @@ public class TriWelcome{
             String get = Core.bundle.get("Iknow");
 
             // 入场动画与欢迎界面共用的 TriLogo 贴图（sprites/ui/TriLogo/TriLogo.png，atlas 键 triangle-TriLogo）
-            TextureRegion triLogo = TriIcon.tex("TriLogo");
+            TextureRegion triLogo = TriDraw.tex("TriLogo");
 
             // ============ 1) 欢迎界面布局：TriLogo 停靠位（动画“对应位置”）+ 下方文本 table + 按钮 table ============
             float w = triLogo.width, h = triLogo.height; // 各帧与 TriLogo 同尺寸 1000x500（arc TextureRegion 用公开字段）
             float sw = Core.graphics.getWidth(), sh = Core.graphics.getHeight();
             float cx = sw / 2f, cy = sh / 2f; // 屏幕中央（拼合终点）
 
-            // 欢迎界面整体垂直居中排布：TriLogo（停靠）→ 文本 → 按钮
+            // 欢迎界面整体垂直居中排布：TriLogo（停靠）→ 文本 → 按钮行；“下次启动不再显示”开关行位于按钮行上方
             float textW = 720f, textH = 110f;         // 文本 table 尺寸
-            float btnW = 150f, btnH = 50f, btnGap = 20f; // 按钮尺寸与间距
-            float stackH = h + btnGap + textH + btnGap + btnH; // 整个内容栈高度
+            float btnW = 150f, btnH = 50f, btnGap = 20f; // 按钮尺寸与行间距
+            float checkRowH = 40f, checkGap = 8f;      // “下次启动不再显示”开关行高、开关行到按钮行的间距
+            float stackH = h + btnGap + textH + btnGap + btnH; // 整个内容栈高度（按钮行位置不变，开关行位于其上方，由按钮 table 承载）
             float topY = (sh + stackH) / 2f;                    // 内容栈顶边（垂直居中）
             float logoCy = topY - h / 2f;                        // TriLogo 停靠中心 y
             float textCy = logoCy - h / 2f - btnGap - textH / 2f; // 文本 table 中心 y
-            float btnCy = textCy - textH / 2f - btnGap - btnH / 2f; // 按钮 table 中心 y
+            float btnCy = textCy - textH / 2f - btnGap - btnH / 2f; // 按钮行中心 y（按钮 table 以按钮行（第二行）为基准定位）
             Vec2 target = new Vec2(cx, logoCy);                  // 动画终点：TriLogo 中心停靠位
 
             /* ============ 旧欢迎弹窗（BaseDialog）代码，暂时注释 ============
@@ -108,7 +109,7 @@ public class TriWelcome{
             // 置于其上方，两按钮尺寸统一；图标使用模组自带 Tmail.png（m 小写规范）
             TextButton mail = new TextButton(Core.bundle.get("tri.mail.button"), Styles.defaultt);
             mail.clearChildren();
-            mail.add(new Image(TriIcon.tex("Tmail"))).size(32f).padRight(8);
+            mail.add(new Image(TriDraw.tex("Tmail"))).size(32f).padRight(8);
             mail.add(mail.getLabel());
             mail.clicked(TriMainMenuButton::showInfo);
             dialog.cont.add(mail).size(150f, 50f).pad(4).row();
@@ -157,7 +158,7 @@ public class TriWelcome{
             // 第 i 帧出发延迟 = i * STAGGER_SPAN / (帧数-1)，到位时刻 = 出发延迟 + ASSEMBLE_DURATION 依次延后，
             // 最开始的到位时间与最末的到位时间之差恰为 STAGGER_SPAN
             for(int i = 0; i < frames.length; i++){
-                Image f = new Image(TriIcon.tex(frames[i]));
+                Image f = new Image(TriDraw.tex(frames[i]));
                 f.setSize(w, h);
                 intro.add(f);
                 f.setPosition(sx[i] - w / 2f, sy[i] - h / 2f); // 左下角定位，中心落在起点
@@ -194,52 +195,47 @@ public class TriWelcome{
                         Table textBox = new Table();
                         textBox.setSize(textW, textH);
                         textBox.setPosition(cx - textW / 2f, textCy - textH / 2f + 50f);
-                        Label typed = new Label("");
-                        typed.setWrap(true);
-                        typed.setAlignment(Align.center);
-                        textBox.add(typed).grow().pad(4);
-                        intro.add(textBox);
-                        // 打字机（与 TriMailDialog 同一模式：Time.time + 字符/秒 + update 刷新 substring）
+                        // 打字机：复用 TriDraw.typewriter（Time.time + 字符/秒 + update 刷新 substring）
                         String full = open + "\n" + word + "\n" + remind + "\n" + stop;
                         float typeSpeed = 5f; // 字符/秒
-                        float typeStart = Time.time;
-                        int[] lastShown = {0};
-                        textBox.update(() -> {
-                            int shown = Math.min(full.length(), (int)((Time.time - typeStart) * typeSpeed));
-                            if(shown != lastShown[0]){
-                                lastShown[0] = shown;
-                                typed.setText(full.substring(0, shown));
-                            }
-                        });
+                        Label typed = TriDraw.typewriter(textBox, full, typeSpeed, Align.center, null, null);
+                        textBox.add(typed).grow().pad(4);
+                        intro.add(textBox);
 
                         // ---------- 按钮 table：控制按钮们滑入 ----------
-                        // 两按钮固定在 table 内的槽位（不各自移动），按钮 table 整体从屏幕下方外先快后慢滑入正确位置
+                        // 两行结构：第一行“下次启动不再显示”开关，第二行两按钮（邮件、知道了）；
+                        // 开关样式与写入逻辑复用旧弹窗（见第 1 段注释块 100~105 行）；
+                        // 两按钮固定在 table 内（不各自移动），按钮 table 整体从屏幕下方外先快后慢滑入正确位置
                         Table buttons = new Table();
-                        buttons.setLayoutEnabled(false);
-                        buttons.setSize(2f * btnW + btnGap, btnH);
-                        buttons.setPosition(cx - btnW - btnGap / 2f, -btnH - START_MARGIN); // 起始：整张 table 位于屏幕下方外
                         intro.add(buttons);
 
-                        // 邮件按钮（Tmail 图标 + 文本，样式与原一致）
+                        // 第一行：开关（勾选 = “下次启动不再显示”，与设置值相反，写入 STARTUP_DIALOG_KEY 并持久化）
+                        CheckBox check = new CheckBox(Core.bundle.get("tri.startup.dialog.hide"));
+                        check.update(() -> check.setChecked(!Core.settings.getBool(STARTUP_DIALOG_KEY, true)));
+                        check.changed(() -> Core.settings.put(STARTUP_DIALOG_KEY, !check.isChecked()));
+                        buttons.add(check).colspan(2).center().padBottom(checkGap);
+                        buttons.row();
+
+                        // 第二行：邮件按钮（Tmail 图标 + 文本，样式与原一致）
                         TextButton mail = new TextButton(Core.bundle.get("tri.mail.button"), Styles.defaultt);
                         mail.clearChildren();
                         // 图标与文字之间留出恰当间距（与 TriMainMenuButton 构造一致）
-                        mail.add(new Image(TriIcon.tex("Tmail"))).size(32f).padRight(8);
+                        mail.add(new Image(TriDraw.tex("Tmail"))).size(32f).padRight(8);
                         mail.add(mail.getLabel());
                         mail.clicked(TriMainMenuButton::showInfo);
-                        buttons.add(mail);
-                        mail.setSize(btnW, btnH);
-                        mail.setPosition(0f, 0f);
+                        buttons.add(mail).size(btnW, btnH);
 
                         // 知道了（关闭欢迎界面）
                         TextButton close = new TextButton(get, Styles.defaultt);
                         close.clicked(intro::remove);
-                        buttons.add(close);
-                        close.setSize(btnW, btnH);
-                        close.setPosition(btnW + btnGap, 0f);
+                        buttons.add(close).size(btnW, btnH);
 
-                        // 按钮 table 整体从屏幕下方外滑入正确位置（先快后慢 pow2Out），稍等文本开始打字后起滑
-                        buttons.actions(Actions.delay(0.2f), Actions.moveTo(cx - btnW - btnGap / 2f, btnCy - btnH / 2f, 0.3f, Interp.pow2Out));
+                        // 先按内容布局（pack），再手动定位：水平居中于屏幕；垂直以第二行（按钮行）中心对齐 btnCy
+                        buttons.pack();
+                        float bw = buttons.getWidth(), bh = buttons.getHeight();
+                        buttons.setPosition(cx - bw / 2f, -bh - START_MARGIN); // 起始：整张 table 位于屏幕下方外
+                        // 稍等文本开始打字后起滑（先快后慢 pow2Out），终点按钮行中心对齐 btnCy
+                        buttons.actions(Actions.delay(0.2f), Actions.moveTo(cx - bw / 2f, btnCy - bh + btnH / 2f, 0.3f, Interp.pow2Out));
                     })
                 );
             }));

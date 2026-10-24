@@ -22,7 +22,7 @@ import arc.util.Time;
 import mindustry.gen.Tex;
 import mindustry.ui.Styles;
 import mindustry.ui.dialogs.BaseDialog;
-import triangle.black.MRFactory.MultiRecipeFactory;
+import triangle.black.TriDraw;
 
 /**
  * 三角通讯收件箱界面。
@@ -267,8 +267,8 @@ public class TriMailDialog{
     private static Table card(TriMail mail){
         Table card = new Table();
         card.top().left();
-        // 圆角矩形包裹 + 白色描边（复用 MultiRecipeFactory.whiteOutlined 的圆角描边绘制）
-        card.background(MultiRecipeFactory.whiteOutlined(Styles.grayPanel));
+        // 圆角矩形包裹 + 白色描边（复用 TriDraw.whiteOutlined 的圆角描边绘制）
+        card.background(TriDraw.whiteOutlined(Styles.grayPanel));
 
         // 文本单元格必须显式定宽（不能 growX），否则列宽被最长文本撑大、ellipsis 无法触发
         float innerW = CARD_WIDTH - 28;
@@ -323,7 +323,7 @@ public class TriMailDialog{
         float sw = Core.graphics.getWidth(), sh = Core.graphics.getHeight();
         Table detail = new Table();
         detail.top().left();
-        detail.background(MultiRecipeFactory.whiteOutlined(Styles.grayPanel)); // 白色描边
+        detail.background(TriDraw.whiteOutlined(Styles.grayPanel)); // 白色描边
         buildDetailContent(detail, mail, () -> closeDetail(detail, mailCard));
         // 限定宽度后布局，取内容实际高度（而非期望高度）用于真正居中
         detail.setSize(DETAIL_WIDTH, 600f);
@@ -477,7 +477,7 @@ public class TriMailDialog{
             section.top().left();
             Table box = new Table();
             box.top().left();
-            box.background(MultiRecipeFactory.whiteOutlined(Styles.grayPanel));
+            box.background(TriDraw.whiteOutlined(Styles.grayPanel));
             buildReplyFull(box, mail, replyTextOf(mail), false, () -> {
                 if(TriInbox.isReplied(mail)){
                     // 已发送：点击框 → 收起为“回信内容”面板
@@ -499,7 +499,7 @@ public class TriMailDialog{
     private static Table replyBox(TriMail mail){
         Table box = new Table();
         box.top().left();
-        box.background(MultiRecipeFactory.whiteOutlined(Styles.grayPanel));
+        box.background(TriDraw.whiteOutlined(Styles.grayPanel));
         buildReplyMini(box, mail, replyTextOf(mail));
         return box;
     }
@@ -554,7 +554,6 @@ public class TriMailDialog{
         // 发送按钮引用：不预先加入布局（空文本 Label 与按钮占位都会造成空行）；
         // 供收回判定排除其区域，且仅打字机态/无内容态动态加入
         TextButton sendBtn = new TextButton(bundle("tri.mail.send"));
-        boolean[] btnAdded = {false};
 
         // 点击整表收回。arc 事件冒泡：点击框内任意子元素都会冒泡到本表触发 clicked；
         // 若本次点击目标是发送按钮（或其子元素），由按钮自身处理，不收回
@@ -598,34 +597,14 @@ public class TriMailDialog{
             return;
         }
 
-        // 打字机：逻辑挂在 box 上（box 始终在场景中才会执行 update）；
-        // typed 初始不加入布局（空文本占行导致空行），出现第一个字后动态加入；
-        // 播放完成后动态加入“发送”按钮
-        Label typed = new Label("");
-        typed.touchable = Touchable.disabled;
-        typed.setWrap(true);
-        typed.setAlignment(Align.topLeft);
-        float speed = mail.replySpeed > 0 ? mail.replySpeed : 24f;
-        float start = Time.time;
-        int[] last = {0};
-        boolean[] typedAdded = {false};
-        box.update(() -> {
-            int shown = Math.min(text.length(), (int)((Time.time - start) * speed));
-            if(shown != last[0]){
-                last[0] = shown;
-                typed.setText(text.substring(0, shown));
-                if(shown > 0 && !typedAdded[0]){
-                    typedAdded[0] = true;
-                    box.row();
-                    box.add(typed).left().top().growX().pad(12).row();
-                }
-            }
-            if(shown >= text.length() && !btnAdded[0]){
-                btnAdded[0] = true;
-                box.row();
-                box.add(sendBtn).size(100f, 44f).pad(8);
-            }
-        });
+        // 打字机：复用 TriDraw.typewriter（逻辑挂在 box 上，box 始终在场景中才会执行 update）；
+        // typed 初始不加入布局（空文本占行导致空行），首字出现时动态加入；播放完成后动态加入“发送”按钮。
+        // 回调内引用 typed 需经数组间接化：lambda 不能在变量自身初始化表达式中引用它（编译错误）
+        Label[] typedRef = {null};
+        Label typed = TriDraw.typewriter(box, text, mail.replySpeed > 0 ? mail.replySpeed : 24f, Align.topLeft,
+            () -> { box.row(); box.add(typedRef[0]).left().top().growX().pad(12).row(); },
+            () -> { box.row(); box.add(sendBtn).size(100f, 44f).pad(8); });
+        typedRef[0] = typed; // 首字回调在下一次 update（≥1 帧）才触发，此时已赋值
     }
 
     /** 按当前分类过滤（历史按最后阅读时间倒序）。传入已解锁邮件列表，避免重复遍历。 */
