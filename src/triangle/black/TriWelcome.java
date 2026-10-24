@@ -75,8 +75,8 @@ public class TriWelcome{
             String word = Core.bundle.get("login");
             String get = Core.bundle.get("Iknow");
 
-            // 入场动画与欢迎界面共用的 TriLogo 贴图（sprites/ui/TriLogo/TriLogo.png，atlas 键 triangle-TriLogo）
-            TextureRegion triLogo = TriDraw.tex("TriLogo");
+            // 入场动画与欢迎界面共用的 TriLogo 贴图（assets/TriUI/TriLogo/TriLogo.png，独立纹理加载）
+            TextureRegion triLogo = TriDraw.tex("TriLogo/TriLogo");
 
             // ============ 1) 欢迎界面布局：TriLogo 停靠位（动画“对应位置”）+ 下方文本 table + 按钮 table ============
             float w = triLogo.width, h = triLogo.height; // 各帧与 TriLogo 同尺寸 1000x500（arc TextureRegion 用公开字段）
@@ -122,7 +122,7 @@ public class TriWelcome{
             float d = Math.max((sw + w * as + 2f * START_MARGIN) / (2f * cos), (sh + h * as + 2f * START_MARGIN) / (2f * sin));
             float[] sx = { cx + d * cos, cx - d * cos, cx, cx, sw + w * as / 2f + START_MARGIN };
             float[] sy = { cy + d * sin, cy - d * sin, sh + h * as / 2f + START_MARGIN, -h * as / 2f - START_MARGIN, cy };
-            String[] frames = { "TriLogo-1", "TriLogo-2", "TriLogo-3", "TriLogo-4", "TriLogo-5" };
+            String[] frames = { "TriLogo/TriLogo-1", "TriLogo/TriLogo-2", "TriLogo/TriLogo-3", "TriLogo/TriLogo-4", "TriLogo/TriLogo-5" };
             Image[] pieces = new Image[frames.length];
 
             // 各帧飞行时长一致（先快后慢 pow2Out），但出发时刻从左到右依次延后，实现从左到右依次到位：
@@ -198,7 +198,7 @@ public class TriWelcome{
 
         // ---------- 半透明 Triangle 图标：从透明渐变到 0.3 ----------
         float sw = Core.graphics.getWidth(), sh = Core.graphics.getHeight();
-        TextureRegion triangleTex = TriDraw.tex("Triangle");
+        TextureRegion triangleTex = TriDraw.tex("TriIcon/Triangle");
         Image triangle = new Image(triangleTex);
         // 设置 Triangle 尺寸（保持原始比例，放大 1.5 倍）
         float triScale = 1.5f;

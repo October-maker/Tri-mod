@@ -26,48 +26,44 @@ import triangle.triangle;
  *
  * <p>汇集多个界面共用的复杂绘制方法：
  * <ul>
- *   <li>模组 UI 图标纹理加载：Mindustry 打包模组 sprites 时，atlas 键为
- *       "&lt;modName&gt;-&lt;文件名无扩展名&gt;"（如 mod.hjson 的 name 为 "triangle" 时，
- *       sprites/ui/Tmail.png 的键为 "triangle-Tmail"）。本类依次尝试：直接文件名键 → ui/ 路径键 →
- *       模组名前缀键（引擎标准）→ 从模组文件直接读取（root/file 多候选路径），
- *       成功后以引擎标准键注册进 atlas。</li>
+ *   <li>模组 UI 纹理加载：大尺寸 UI 图统一放在 {@code assets/TriUI/} 下，不再进入
+ *       {@code sprites/ui} 的 Atlas 页面，避免其参与 UI 图集/字体图集合并；本类直接
+ *       从模组文件读取为独立 {@link Texture}。name 支持相对 {@code TriUI} 的路径，
+ *       例如 "Tmail/TmailLogo"。</li>
  *   <li>白色描边圆角背景：把任意 Drawable 包装为带 #FFFFFF 圆角描边的版本，按 base 缓存复用。</li>
  *   <li>打字机 Label：挂在宿主 update 上按字符/秒刷新文本。</li>
  * </ul>
  */
 public class TriDraw{
 
-    /** 文件兜底加载的缓存（atlas 收录的不在此缓存，由 atlas 统一管理）。 */
+    /** 独立纹理缓存（不进入 atlas）。 */
     private static final ObjectMap<String, TextureRegion> fileCache = new ObjectMap<>();
-    /** 模组名前缀（含末尾 "-"），惰性取模组 meta.name。 */
+    /** 模组名前缀（含末尾 "-"），惰性取模组 meta.name；仅用于旧资源的 atlas 回退。 */
     private static String modPrefix;
 
     private TriDraw(){}
 
-    /** 获取模组 sprites/ui/ 下的图标；name 为文件名（不含扩展名，如 "Tmail"）。 */
+    /** 获取模组 TriUI/ 下的贴图；name 为相对 TriUI 的路径（不含扩展名，如 "Tmail/TmailLogo"）。 */
     public static TextureRegion tex(String name){
-        // 1) 直接文件名键（原版 atlas 键形式）
-        if(Core.atlas.has(name)) return Core.atlas.find(name);
-        // 2) ui/ 路径键
-        if(Core.atlas.has("ui/" + name)) return Core.atlas.find("ui/" + name);
-        // 3) 模组名前缀键：引擎打包模组 sprites 的标准键 = "<modName>-<file>"
-        String prefixed = prefix() + name;
-        if(Core.atlas.has(prefixed)) return Core.atlas.find(prefixed);
-
         TextureRegion cached = fileCache.get(name);
         if(cached != null) return cached;
 
-        // 4) 兜底：从模组 jar/目录直接读取 png，成功后以引擎标准键注册进 atlas
+        // 优先从 assets/TriUI 直接读取独立纹理，避免大图进入 UI 图集/字体图集
         try{
             TextureRegion region = loadFile(name);
             if(region != null){
                 fileCache.put(name, region);
-                try{ Core.atlas.addRegion(prefixed, region); }catch(Throwable ignored){}
                 return region;
             }
         }catch(Throwable ignored){
-            // 文件缺失或解析失败：回退白色占位，不崩溃
+            // 文件缺失或解析失败：继续走 atlas 回退，不崩溃
         }
+
+        // 兼容回退：仍可能存在于 atlas 的旧资源/原版图标
+        if(Core.atlas.has(name)) return Core.atlas.find(name);
+        if(Core.atlas.has("ui/" + name)) return Core.atlas.find("ui/" + name);
+        String prefixed = prefix() + name;
+        if(Core.atlas.has(prefixed)) return Core.atlas.find(prefixed);
         return Core.atlas.find("white");
     }
 
@@ -84,16 +80,20 @@ public class TriDraw{
         return modPrefix;
     }
 
-    /** 从模组资源中读取 png；依次尝试 root / file 两种句柄下的候选路径。 */
+    /** 从模组 assets/TriUI/ 目录读取 png；依次尝试 root / file 两种句柄。 */
     private static TextureRegion loadFile(String name){
         LoadedMod mod = Vars.mods.getMod(triangle.class);
         if(mod == null) return null;
 
+        // 打包后的 jar 会把 assets/ 的内容放到 jar 根目录，因此同时尝试：
+        // - assets/TriUI/...（源码/目录模组）
+        // - TriUI/...（jar 根目录）
+        // 注意：ZipFi.child("A/B/C.png") 不会解析斜杠，必须逐级 child。
         Fi[] candidates = {
-            mod.root.child("sprites/ui/" + name + ".png"),
-            mod.file.child("sprites/ui/" + name + ".png"),
-            mod.root.child("ui/" + name + ".png"),
-            mod.file.child("ui/" + name + ".png"),
+            resolve(mod.root, "assets/TriUI/" + name + ".png"),
+            resolve(mod.file, "assets/TriUI/" + name + ".png"),
+            resolve(mod.root, "TriUI/" + name + ".png"),
+            resolve(mod.file, "TriUI/" + name + ".png"),
         };
         for(Fi f : candidates){
             if(f.exists()){
@@ -101,21 +101,35 @@ public class TriDraw{
                 return new TextureRegion(tex);
             }
         }
-        // 兜底：允许 sprites/ui/ 下的子目录资源（如 sprites/ui/Tmail/TmailLogo.png）
+        // 兜底：在 assets/TriUI/（或 TriUI/）中按相对路径/文件名递归查找
         for(Fi base : new Fi[]{mod.root, mod.file}){
-            try{
-                Fi ui = base.child("sprites/ui");
-                if(!ui.exists()) continue;
-                Fi found = ui.findAll(f -> f.name().equals(name + ".png")).first();
-                if(found != null){
-                    Texture tex = new Texture(new Pixmap(found));
-                    return new TextureRegion(tex);
+            for(String rootName : new String[]{"assets/TriUI", "TriUI"}){
+                try{
+                    Fi ui = resolve(base, rootName);
+                    if(!ui.exists()) continue;
+                    String suffix = "/" + name.replace('\\', '/') + ".png";
+                    Fi found = ui.findAll(f -> f.path().replace('\\', '/').endsWith(suffix)).first();
+                    if(found != null){
+                        Texture tex = new Texture(new Pixmap(found));
+                        return new TextureRegion(tex);
+                    }
+                }catch(Throwable ignored){
+                    // 压缩包句柄可能不支持递归遍历，继续尝试下一个来源
                 }
-            }catch(Throwable ignored){
-                // 压缩包句柄可能不支持递归遍历，继续尝试下一个来源
             }
         }
         return null;
+    }
+
+    /** 逐级拼接 Fi 路径，兼容 ZipFi 不解析带斜杠的 child 路径。 */
+    private static Fi resolve(Fi base, String path){
+        Fi current = base;
+        for(String part : path.replace('\\', '/').split("/")){
+            if(!part.isEmpty()){
+                current = current.child(part);
+            }
+        }
+        return current;
     }
 
     /** 将 Drawable 包装为带白色（#FFFFFF）描边的版本，按 base 缓存复用，避免每次 new 匿名对象。 */

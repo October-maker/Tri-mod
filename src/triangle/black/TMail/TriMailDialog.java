@@ -178,9 +178,9 @@ public class TriMailDialog{
         cancelLogoIntro();
 
         float sw = Core.graphics.getWidth(), sh = Core.graphics.getHeight();
-        TextureRegion piece1Tex = TriDraw.tex("TmailLogo-1");
-        TextureRegion piece2Tex = TriDraw.tex("TmailLogo-2");
-        TextureRegion coverTex = TriDraw.tex("TmailLogo");
+        TextureRegion piece1Tex = TriDraw.tex("Tmail/TmailLogo-1");
+        TextureRegion piece2Tex = TriDraw.tex("Tmail/TmailLogo-2");
+        TextureRegion coverTex = TriDraw.tex("Tmail/TmailLogo");
         float logoW = Math.min(sw * LOGO_WIDTH_RATIO, LOGO_MAX_WIDTH);
         float logoH = logoW * coverTex.height / Math.max(coverTex.width, 1);
 
