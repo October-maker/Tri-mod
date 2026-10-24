@@ -33,14 +33,21 @@ public class TriSetting{
      */
     public static final String STARTUP_DIALOG_KEY = "tri.startupDialogToggle";
 
-    /** 拼合入场：各分帧从屏幕外滑入屏幕中央的时长（秒），先快后慢（pow2Out）。 */
-    private static final float ASSEMBLE_DURATION = 1.0f;
+    /** 拼合入场：各分帧从屏幕外滑入屏幕中央的飞行时长（秒），先快后慢（pow2Out）。 */
+    private static final float ASSEMBLE_DURATION = 0.5f;
+    /** 从左到右依次到位的总延后量（秒）：最开始的到位时间与最末的到位时间之差（相邻帧均分该差值）。
+     *  各帧到位时刻 = 出发延迟 + ASSEMBLE_DURATION，故最末帧在 ASSEMBLE_DURATION + STAGGER_SPAN 时刻到位。 */
+    private static final float STAGGER_SPAN = 0.8f;
     /** 分帧起始位置超出屏幕边缘的距离（像素），保证贴图出现时完全在屏幕外（不露出）。 */
     private static final float START_MARGIN = 40f;
-    /** 滑动发生的时机（秒）：进程进行到该时刻时，TriLogo 覆盖并替代组合体，同时滑向欢迎页 logo 位置。 */
-    private static final float SLIDE_AT = 1.5f;
+    /** TriLogo-1 滑入路径相对水平的角度（度）；TriLogo-2 与其中心对称（取负），其余分帧保持原方位。 */
+    private static final float SLIDE_ANGLE = 60f;
+    /** 滑动发生的时机（秒）：进程进行到该时刻时，TriLogo 盖住组合体并开始滑向欢迎页 logo 位置。
+     *  注意：该时刻必须 ≥ 组合体最末到位时刻（ASSEMBLE_DURATION + STAGGER_SPAN），
+     *  否则组合体在 TriLogo 出现前消失，屏幕中央会出现几帧空白闪动（历史 bug）。 */
+    private static final float SLIDE_AT = ASSEMBLE_DURATION + STAGGER_SPAN + 0.25f;
     /** TriLogo 从屏幕中央滑动到欢迎页 logo 位置的时长（秒），先慢后快（pow2In）。 */
-    private static final float FLY_TO_DIALOG_DURATION = 0.6f;
+    private static final float FLY_TO_DIALOG_DURATION = 0.3f;
 
     /** 是否已向设置界面添加“三角”设置页（防止 ClientLoadEvent 重复触发导致重复添加）。 */
     private static boolean settingsAdded = false;
@@ -53,9 +60,11 @@ public class TriSetting{
      */
     public static void init(){
         // 启动欢迎弹窗：受 STARTUP_DIALOG_KEY 控制（默认显示）。
-        // 流程（伪骨骼拼合入场）：进入游戏后，5 张 TriLogo 分帧从不同方位（先快后慢、不旋转、起点屏幕外）用 0.5 秒滑向屏幕中央拼成组合体；
-        // 组合体保持展示，进程进行到 1.5 秒（滑动时机）时 TriLogo 覆盖并替代组合体，先慢后快滑向欢迎页 TriLogo 位置；
-        // 到达后显示欢迎界面内容。关闭后可从 设置→三角 页重新开启，或在弹窗内勾选“下次启动不再显示”。
+        // 流程（伪骨骼拼合入场）：进入游戏后，5 张 TriLogo 分帧从不同方位（先快后慢、不旋转、起点屏幕外）滑向屏幕中央拼成组合体；
+        // TriLogo-1 沿相对水平 60° 斜线滑入，TriLogo-2 与其中心对称（-60°）；
+        // 各帧到位时间从左到右依次延后（最始与最末之差 = STAGGER_SPAN，形成从左到右组合效果）；组合体全部到位后保持展示；
+        // 进程进行到滑动时机（SLIDE_AT，≥ 最末到位时刻）时 TriLogo 覆盖并替代组合体，先慢后快滑向欢迎页位置；
+        // TriLogo 到达欢迎页位置后显示欢迎界面内容。关闭后可从 设置→三角 页重新开启，或在弹窗内勾选“下次启动不再显示”。
         Events.on(ClientLoadEvent.class, e -> {
             if(!Core.settings.getBool(STARTUP_DIALOG_KEY, true)) return;
 
@@ -113,26 +122,39 @@ public class TriSetting{
             float sw = Core.graphics.getWidth(), sh = Core.graphics.getHeight();
             float cx = sw / 2f, cy = sh / 2f; // 屏幕中央（拼合终点）
 
-            // 分帧起点（中心坐标：整体位于屏幕外，带 START_MARGIN 边距保证完全不露出）：
-            // TriLogo-1：右上角外；TriLogo-2：左下角外；TriLogo-3：正上方外；TriLogo-4：正下方外；TriLogo-5：正右外
-            // 贴图只平移不旋转（无旋转、无倾斜），直接由屏幕外滑向中央
-            float[] sx = { sw + w / 2f + START_MARGIN, -w / 2f - START_MARGIN, cx, cx, sw + w / 2f + START_MARGIN };
-            float[] sy = { sh + h / 2f + START_MARGIN, -h / 2f - START_MARGIN, sh + h / 2f + START_MARGIN, -h / 2f - START_MARGIN, cy };
+            // 分帧起点（中心坐标）：TriLogo-1 从右上外沿相对水平 60° 斜线滑向中央（滑入路径角 SLIDE_ANGLE）；
+            // TriLogo-2 与其中心对称（-60°，左下外镜像）；TriLogo-3/4/5 保持正上/正下/正右原方位。
+            // 贴图只平移不旋转（无旋转、无倾斜），沿各自路径由屏幕外滑向中央。
+            // 60° 起点沿斜线取在屏幕外足够远处（d），保证整张贴图完全不露出屏幕。
+            double rad = Math.toRadians(SLIDE_ANGLE);
+            float cos = (float)Math.cos(rad), sin = (float)Math.sin(rad);
+            // d 取“整张在屏幕右侧外”与“整张在屏幕上侧外”两者所需距离的较大者（带 START_MARGIN 安全边距）
+            float d = Math.max((sw + w + 2f * START_MARGIN) / (2f * cos), (sh + h + 2f * START_MARGIN) / (2f * sin));
+            float[] sx = { cx + d * cos, cx - d * cos, cx, cx, sw + w / 2f + START_MARGIN };
+            float[] sy = { cy + d * sin, cy - d * sin, sh + h / 2f + START_MARGIN, -h / 2f - START_MARGIN, cy };
             String[] frames = { "TriLogo-1", "TriLogo-2", "TriLogo-3", "TriLogo-4", "TriLogo-5" };
             Image[] pieces = new Image[frames.length];
 
-            // 所有帧同时出发、同时到位（同一时长），先快后慢（pow2Out）滑入屏幕中央；不旋转只移动
+            // 各帧飞行时长一致（先快后慢 pow2Out），但出发时刻从左到右依次延后，实现从左到右依次到位：
+            // 实测各帧内容中心 x（TriLogo-1..5 = 149/387/637/826/870），frames 数组天然即从左到右顺序；
+            // 第 i 帧出发延迟 = i * STAGGER_SPAN / (帧数-1)，到位时刻 = 出发延迟 + ASSEMBLE_DURATION 依次延后，
+            // 最开始的到位时间与最末的到位时间之差恰为 STAGGER_SPAN
             for(int i = 0; i < frames.length; i++){
                 Image f = new Image(TriIcon.tex(frames[i]));
                 f.setSize(w, h);
                 intro.add(f);
                 f.setPosition(sx[i] - w / 2f, sy[i] - h / 2f); // 左下角定位，中心落在起点
-                f.actions(Actions.moveTo(cx - w / 2f, cy - h / 2f, ASSEMBLE_DURATION, Interp.pow2Out));
+                float startDelay = i * STAGGER_SPAN / (frames.length - 1);
+                f.actions(
+                    Actions.delay(startDelay),
+                    Actions.moveTo(cx - w / 2f, cy - h / 2f, ASSEMBLE_DURATION, Interp.pow2Out)
+                );
                 pieces[i] = f;
             }
 
-            // ============ 3) 组合体拼合完成后保持展示，进程进行到 SLIDE_AT 时刻：TriLogo 覆盖替代组合体并滑向欢迎页 ============
-            // 单条容器级定时：等 5 帧快速拼合（0.5s）到位后组合体停留展示，到 1.5s 执行覆盖+滑动（替代时序）
+            // ============ 3) 组合体全部到位后保持展示，进程进行到 SLIDE_AT 时刻：TriLogo 覆盖替代组合体并滑向欢迎页 ============
+            // 覆盖、隐藏组合体、开始滑动必须在同一时刻执行（单条定时）：若先移除组合体再等 TriLogo 出现，
+            // 期间屏幕中央会空白闪动（历史 bug）；SLIDE_AT ≥ 最末到位时刻，组合体完整展示后才被替换。
             intro.actions(Actions.delay(SLIDE_AT), Actions.run(() -> {
                 // 后加入容器 → 绘制在最上层，盖住组合体
                 Image cover = new Image(triLogo);
