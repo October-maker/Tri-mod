@@ -45,12 +45,12 @@ public class TriWelcome{
     /** 滑动发生的时机（秒）：进程进行到该时刻时，TriLogo 盖住组合体并开始滑向欢迎页 logo 位置。
      *  注意：该时刻必须 ≥ 组合体最末到位时刻（ASSEMBLE_DURATION + STAGGER_SPAN），
      *  否则组合体在 TriLogo 出现前消失，屏幕中央会出现几帧空白闪动（历史 bug）。 */
-    private static final float SLIDE_AT = ASSEMBLE_DURATION + STAGGER_SPAN + 0.25f;
+    private static final float SLIDE_AT = ASSEMBLE_DURATION + STAGGER_SPAN + 0.15f;
     /** TriLogo 从屏幕中央滑动到欢迎页 logo 位置的时长（秒），先慢后快（pow2In）。 */
     private static final float FLY_TO_DIALOG_DURATION = 0.3f;
     /** 组合体放大倍数：各分帧滑入前即处于该放大样式（组合全程放大），
      *  移动到欢迎页停靠位时随移动缩放回 1（“砸入面板”效果）。独立变量，可按观感调整。 */
-    private static final float ASSEMBLE_SCALE = 1.15f;
+    private static final float ASSEMBLE_SCALE = 1.25f;
 
     private TriWelcome(){}
 
@@ -198,6 +198,22 @@ public class TriWelcome{
     private static void buildWelcomeContent(Table intro, float cx, float textW, float textH, float textCy, float btnW, float btnH, float btnGap, float checkGap, float btnCy, String open, String word, String remind, String stop, String get){
         // TriLogo 到位：intro（TriLogo 所在 table）保留不消失，改为可交互模态（按钮可点击）
         intro.touchable = Touchable.enabled;
+
+        // ---------- 半透明 Triangle 图标：从透明渐变到 0.3 ----------
+        float sw = Core.graphics.getWidth(), sh = Core.graphics.getHeight();
+        TextureRegion triangleTex = TriDraw.tex("Triangle");
+        Image triangle = new Image(triangleTex);
+        // 设置 Triangle 尺寸（保持原始比例，放大 1.5 倍）
+        float triScale = 1.5f;
+        triangle.setSize(triangleTex.width * triScale, triangleTex.height * triScale);
+        // 居中放置
+        triangle.setPosition((sw - triangle.getWidth()) / 2f, (sh - triangle.getHeight()) / 2f);
+        // 初始完全透明
+        triangle.setColor(1f, 1f, 1f, 0f);
+        triangle.touchable = Touchable.disabled;
+        intro.add(triangle);
+        // 渐变动画：从透明到 0.3 不透明度，时长 0.5 秒
+        triangle.actions(Actions.alpha(0.15f, 0.5f, Interp.fade));
 
         // ---------- 文本 table：显示文本内容并实现打字机效果 ----------
         Table textBox = new Table();
