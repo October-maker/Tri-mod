@@ -88,9 +88,9 @@ public class TriMainMenuButton{
         return null;
     }
 
-    /** 打开主菜单 TMail：直接进入模组资讯收件箱页面（页面内执行毛玻璃+滑入流程）。 */
+    /** 打开主菜单 TMail：立即进入收件箱页面并播放 TmailLogo 入场动画，动画结束后卡片滑入。 */
     public static void showInfo(){
-        TriMailDialog.show(false);
+        TriMailDialog.showWithIntro(false);
     }
 
     /** bundle 键取值，缺失时回退到键名本身。 */

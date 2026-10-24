@@ -52,7 +52,7 @@ public class TriPlanetMailButton{
             // 行高随 sectorTop 变化时按钮贴底不动
             button = planet.buttons.button(bundle("tri.mail.button"),
                 new TextureRegionDrawable(TriDraw.tex("Tmail")),
-                Styles.defaultt, () -> TriMailDialog.show()).size(150f, 48f).pad(2).bottom().get();
+                Styles.defaultt, () -> TriMailDialog.showWithIntro()).size(150f, 48f).pad(2).bottom().get();
             lastUnread = -1; // 强制刷新角标
         }
 

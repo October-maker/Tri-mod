@@ -2,6 +2,7 @@ package triangle.black.TMail;
 
 import arc.Core;
 import arc.graphics.Color;
+import arc.graphics.g2d.TextureRegion;
 import arc.input.KeyCode;
 import arc.math.Interp;
 import arc.scene.Element;
@@ -29,6 +30,7 @@ import triangle.black.TriDraw;
  * 每封邮件固定大小卡片（圆角矩形包裹：上发件人、中分割线、下内容，过长省略）；
  * 卡片竖直向下居中排列、可滚动；顶部居中分类栏（带未读角标）：全部 / 已读 / 未读 / 历史；
  * 列表为空时显示灰色提示；详情页限宽。
+ * 打开时先在页面内播放 TmailLogo 入场动画，动画结束后邮件卡片组滑入。
  */
 public class TriMailDialog{
 
@@ -37,6 +39,27 @@ public class TriMailDialog{
     private static final float CARD_WIDTH = 480f;
     private static final float CARD_HEIGHT = 76f;
     private static final float DETAIL_WIDTH = 560f;
+
+    /** TmailLogo 分帧滑入时长（秒）。 */
+    private static final float LOGO_PIECE_DURATION = 0.55f;
+    /** TmailLogo-2 相对 -1 的出发延迟（秒），形成上下交错拼合。 */
+    private static final float LOGO_PIECE_STAGGER = 0.08f;
+    /** 两片拼合后到完整 Logo 替换之间的停顿（秒）。 */
+    private static final float LOGO_ASSEMBLE_HOLD = 0.12f;
+    /** 完整 TmailLogo 从中央移动到左侧停靠位的时长（秒）。 */
+    private static final float LOGO_COVER_MOVE_DURATION = 0.5f;
+    /** 分帧滑入前与拼合时的放大倍数。 */
+    private static final float LOGO_ASSEMBLE_SCALE = 1.15f;
+    /** 分帧起点超出页面边缘的距离（像素）。 */
+    private static final float LOGO_OFFSCREEN_MARGIN = 24f;
+    /** TmailLogo 宽度占屏幕宽度的比例。 */
+    private static final float LOGO_WIDTH_RATIO = 0.56f;
+    /** TmailLogo 最大宽度（像素），避免大屏上过大。 */
+    private static final float LOGO_MAX_WIDTH = 1000f;
+    /** TmailLogo 停靠 x 比例：屏幕左侧 1/4 处（右侧 3/4 留给收件箱内容）。 */
+    private static final float LOGO_TARGET_X_RATIO = 0.25f;
+    /** 当前 TmailLogo 层：动画结束后保留为页面左侧品牌标识，关闭页面时移除。 */
+    private static Table logoIntro;
 
     private static BaseDialog inbox;
     private static Filter filter = Filter.ALL;
@@ -66,19 +89,53 @@ public class TriMailDialog{
 
     private TriMailDialog(){}
 
-    /** 打开战役剧情收件箱（战役星球 TMail）。 */
+    /** 打开战役剧情收件箱（战役星球 TMail）：先播放 TmailLogo 入场动画。 */
     public static void show(){
-        show(true);
+        showWithIntro(true);
     }
 
-    /** 打开收件箱（持久实例，可原地重建避免弹窗堆叠）。story=true 剧情 / story=false 资讯。 */
-    public static void show(boolean story){
+    /**
+     * 先播放 TmailLogo 入场动画，再打开战役剧情收件箱。
+     */
+    public static void showWithIntro(){
+        showWithIntro(true);
+    }
+
+    /**
+     * 先打开 Tmail 页面，再播放 TmailLogo 入场动画；动画结束后邮件卡片组滑入。
+     *
+     * <p>流程：立即创建并显示收件箱窗口（毛玻璃背景 + 空内容）→ TmailLogo-1 / -2
+     * 分别从页面上方、下方滑入并在中央拼合 → 完整 TmailLogo 覆盖替换两片并停靠到页面左侧
+     * （作为品牌标识）→ 移除遮罩 → 构建邮件卡片并从右侧滑入。
+     * 若收件箱已经打开，则直接刷新，不重复播放动画。
+     */
+    public static void showWithIntro(boolean story){
+        if(Core.scene == null){
+            show(story);
+            return;
+        }
+        if(inbox != null && inbox.isShown()){
+            show(story);
+            return;
+        }
+
+        openInbox(story);
+        playLogoIntro(story);
+    }
+
+    /**
+     * 立即打开收件箱窗口，但不构建邮件卡片。
+     * 用于让 TmailLogo 动画先显示在已打开的 Tmail 页面内，动画结束后再调用 {@link #build(BaseDialog)}。
+     */
+    private static void openInbox(boolean story){
         storyScope = story;
+
         if(inbox == null){
             inbox = new BaseDialog("");
             inbox.addCloseButton();
-            // 收件箱关闭时移除毛玻璃背景，并同步关闭可能仍打开的信件详情与透明按钮（避免悬浮残留）
+            // 收件箱关闭时移除毛玻璃背景、Logo 层，并同步关闭可能仍打开的信件详情与透明按钮
             inbox.hidden(() -> {
+                cancelLogoIntro();
                 if(activeDetail != null){
                     activeDetail.remove();
                     activeDetail = null;
@@ -102,19 +159,156 @@ public class TriMailDialog{
             Core.scene.add(blur);
         }
 
+        // 动画期间先移除旧内容，但保留可能存在的 Logo 层
+        clearPage();
         inbox.show();
-        build(inbox); // 删除旧 content + rebuildContent（新建 content 并从屏幕右外侧滑入右 3/4 处）
+    }
+
+    /**
+     * 在已打开的 Tmail 页面内播放 TmailLogo 组合动画。
+     *
+     * <p>与开始界面（TriWelcome）类似：
+     * TmailLogo-1 从页面上方滑入、TmailLogo-2 从页面下方滑入，两片在页面中央拼合；
+     * 随后完整的 TmailLogo 覆盖并替换两片，移动到页面左侧停靠；
+     * 动画结束后移除黑色遮罩并构建/滑入邮件卡片。
+     *
+     * <p>整个 Logo 层是 {@code inbox.cont} 的子节点，与 content 一样位于 Tmail 页面内部。
+     */
+    private static void playLogoIntro(boolean story){
+        cancelLogoIntro();
+
+        float sw = Core.graphics.getWidth(), sh = Core.graphics.getHeight();
+        TextureRegion piece1Tex = TriDraw.tex("TmailLogo-1");
+        TextureRegion piece2Tex = TriDraw.tex("TmailLogo-2");
+        TextureRegion coverTex = TriDraw.tex("TmailLogo");
+        float logoW = Math.min(sw * LOGO_WIDTH_RATIO, LOGO_MAX_WIDTH);
+        float logoH = logoW * coverTex.height / Math.max(coverTex.width, 1);
+
+        // 让页面先完成布局，拿到 cont 的实际尺寸/位置
+        inbox.validate();
+        inbox.cont.validate();
+        float pageW = Math.max(inbox.cont.getWidth(), 1f);
+        float pageH = Math.max(inbox.cont.getHeight(), 1f);
+
+        // Logo 层作为 Tmail 页面 cont 的子节点，而不是直接挂到 Core.scene
+        Table layer = new Table();
+        layer.setBounds(0f, 0f, pageW, pageH);
+        layer.setLayoutEnabled(false);
+        layer.touchable = Touchable.enabled; // 动画期间拦截点击，避免误触底层页面
+        inbox.cont.addChild(layer);
+
+        // 半透明黑底：TmailLogo 为白色，压暗背景以保证可读性；动画结束后移除
+        Image dim = new Image(Core.atlas.find("white"));
+        dim.setSize(pageW, pageH);
+        dim.setColor(0f, 0f, 0f, 0.35f);
+        dim.touchable = Touchable.disabled;
+        layer.addChild(dim);
+
+        // 把 content 的屏幕坐标换算成 cont 局部坐标
+        float centerX = sw / 2f - inbox.x - inbox.cont.x;
+        float centerY = sh / 2f - inbox.y - inbox.cont.y;
+        float targetX = sw * LOGO_TARGET_X_RATIO - inbox.x - inbox.cont.x;
+        float targetY = centerY;
+
+        float pieceX = centerX - logoW / 2f;
+        float pieceY = centerY - logoH / 2f;
+        float topStartY = pageH + LOGO_OFFSCREEN_MARGIN;
+        float bottomStartY = -logoH - LOGO_OFFSCREEN_MARGIN;
+
+        Image piece1 = new Image(piece1Tex);
+        piece1.setSize(logoW, logoH);
+        piece1.setOrigin(Align.center);
+        piece1.setScale(LOGO_ASSEMBLE_SCALE);
+        piece1.setPosition(pieceX, topStartY);
+        layer.addChild(piece1);
+
+        Image piece2 = new Image(piece2Tex);
+        piece2.setSize(logoW, logoH);
+        piece2.setOrigin(Align.center);
+        piece2.setScale(LOGO_ASSEMBLE_SCALE);
+        piece2.setPosition(pieceX, bottomStartY);
+        layer.addChild(piece2);
+
+        piece1.actions(Actions.moveTo(pieceX, pieceY, LOGO_PIECE_DURATION, Interp.pow2Out));
+        piece2.actions(
+            Actions.delay(LOGO_PIECE_STAGGER),
+            Actions.moveTo(pieceX, pieceY, LOGO_PIECE_DURATION, Interp.pow2Out)
+        );
+
+        float assembleAt = LOGO_PIECE_STAGGER + LOGO_PIECE_DURATION + LOGO_ASSEMBLE_HOLD;
+        layer.actions(Actions.delay(assembleAt), Actions.run(() -> {
+            if(logoIntro != layer) return;
+
+            // 完整 TmailLogo 覆盖并替换两片分帧
+            Image cover = new Image(coverTex);
+            cover.setSize(logoW, logoH);
+            cover.setOrigin(Align.center);
+            cover.setScale(LOGO_ASSEMBLE_SCALE);
+            cover.setPosition(pieceX, pieceY);
+            layer.addChild(cover);
+            piece1.remove();
+            piece2.remove();
+            dim.remove();
+
+            // 类似 TriWelcome：先慢后快滑入停靠位，同时缩放回正常大小
+            cover.actions(
+                Actions.parallel(
+                    Actions.moveTo(targetX - logoW / 2f, targetY - logoH / 2f, LOGO_COVER_MOVE_DURATION, Interp.pow2In),
+                    Actions.scaleTo(1f, 1f, LOGO_COVER_MOVE_DURATION, Interp.pow2In)
+                ),
+                Actions.run(() -> {
+                    if(logoIntro != layer) return;
+                    layer.touchable = Touchable.disabled;
+                    if(inbox != null && inbox.isShown()){
+                        build(inbox);
+                    }
+                })
+            );
+        }));
+
+        logoIntro = layer;
+    }
+
+    /** 移除当前 TmailLogo 层（关闭页面、重复打开或直接刷新时调用）。 */
+    private static void cancelLogoIntro(){
+        if(logoIntro != null){
+            logoIntro.remove();
+            logoIntro = null;
+        }
+    }
+
+    /** 打开收件箱并立即构建内容（不播放 Logo 动画；供程序化刷新使用）。story=true 剧情 / false 资讯。 */
+    public static void show(boolean story){
+        openInbox(story);
+        build(inbox);
     }
 
     /** 重建收件箱内容（删除旧 content 后，新建 content 并从屏幕右外侧滑入右 3/4 处）。
      *  删除旧 content 的逻辑不内置在本方法——调用方须在调用前自行移除旧 content
      *  （不同调用方可按不同样式删除：直接清空、淡出、滑出等）。 */
     private static void build(BaseDialog dlg){
-        // 删除旧 content：这里直接清空 cont（如需其他删除样式，可在调用 rebuildContent 前自行处理）
-        dlg.cont.clearChildren();
+        // 清空旧 content 的单元格（Element.remove 不会移除 Table 的 cell），再放回 Logo 层
+        if(lastContent != null){
+            clearPage();
+        }
         senderLabels.clear(); // 旧卡片引用作废（即将重建）
         Seq<TriMail> all = TriInbox.unlocked(storyScope);
         rebuildContent(dlg, all, SLIDE_IN_DURATION);
+    }
+
+    /**
+     * 清空 Tmail 页面内的 content 单元格，但保留 TmailLogo 层。
+     * Table.clearChildren 会连同 cell 一起清除；因此先保存 Logo 层，清空后再重新挂回。
+     */
+    private static void clearPage(){
+        Table logo = logoIntro;
+        if(inbox != null){
+            inbox.cont.clearChildren();
+            if(logo != null){
+                inbox.cont.addChild(logo);
+            }
+        }
+        lastContent = null;
     }
 
     /** 新建收件箱 content 卡片列表：在屏幕右外侧新建（分类栏 + 卡片列表），随后滑入右 3/4 处。

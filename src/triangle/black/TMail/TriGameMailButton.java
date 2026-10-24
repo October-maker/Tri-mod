@@ -24,7 +24,7 @@ import triangle.black.TriDraw;
  * 背景为原版默认灰色按钮（Styles.defaultt）；
  * 未读角标为独立 Label 置于外层容器右上角。
  *
- * 短按抬起后打开收件箱（{@link TriMailDialog#show(boolean)}）：
+ * 短按抬起后打开收件箱（{@link TriMailDialog#showWithIntro(boolean)}）：
  * 战役模式（{@code Vars.state.isCampaign()}）打开剧情邮件，自定义游戏打开模组资讯；
  * 长按（{@link #LONG_PRESS} 秒）后移动进入拖动模式，可自由移动位置；
  * 默认位置为屏幕左下角（容器左下角贴屏幕左下角）。
@@ -159,7 +159,7 @@ public class TriGameMailButton{
             // 未实际拖动（无论按住时长）即视为点击：按当前模式打开对应收件箱
             // 战役模式 → 剧情邮件；自定义游戏 → 模组资讯
             if(!wasDragging){
-                TriMailDialog.show(Vars.state.isCampaign());
+                TriMailDialog.showWithIntro(Vars.state.isCampaign());
             }
         }
     }

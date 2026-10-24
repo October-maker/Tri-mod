@@ -101,6 +101,20 @@ public class TriDraw{
                 return new TextureRegion(tex);
             }
         }
+        // 兜底：允许 sprites/ui/ 下的子目录资源（如 sprites/ui/Tmail/TmailLogo.png）
+        for(Fi base : new Fi[]{mod.root, mod.file}){
+            try{
+                Fi ui = base.child("sprites/ui");
+                if(!ui.exists()) continue;
+                Fi found = ui.findAll(f -> f.name().equals(name + ".png")).first();
+                if(found != null){
+                    Texture tex = new Texture(new Pixmap(found));
+                    return new TextureRegion(tex);
+                }
+            }catch(Throwable ignored){
+                // 压缩包句柄可能不支持递归遍历，继续尝试下一个来源
+            }
+        }
         return null;
     }
 
