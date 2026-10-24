@@ -4,7 +4,6 @@ import arc.graphics.Color;
 import mindustry.content.Fx;
 import mindustry.content.Items;
 import mindustry.entities.bullet.LiquidBulletType;
-import mindustry.entities.part.DrawPart.PartProgress;
 import mindustry.entities.part.RegionPart;
 import mindustry.graphics.Layer;
 import mindustry.type.Category;
@@ -137,7 +136,7 @@ public class TriTurret {
                 fuseDamageMultiplier = 1.2f;
                 damageFalloff = true;
 
-                // 430 需要兼顾普通目标：允许与敌方单位/建筑碰撞，但仍不碰地形
+                // 430 需要兼顾普通目标：允许与敌方单位/建筑碰撞
                 collides = true;
                 collidesAir = true;
                 collidesGround = true;

@@ -36,6 +36,9 @@ import mindustry.gen.Unit;
  * (1 - d/armorSplashRadius)²；<b>直接命中目标本身不参与范围结算</b>（中心目标只吃一次直接伤害）。
  * 启用时原版平顶溅射（splashDamage/splashDamageRadius）视同并实际归零，避免双重范围伤害。
  * 0 / 未设置为禁用。
+ *
+ * <p>对建筑的最终伤害会在护甲反应公式结算后额外乘以 {@link #buildingDamageMultiplier}，
+ * 与原生子弹的建筑减伤行为保持一致。
  */
 
 public class ArmorReactiveBulletType extends BasicBulletType {
@@ -111,6 +114,7 @@ public class ArmorReactiveBulletType extends BasicBulletType {
      * 护甲反应范围伤害：仅当 {@link #armorSplashRadius} &gt; 0 时启用。
      * 遍历命中点半径内<b>所有敌方单位与建筑</b>，对每个目标按<b>其自身护甲</b>独立结算护甲反应伤害
      * （totalDamage(目标护甲)），并随距离按二次衰减 {@link #splashFalloff}。
+     * 建筑在护甲结算后额外乘以 {@link #buildingDamageMultiplier}，与原生建筑减伤保持一致。
      * 直接命中目标通过 {@code exclude} 排除，中心目标只吃一次直接伤害，不会被范围重复结算。
      */
     private void armorSplash(Bullet b, Object exclude){
@@ -124,7 +128,9 @@ public class ArmorReactiveBulletType extends BasicBulletType {
         // 敌方建筑（nearbyBuildings 不按队伍过滤，手动排除友军与直接命中目标）
         Units.nearbyBuildings(b.x, b.y, armorSplashRadius, build -> {
             if(build.dead() || build == exclude || build.team == b.team) return;
-            float dmg = totalDamage(build.block.armor) * splashFalloff(Mathf.dst(b.x, b.y, build.x, build.y));
+            // 护甲反应伤害结算后，再应用原版建筑减伤倍率
+            float dmg = totalDamage(build.block.armor) * buildingDamageMultiplier
+                * splashFalloff(Mathf.dst(b.x, b.y, build.x, build.y));
             if(dmg > 0) build.damagePierce(dmg);
         });
     }
@@ -158,6 +164,8 @@ public class ArmorReactiveBulletType extends BasicBulletType {
         // 实体（单位/建筑）命中：结算自定义伤害；弹头移除/穿透由引擎 Bullet.collision 处理
         if(entity instanceof Healthc h){
             float dmg = totalDamage(armorOf(entity));
+            // 建筑在护甲反应伤害之后再应用原版建筑减伤倍率
+            if(entity instanceof Building) dmg *= buildingDamageMultiplier;
             if(dmg > 0) h.damagePierce(dmg);
         }
         // 可选范围伤害：命中点周围所有敌方单位与建筑按各自护甲结算（armorSplashRadius>0 时启用）；排除直接命中目标
@@ -169,7 +177,8 @@ public class ArmorReactiveBulletType extends BasicBulletType {
         // 与默认 hitTile 一致的门控：仅对敌对建筑且 apply 时结算
         if(build.team != b.team && apply){
             hit(b, x, y); // 命中特效/音效
-            float dmg = totalDamage(build.block.armor);
+            // 先按建筑护甲结算护甲反应伤害，再乘原版建筑减伤倍率
+            float dmg = totalDamage(build.block.armor) * buildingDamageMultiplier;
             if(dmg > 0) build.damagePierce(dmg);
             // 可选范围伤害：命中点周围所有敌方单位与建筑按各自护甲结算（armorSplashRadius>0 时启用）；排除直接命中建筑
             armorSplash(b, build);

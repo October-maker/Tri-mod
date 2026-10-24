@@ -12,10 +12,8 @@ import arc.scene.ui.Label;
 import arc.scene.ui.TextButton;
 import arc.scene.ui.layout.Table;
 import arc.util.*;
-import mindustry.*;
 import mindustry.game.EventType.*;
 import mindustry.ui.Styles;
-import mindustry.ui.dialogs.*;
 import triangle.black.TMail.TriMainMenuButton;
 
 /**
@@ -88,7 +86,7 @@ public class TriWelcome{
             // 欢迎界面整体垂直居中排布：TriLogo（停靠）→ 文本 → 按钮行；“下次启动不再显示”开关行位于按钮行上方
             float textW = 720f, textH = 110f;         // 文本 table 尺寸
             float btnW = 150f, btnH = 50f, btnGap = 20f; // 按钮尺寸与行间距
-            float checkRowH = 40f, checkGap = 8f;      // “下次启动不再显示”开关行高、开关行到按钮行的间距
+            float checkGap = 8f;      // “下次启动不再显示”开关行高、开关行到按钮行的间距
             float stackH = h + btnGap + textH + btnGap + btnH; // 整个内容栈高度（按钮行位置不变，开关行位于其上方，由按钮 table 承载）
             float topY = (sh + stackH) / 2f;                    // 内容栈顶边（垂直居中）
             float logoCy = topY - h / 2f;                        // TriLogo 停靠中心 y
@@ -166,7 +164,7 @@ public class TriWelcome{
                 // moveTo 的 x/y 是左下角坐标，故减去半宽/半高使中心落在停靠位中心
                 cover.actions(
                     Actions.moveTo(target.x - w / 2f, target.y - h / 2f, FLY_TO_DIALOG_DURATION, Interp.pow2In),
-                    Actions.run(() -> buildWelcomeContent(intro, cx, textW, textH, textCy, btnW, btnH, btnGap, checkGap, btnCy, open, word, remind, stop, get))
+                    Actions.run(() -> buildWelcomeContent(intro, cx, textW, textH, textCy, btnW, btnH, checkGap, btnCy, open, word, remind, stop, get))
                 );
                 // 与移动并行：缩放回正常大小（先慢后快，落地瞬间完成 → “砸入面板”效果）
                 cover.actions(Actions.scaleTo(1f, 1f, FLY_TO_DIALOG_DURATION, Interp.pow2In));
@@ -186,7 +184,6 @@ public class TriWelcome{
      * @param textCy 文本 table 中心 y
      * @param btnW 按钮宽
      * @param btnH 按钮高
-     * @param btnGap 按钮行与相邻行（开关行）的间距
      * @param checkGap 开关行到按钮行的间距
      * @param btnCy 按钮行中心 y（按钮 table 以第二行（按钮行）为基准定位）
      * @param open 欢迎文案第一段（bundle）
@@ -195,7 +192,7 @@ public class TriWelcome{
      * @param stop 欢迎文案第四段（bundle）
      * @param get “知道了”按钮文案（bundle）
      */
-    private static void buildWelcomeContent(Table intro, float cx, float textW, float textH, float textCy, float btnW, float btnH, float btnGap, float checkGap, float btnCy, String open, String word, String remind, String stop, String get){
+    private static void buildWelcomeContent(Table intro, float cx, float textW, float textH, float textCy, float btnW, float btnH, float checkGap, float btnCy, String open, String word, String remind, String stop, String get){
         // TriLogo 到位：intro（TriLogo 所在 table）保留不消失，改为可交互模态（按钮可点击）
         intro.touchable = Touchable.enabled;
 

@@ -159,7 +159,7 @@ public class ExSerBlocks {
                 sideWidth = 1f;        // 侧向宽度
                 sideLength = 40f;      // 侧向长度
                 lifetime = 20f;
-                damage = 2750f;         // 激光伤害
+                damage = 1950f;         // 激光伤害
                 length = 85f;          // 激光长度
                 pierce = true;         // 穿透
                 pierceArmor = true;    // 无视护甲

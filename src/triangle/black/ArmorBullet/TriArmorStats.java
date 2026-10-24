@@ -183,7 +183,7 @@ public final class TriArmorStats {
             }
             if(b.timeDuration > 0f && b.powerSclDecrease < 1f){
                 sep(parent, Core.bundle.format("bullet.empslowdown",
-                    (b.powerSclDecrease < 1f ? "[negstat]" : "") + Strings.autoFixed((b.powerSclDecrease - 1f) * 100f, 2),
+                        "[negstat]" + Strings.autoFixed((b.powerSclDecrease - 1f) * 100f, 2),
                     Strings.autoFixed(b.timeDuration / 60f, 1)) + " " + StatUnit.seconds.localized());
             }
             if(!Mathf.equal(b.powerDamageScl, 1f)){
