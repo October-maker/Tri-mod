@@ -107,7 +107,7 @@ public class TriFactory {
         Condenser = new GenericCrafter("Condenser"){{}};
 
         // ---- 多配方工厂 ----
-        // 子弹工厂：四条弹药配方（LHEAT / thermite / WBullet / LHESH）
+        // 子弹工厂
         BulletFactory = new MultiRecipeFactory("BulletFactory"){{
             size = 4;
             health = 20;
@@ -135,15 +135,16 @@ public class TriFactory {
                         craftTime = 10f;
                         powerUse = 10f/60f;
                     }},
-                    // 钨芯弹：钨钢 + 镍
+                    // 钨芯弹：钨钢 + 镍（需研究）
                     new Recipe() {{
                         inputItem.add(new ItemStack(TriItems.WSteel,2));
                         inputItem.add(new ItemStack(TriItems.Ni,1));
                         outputItem.add(new ItemStack(TriItems.WBullet,3));
                         craftTime = 60f;
                         powerUse = 1f;
+                        requiresResearch = true;
                     }},
-                    // 碎甲弹 LHESH：聚乙烯 + 钢 + TNT（需研究）
+                    // 碎甲弹 LHESH：聚乙烯 + 钢 + TNT
                     new Recipe() {{
                         inputItem.add(new ItemStack(TriItems.PE,2));
                         inputItem.add(new ItemStack(TriItems.FeSteel,4));
@@ -151,6 +152,36 @@ public class TriFactory {
                         outputItem.add(new ItemStack(TriItems.LHESH,4));
                         craftTime = 30f;
                         powerUse = 30f/60f;
+                    }}
+            );
+            recipes.add(
+                    // 碎甲弹 BHE：钢 + TNT（需研究）
+                    new Recipe() {{
+                        inputItem.add(new ItemStack(TriItems.FeSteel,5));
+                        inputItem.add(new ItemStack(TriItems.TNT,12));
+                        outputItem.add(new ItemStack(TriItems.BHE,1));
+                        craftTime = 120f;
+                        powerUse = 120f/60f;
+                        requiresResearch = true;
+                    }},
+                    // 破甲弹 BHEAT：铜 + 钢 + TNT
+                    new Recipe() {{
+                        inputItem.add(new ItemStack(TriItems.Cu, 5));
+                        inputItem.add(new ItemStack(TriItems.FeSteel,4));
+                        inputItem.add(new ItemStack(TriItems.TNT,7));
+                        outputItem.add(new ItemStack(TriItems.BHEAT, 1));
+                        craftTime = 150f;
+                        powerUse = 220f/60f;
+                        requiresResearch = true;
+                    }},
+                    // 碎甲弹 LHESH：聚乙烯 + 钢 + TNT
+                    new Recipe() {{
+                        inputItem.add(new ItemStack(TriItems.PE,4));
+                        inputItem.add(new ItemStack(TriItems.FeSteel,4));
+                        inputItem.add(new ItemStack(TriItems.TNT,6));
+                        outputItem.add(new ItemStack(TriItems.BHESH,1));
+                        craftTime = 150f;
+                        powerUse = 180f/60f;
                         requiresResearch = true;
                     }}
             );
