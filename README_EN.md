@@ -16,7 +16,7 @@ When you encounter issues or feel confused, please check if the module version i
 
 ---
 ### How to play a mod campaign
-After clearing the original "biomassFacility", the mod campaign will appear in the technology tree
+After clearing the original "biomassFacility", the mod campaign will appear in the technology tree.\
 The module campaign is not solely attached to a single original Serpulo map. If you find that you cannot progress in the campaign, please try advancing the original campaign progress
 
 ---
