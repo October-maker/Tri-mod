@@ -12,6 +12,7 @@ import triangle.black.PIBulletType;
 import triangle.black.TriCIWS;
 import triangle.black.TMail.TriGameMailButton;
 import triangle.black.TMail.TriInbox;
+import triangle.black.TMail.TriModInfo;
 import triangle.black.TMail.TriMainMenuButton;
 import triangle.black.TMail.TriPlanetMailButton;
 import triangle.black.TMail.TriSettingsDataButton;
@@ -59,6 +60,7 @@ public class triangle extends Mod{
         ExSerBlocks.load();
         SerTriTechTree.load();
         TriInbox.registerDefaults();
+        TriModInfo.init();
         Vars.renderer.minZoom =0.3f;
         Vars.renderer.maxZoom = 20.0f;
         float MiZ = Vars.renderer.minZoom;

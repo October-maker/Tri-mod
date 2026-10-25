@@ -45,6 +45,14 @@ public class TriInbox{
         mails.add(mail);
     }
 
+    /** 用远端资讯邮件替换现有资讯信件；战役剧情邮件保持不变。 */
+    public static void replaceInfoMails(Seq<TriMail> replacement){
+        for(int i = mails.size - 1; i >= 0; i--){
+            if(!mails.get(i).story) mails.remove(i);
+        }
+        mails.addAll(replacement);
+    }
+
     /** 全部邮件（含未解锁）。 */
     public static Seq<TriMail> all(){
         return mails;
@@ -250,29 +258,29 @@ public class TriInbox{
 //            "微晶硅制备工艺已上线。\n更复杂的自动化和逻辑网络将由此展开。", tech(Items.silicon)));
 
          //示例剧情邮件：解锁“硅”科技时收到（文本硬编码，不参与 bundle 本地化）
-        add(new TriMail("silicon",
-                "科技部",
-                "传输",
-                "测试邮件。\n当灰带被解锁时被发送至玩家邮件箱。\n——示例剧情邮件",
-                tech(Blocks.conveyor)));
+//        add(new TriMail("silicon",
+//                "科技部",
+//                "传输",
+//                "测试邮件。\n当灰带被解锁时被发送至玩家邮件箱。\n——示例剧情邮件",
+//                tech(Blocks.conveyor)));
 
         // ---- 模组资讯邮件（主菜单 TMail 显示，无条件解锁）----
-        add(new TriMail("info_about",
-                b("tri.mail.info_about.sender"),
-                b("tri.mail.info_about.subject"),
-                b("tri.mail.info_about.body"),
-                always(), false));
+//        add(new TriMail("info_about",
+//                b("tri.mail.info_about.sender"),
+//                b("tri.mail.info_about.subject"),
+//                b("tri.mail.info_about.body"),
+//                always(), false));
 
         // 中文示例信件（回信功能演示）：全部文本硬编码，不参与 bundle 本地化。
         // 回信内容同样硬编码（replyText 非空即不读 bundle）；
         // 发送后触发 onReply（演示事件：解锁重建投影仪），发送后内容保留显示、点击框再收起。
         // 打字机速度未设置（-1f）→ 使用默认 24 字/秒；如需演示单独调速，可改最后一个参数。
-        add(new TriMail("demoReply", "示例发件人", "回信功能演示",
-                "这是一封用于演示回信功能的中文示例信件。\n点击“回信”按钮，等待回信正文播放完毕后点击“发送”，回信内容将保留显示；再次点击回信框即可收起。",
-                always(), true, null, null,
-                () -> Blocks.mendProjector.unlock(),
-                "收到！这是一封由PL发出的中文回信示例。\n回信内容可以直接硬编码在信件中，无需通过bundle进行本地化，适合用于事件触发的演示。\n——PL",
-                -1f));
+//        add(new TriMail("demoReply", "示例发件人", "回信功能演示",
+//                "这是一封用于演示回信功能的中文示例信件。\n点击“回信”按钮，等待回信正文播放完毕后点击“发送”，回信内容将保留显示；再次点击回信框即可收起。",
+//                always(), true, null, null,
+//                () -> Blocks.mendProjector.unlock(),
+//                "收到！这是一封由PL发出的中文回信示例。\n回信内容可以直接硬编码在信件中，无需通过bundle进行本地化，适合用于事件触发的演示。\n——PL",
+//                -1f));
 
     }
 

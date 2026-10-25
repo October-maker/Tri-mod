@@ -165,6 +165,8 @@ refreshReadState 更新未读角标
     /** 当前邮件列表 Table（scroll 内容），供“未读”分类下移除已读卡片（轻量刷新，不重建收件箱
 */
     private static Table listTable;
+    /** 模组资讯页专用“获取最新资讯”按钮。 */
+    private static TextButton latestInfoButton;
     /** 已构建卡片的发件
 Label 引用（mail
 sender Label），
@@ -564,11 +566,14 @@ Tmail 页面内，动画结束后再调用 {@link #build(BaseDialog)}
         addCategory(dlg, bar, group, Filter.READ, "tri.mail.cat.read", all);
         addCategory(dlg, bar, group, Filter.UNREAD, "tri.mail.cat.unread", all);
         addCategory(dlg, bar, group, Filter.HISTORY, "tri.mail.cat.history", all);
-        // 刷新按钮（暂未启用）：手动刷新已 未读状态（角标 + 未读列表），样式同分类按钮；不入 ButtonGroup（非分类切换
-        // 【暂时注释】待用户决定是否恢复
-        // TextButton refreshBtn = new TextButton(bundle("tri.mail.refresh"));
-        // refreshBtn.clicked(() -> refreshReadState());
-        // bar.add(refreshBtn).size(96f, 42f).pad(3);
+        // 模组资讯页专用：获取最新资讯；剧情页不显示
+        if(!storyScope){
+            TextButton refreshBtn = new TextButton(bundle("tri.mail.refreshLatest"));
+            refreshBtn.clicked(() -> TriModInfo.refresh(true));
+            refreshBtn.setDisabled(TriModInfo.isRefreshing());
+            latestInfoButton = refreshBtn;
+            bar.add(refreshBtn).size(126f, 42f).pad(3);
+        }
         content.add(bar).padTop(8).padBottom(4).row();
 
         // 竖直向下的邮件列表（居中），可滚
@@ -631,6 +636,9 @@ Tmail 页面内，动画结束后再调用 {@link #build(BaseDialog)}
             lastContent.clearActions();
             lastContent.actions(moveTo(targetLocalX, targetLocalY, slideDuration, Interp.pow2Out));
         });
+
+        // 仅在模组资讯页尝试自动更新；剧情页不触发任何资讯刷新
+        if(!storyScope) TriModInfo.refreshIfStale();
     }
 
     private static void addCategory(BaseDialog dlg, Table bar, ButtonGroup<TextButton> group, Filter f, String key, Seq<TriMail> all){
@@ -694,6 +702,23 @@ Tmail 页面内，动画结束后再调用 {@link #build(BaseDialog)}
                 listTable.add("[#7f8c8d]" + bundle("tri.mail.empty")).pad(30);
             }
         }
+    }
+
+    /** 远端资讯刷新开始：禁用“获取最新资讯”按钮。 */
+    public static void onModInfoRefreshStarted(){
+        if(latestInfoButton != null) latestInfoButton.setDisabled(true);
+    }
+
+    /** 远端资讯刷新结束（成功或失败）：恢复按钮。 */
+    public static void onModInfoRefreshFinished(){
+        if(latestInfoButton != null) latestInfoButton.setDisabled(false);
+    }
+
+    /** 远端资讯已替换：只在模组资讯页且没有打开的详情时重建列表。 */
+    public static void onModInfoUpdated(){
+        if(storyScope || inbox == null || !inbox.isShown() || exitAnimating) return;
+        if(activeDetail != null) return;
+        build(inbox);
     }
 
     /** 单封邮件的固定大小卡片：圆角矩形包裹，上发件人、中分割线、下内容（省略）。整卡可点击阅读
