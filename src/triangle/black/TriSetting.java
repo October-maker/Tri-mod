@@ -12,10 +12,29 @@ import mindustry.game.EventType.*;
  */
 public class TriSetting{
 
+    /** Tmail 动画速度挡位（1~5，默认3）。 */
+    public static final String TMAIL_SPEED_KEY = "tri.tmail.animSpeed";
+
     /** 是否已向设置界面添加“三角”设置页（防止 ClientLoadEvent 重复触发导致重复添加）。 */
     private static boolean settingsAdded = false;
 
     private TriSetting(){}
+
+    /** 1~5 挡位对应的动画倍率。 */
+    public static float tmailAnimMultiplierForStep(int step){
+        switch(Math.max(1, Math.min(5, step))){
+            case 1: return 0.5f;
+            case 2: return 0.75f;
+            case 4: return 1.25f;
+            case 5: return 1.5f;
+            default: return 1f;
+        }
+    }
+
+    /** 当前 Tmail 动画倍率。 */
+    public static float tmailAnimMultiplier(){
+        return tmailAnimMultiplierForStep(Core.settings.getInt(TMAIL_SPEED_KEY, 3));
+    }
 
     /**
      * 注册“三角”设置页。
@@ -33,6 +52,10 @@ public class TriSetting{
                 // STARTUP_DIALOG_KEY(=tri.startupDialogToggle) 即 bundle 键，故显示文本自动本地化；
                 // 且与弹窗内勾选框读写同一个键，状态保持同步（键为跨语言稳定的标识符）。
                 t.checkPref(TriWelcome.STARTUP_DIALOG_KEY, true);
+                // Tmail 动画速度：5 挡滑条，默认第 3 挡（1.0x）
+                t.sliderPref(TMAIL_SPEED_KEY, 3, 1, 5, 1,
+                    value -> String.format(java.util.Locale.ROOT, "%.2f×",
+                        tmailAnimMultiplierForStep(value)));
             });
         });
     }

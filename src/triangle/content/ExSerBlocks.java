@@ -101,15 +101,15 @@ public class ExSerBlocks {
             lhesh.load();   // 解析 LHESH 贴图
         });
 
-// ============ 原版 foreshadow（噩兆）炮塔：射程翻倍 + 新增 BHE/BHEAT/BHESH 三种弹药 ============
+// ============ 原版 foreshadow（噩兆）炮塔：射程 700 + 新增 BHE/BHEAT/BHESH 三种弹药 ============
         // foreshadow 是原版 ItemTurret（mindustry.content.Blocks.foreshadow），原版射程 500f
         ItemTurret foreshadow = (ItemTurret)Blocks.foreshadow;
 
-        // 1) 射程改为原来的两倍（500 → 1000）
-        foreshadow.range = foreshadow.range * 2f;
+        // 1) 射程覆盖为 700
+        foreshadow.range = 700f;
 
         // 2) 原版既有弹药是 surgeAlloy 的 RailBulletType（轨道弹，hit-scan），其 length 在构造时按
-        //    「原 range+10=510」固化；翻倍射程后若不改，它仍只会命中到 510，故同步拉长到新射程+10
+        //    「原 range+10=510」固化；改为 700 后同步拉长到新射程+10
         RailBulletType rail = (RailBulletType)foreshadow.ammoTypes.get(Items.surgeAlloy);
         if(rail != null){
             rail.length = foreshadow.range + 10f;
@@ -117,7 +117,7 @@ public class ExSerBlocks {
 
         // 3) 新增三种弹药：BHE/BHESH 为护甲反应弹（ArmorReactiveBulletType），BHEAT 为普通破甲弹
         //    key 使用模组物品 TriItems.BHE/BHEAT/BHESH，foreshadow 将消耗这些物品作为弹药
-        //    lifetime 手动设为「(新射程+10)/speed」，保证弹种能飞到新射程 1000 而不提前消失
+        //    lifetime 手动设为「(新射程+10)/speed」，保证弹种能飞到新射程 700 而不提前消失
         //    （不调用 foreshadow.limitRange()，以免误改原版 speed=0 的轨道弹）
         BulletType bhe = new ArmorReactiveBulletType(10f){{ // 高爆弹
             ammoMultiplier = 1f;
@@ -184,5 +184,17 @@ public class ExSerBlocks {
             buildingDamageMultiplier = 0.2f;
         }};
         foreshadow.ammoTypes.put(TriItems.BHESH, bhesh);
+
+        // 4) 统一适配所有弹药的射程：
+        //    rail 弹同步 length；其余有速度的弹种按「(射程+10)/速度」补足 lifetime，
+        //    避免任何弹种在到达 700 射程前提前消失。
+        for(BulletType bullet : foreshadow.ammoTypes.values()){
+            if(bullet == null) continue;
+            if(bullet instanceof RailBulletType railBullet){
+                railBullet.length = foreshadow.range + 10f;
+            }else if(bullet.speed > 0f){
+                bullet.lifetime = Math.max(bullet.lifetime, (foreshadow.range + 10f) / bullet.speed);
+            }
+        }
     }
 }

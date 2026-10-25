@@ -7,6 +7,7 @@ import arc.input.KeyCode;
 import arc.math.Interp;
 import arc.math.geom.Vec2;
 import arc.scene.Element;
+import arc.scene.Action;
 import arc.scene.actions.Actions;
 import arc.scene.event.ClickListener;
 import arc.scene.event.InputEvent;
@@ -28,6 +29,7 @@ import mindustry.gen.Icon;
 import mindustry.ui.Styles;
 import mindustry.ui.dialogs.BaseDialog;
 import triangle.black.TriDraw;
+import triangle.black.TriSetting;
 
 /**
  * 三角通讯收件箱界
@@ -180,6 +182,34 @@ refreshReadState 局部更新未
     /** 打开/关闭详情时，背景 content 滑出（加速）/滑回（减速）时长（≤0.2s
 */
     private static final float CONTENT_SWEEP_DURATION = 0.2f;
+    /** Tmail 退出时 logo/content 高速移出时长。 */
+    private static final float TMAIL_EXIT_DURATION = 0.1f;
+    private static boolean exitAnimating;
+
+    /** Tmail 动画时长按设置倍率缩放。 */
+    private static float anim(float seconds){
+        return seconds / TriSetting.tmailAnimMultiplier();
+    }
+
+    private static Action moveTo(float x, float y, float seconds, Interp interp){
+        return Actions.moveTo(x, y, anim(seconds), interp);
+    }
+
+    private static Action sizeTo(float width, float height, float seconds, Interp interp){
+        return Actions.sizeTo(width, height, anim(seconds), interp);
+    }
+
+    private static Action scaleTo(float sx, float sy, float seconds, Interp interp){
+        return Actions.scaleTo(sx, sy, anim(seconds), interp);
+    }
+
+    private static Action delay(float seconds){
+        return Actions.delay(anim(seconds));
+    }
+
+    private static Action alpha(float value, float seconds, Interp interp){
+        return Actions.alpha(value, anim(seconds), interp);
+    }
 
     private TriMailDialog(){}
 
@@ -236,10 +266,21 @@ Tmail 页面内，动画结束后再调用 {@link #build(BaseDialog)}
         storyScope = story;
 
         if(inbox == null){
-            inbox = new BaseDialog("");
+            inbox = new BaseDialog(""){
+                @Override
+                public void hide(){
+                    if(exitAnimating) return;
+                    playExitAnimation(this::hideImmediately);
+                }
+
+                private void hideImmediately(){
+                    super.hide();
+                }
+            };
             inbox.addCloseButton();
             // 收件箱关闭时移除毛玻璃背景、Logo 层，并同步关闭可能仍打开的信件详情与透明按钮
             inbox.hidden(() -> {
+                exitAnimating = false;
                 cancelLogoIntro();
                 if(activeDetail != null){
                     activeDetail.remove();
@@ -258,6 +299,8 @@ Tmail 页面内，动画结束后再调用 {@link #build(BaseDialog)}
             });
         }
         inbox.title.setText(story ? bundle("tri.mail.title") : bundle("tri.modinfo.title"));
+        // 上一次退出时冻结过父布局，重新打开时恢复
+        inbox.cont.setLayoutEnabled(true);
 
         // 全屏毛玻璃背景（截屏 + 模糊 + 透明度渐深），置于收件箱窗口之下
         if(blur == null || !blur.hasParent()){
@@ -268,6 +311,51 @@ Tmail 页面内，动画结束后再调用 {@link #build(BaseDialog)}
         // 动画期间先移除旧内容，但保留可能存在 Logo
         clearPage();
         inbox.show();
+    }
+
+    /**
+     * Tmail 退出动画：logo 向左移出、content 向右移出，线性高速，不做缓动。
+     */
+    private static void playExitAnimation(Runnable done){
+        if(exitAnimating) return;
+        exitAnimating = true;
+        // 退出动画期间冻结父布局，避免父 Table 重新布局把 content 拉回“家”位置造成闪回
+        if(inbox != null){
+            inbox.cont.setLayoutEnabled(false);
+        }
+
+        // 退出时立即收掉详情与回信浮层，避免遮挡退场
+        if(activeDetail != null){
+            activeDetail.remove();
+            activeDetail = null;
+            activeDetailMorph = null;
+            activeDetailCard = null;
+            activeDetailMail = null;
+        }
+        closingDetail = false;
+        removeDetailOverlays();
+        removeReplyUi();
+
+        float sw = Core.graphics.getWidth();
+        if(tmailLogoTable != null){
+            tmailLogoTable.clearActions();
+            tmailLogoTable.actions(moveTo(-tmailLogoTable.getWidth() - 24f, tmailLogoTable.y,
+                TMAIL_EXIT_DURATION, Interp.linear));
+        }else if(logoIntro != null){
+            logoIntro.clearActions();
+            logoIntro.actions(moveTo(-sw, logoIntro.y, TMAIL_EXIT_DURATION, Interp.linear));
+        }
+
+        if(lastContent != null){
+            lastContent.clearActions();
+            lastContent.actions(moveTo(sw + lastContent.getWidth(), lastContent.y,
+                TMAIL_EXIT_DURATION, Interp.linear));
+        }
+
+        Time.runTask(anim(TMAIL_EXIT_DURATION) * 60f + 1f, () -> {
+            exitAnimating = false;
+            if(done != null) done.run();
+        });
     }
 
     /**
@@ -335,14 +423,14 @@ Tmail 页面内，动画结束后再调用 {@link #build(BaseDialog)}
         piece2.setPosition(pieceX, bottomStartY);
         layer.addChild(piece2);
 
-        piece1.actions(Actions.moveTo(pieceX, pieceY, LOGO_PIECE_DURATION, Interp.pow2Out));
+        piece1.actions(moveTo(pieceX, pieceY, LOGO_PIECE_DURATION, Interp.pow2Out));
         piece2.actions(
-            Actions.delay(LOGO_PIECE_STAGGER),
-            Actions.moveTo(pieceX, pieceY, LOGO_PIECE_DURATION, Interp.pow2Out)
+            delay(LOGO_PIECE_STAGGER),
+            moveTo(pieceX, pieceY, LOGO_PIECE_DURATION, Interp.pow2Out)
         );
 
         float assembleAt = LOGO_PIECE_STAGGER + LOGO_PIECE_DURATION + LOGO_ASSEMBLE_HOLD;
-        layer.actions(Actions.delay(assembleAt), Actions.run(() -> {
+        layer.actions(delay(assembleAt), Actions.run(() -> {
             if(logoIntro != layer) return;
 
             // 完整 TmailLogo 覆盖并替换两片分帧；放入独立 Table，便于详情打开时整体移
@@ -371,7 +459,7 @@ Tmail 页面内，动画结束后再调用 {@link #build(BaseDialog)}
 
             // 类似 TriWelcome：先慢后快滑入停靠位，同时缩放回正常大小
             logoTable.actions(
-                Actions.moveTo(logoHomeX, logoHomeY, LOGO_COVER_MOVE_DURATION, Interp.pow2In),
+                moveTo(logoHomeX, logoHomeY, LOGO_COVER_MOVE_DURATION, Interp.pow2In),
                 Actions.run(() -> {
                     if(logoIntro != layer) return;
                     layer.touchable = Touchable.disabled;
@@ -381,12 +469,12 @@ Tmail 页面内，动画结束后再调用 {@link #build(BaseDialog)}
                     }
                 })
             );
-            cover.actions(Actions.scaleTo(1f, 1f, LOGO_COVER_MOVE_DURATION, Interp.pow2In));
+            cover.actions(scaleTo(1f, 1f, LOGO_COVER_MOVE_DURATION, Interp.pow2In));
 
             // 调整 content 入场时机：content 滑入（SLIDE_IN_DURATION）结 + 1 tick 延迟
             // 恰好 Logo 滑到停靠位（LOGO_COVER_MOVE_DURATION）同一时刻
             float contentStartDelay = Math.max(0f, LOGO_COVER_MOVE_DURATION - SLIDE_IN_DURATION - 1f / 60f);
-            layer.actions(Actions.delay(contentStartDelay), Actions.run(() -> {
+            layer.actions(delay(contentStartDelay), Actions.run(() -> {
                 if(logoIntro == layer && inbox != null && inbox.isShown() && lastContent == null){
                     build(inbox);
                 }
@@ -412,7 +500,7 @@ Tmail 页面内，动画结束后再调用 {@link #build(BaseDialog)}
         float x = centered ? logoCenterX : logoHomeX;
         float y = centered ? logoCenterY : logoHomeY;
         tmailLogoTable.clearActions();
-        tmailLogoTable.actions(Actions.moveTo(x, y, LOGO_DETAIL_MOVE_DURATION, Interp.pow2Out));
+        tmailLogoTable.actions(moveTo(x, y, LOGO_DETAIL_MOVE_DURATION, Interp.pow2Out));
     }
 
     /** 打开收件箱并立即构建内容（不播放 Logo 动画；供程序化刷新使用）。story=true 剧情 / false 资讯*/
@@ -533,7 +621,7 @@ Tmail 页面内，动画结束后再调用 {@link #build(BaseDialog)}
             lastContent.setPosition(sw + cw, targetLocalY); // 起点：屏幕右外侧（布局已稳定，定位生效
             lastContent.visible = true; // 恢复可见，随即滑
             lastContent.clearActions();
-            lastContent.actions(Actions.moveTo(targetLocalX, targetLocalY, slideDuration, Interp.pow2Out));
+            lastContent.actions(moveTo(targetLocalX, targetLocalY, slideDuration, Interp.pow2Out));
         });
     }
 
@@ -696,7 +784,7 @@ morph table
         // content 卡片组加速移出画面，空出收件箱区
         if(lastContent != null){
             lastContent.clearActions();
-            lastContent.actions(Actions.moveTo(sw + lastContent.getWidth(), contentHomeY, CONTENT_SWEEP_DURATION, Interp.pow2In));
+            lastContent.actions(moveTo(sw + lastContent.getWidth(), contentHomeY, CONTENT_SWEEP_DURATION, Interp.pow2In));
         }
 
         // 全屏透明点击 + 灰色半透明背景
@@ -750,11 +838,11 @@ morph table
 
         // 位置/尺寸同步过渡；正好在中点时替换为详情内容
         detailRoot.actions(Actions.parallel(
-            Actions.moveTo(targetX, targetY, MORPH_DURATION, Interp.pow2Out),
-            Actions.sizeTo(dw, dh, MORPH_DURATION, Interp.pow2Out)
+            moveTo(targetX, targetY, MORPH_DURATION, Interp.pow2Out),
+            sizeTo(dw, dh, MORPH_DURATION, Interp.pow2Out)
         ));
         detailRoot.addAction(Actions.sequence(
-            Actions.delay(MORPH_DURATION / 2f),
+            delay(MORPH_DURATION / 2f),
             Actions.run(() -> {
                 if(activeDetail != detailRoot) return;
                 morph.clearChildren();
@@ -766,7 +854,7 @@ morph table
             })
         ));
         detailRoot.addAction(Actions.sequence(
-            Actions.delay(MORPH_DURATION),
+            delay(MORPH_DURATION),
             Actions.run(() -> {
                 if(activeDetail == detailRoot){
                     detailRoot.setBounds(targetX, targetY, dw, dh);
@@ -816,7 +904,7 @@ morph table
             moveLogoToDetail(false);
             if(lastContent != null){
                 lastContent.clearActions();
-                lastContent.actions(Actions.moveTo(contentHomeX, contentHomeY, CONTENT_SWEEP_DURATION, Interp.pow2Out));
+                lastContent.actions(moveTo(contentHomeX, contentHomeY, CONTENT_SWEEP_DURATION, Interp.pow2Out));
             }
             refreshReadState();
             return;
@@ -829,19 +917,19 @@ morph table
         // content 卡片组同步回移， morph table 同时到位
         if(lastContent != null){
             lastContent.clearActions();
-            lastContent.actions(Actions.moveTo(contentHomeX, contentHomeY, MORPH_DURATION, Interp.pow2Out));
+            lastContent.actions(moveTo(contentHomeX, contentHomeY, MORPH_DURATION, Interp.pow2Out));
         }
         // Logo 返回左侧
         moveLogoToDetail(false);
 
         detail.clearActions();
         detail.actions(Actions.parallel(
-            Actions.moveTo(detailStartX, detailStartY, MORPH_DURATION, Interp.pow2In),
-            Actions.sizeTo(detailStartW, detailStartH, MORPH_DURATION, Interp.pow2In)
+            moveTo(detailStartX, detailStartY, MORPH_DURATION, Interp.pow2In),
+            sizeTo(detailStartW, detailStartH, MORPH_DURATION, Interp.pow2In)
         ));
         // 中途切回缩略图外观
         detail.addAction(Actions.sequence(
-            Actions.delay(MORPH_DURATION / 2f),
+            delay(MORPH_DURATION / 2f),
             Actions.run(() -> {
                 if(activeDetail != detail || mail == null) return;
                 Table morph = activeDetailMorph;
@@ -855,7 +943,7 @@ morph table
         ));
         // 双方到位：删 morph table，恢复原缩略
         detail.addAction(Actions.sequence(
-            Actions.delay(MORPH_DURATION),
+            delay(MORPH_DURATION),
             Actions.run(() -> {
                 if(activeDetail != detail) return;
                 closingDetail = false;
@@ -945,7 +1033,7 @@ morph table
         Image icon = iconOf(button);
         if(icon == null) return;
         icon.clearActions();
-        icon.actions(Actions.alpha(0f, duration, Interp.pow2In));
+        icon.actions(alpha(0f, duration, Interp.pow2In));
     }
 
     /** 按钮图标渐显；与信纸缩放动画同时进行
@@ -955,7 +1043,7 @@ morph table
         if(icon == null) return;
         icon.clearActions();
         icon.color.a = 0f;
-        icon.actions(Actions.alpha(1f, duration, Interp.pow2Out));
+        icon.actions(alpha(1f, duration, Interp.pow2Out));
     }
 
     /** 静态出现（无缩放）时使用的短渐显
@@ -983,7 +1071,7 @@ morph table
         activeDetail.addChildAt(0, button); // 位于内部卡片之下，被卡片遮住上半部分
         activeReplyButton = button;
 
-        button.actions(Actions.moveTo(x, endY, REPLY_SLIDE_DURATION, Interp.pow2Out));
+        button.actions(moveTo(x, endY, REPLY_SLIDE_DURATION, Interp.pow2Out));
     }
 
     /**
@@ -1009,7 +1097,7 @@ morph table
 
         // 详情卡片右移，给左侧信纸让位
         activeDetail.clearActions();
-        activeDetail.actions(Actions.moveTo(detailX, y, REPLY_LAYOUT_DURATION, Interp.pow2Out));
+        activeDetail.actions(moveTo(detailX, y, REPLY_LAYOUT_DURATION, Interp.pow2Out));
 
         // 信纸根节点：内容卡片与发信按钮都是它的子节点，移 缩小时会一起跟
         Table paperRoot = new Table();
@@ -1042,13 +1130,13 @@ morph table
         if(alreadyReplied) fadeReplyIconIn(collapse);
 
         // 从屏幕左侧外滑入，先快后慢，落到详情卡左
-        paperRoot.actions(Actions.moveTo(left, y, REPLY_LAYOUT_DURATION, Interp.pow2Out));
+        paperRoot.actions(moveTo(left, y, REPLY_LAYOUT_DURATION, Interp.pow2Out));
 
         if(alreadyReplied){
             buildReplyPaperFull(paper, mail);
         }else{
             // 空白信纸停留一小段时间后，再播放回信打字机
-            Time.runTask(REPLY_PAPER_DELAY * 60f, () -> {
+            Time.runTask(anim(REPLY_PAPER_DELAY) * 60f, () -> {
                 if(activeReplyPaperContent == paper){
                     buildReplyPaperTyping(paper, mail);
                 }
@@ -1132,7 +1220,7 @@ morph table
         root.addChildAt(0, send); // 位于信纸内容之下，被信纸遮住上半部分
         activeReplySend = send;
 
-        send.actions(Actions.moveTo(x, endY, REPLY_SLIDE_DURATION, Interp.pow2Out));
+        send.actions(moveTo(x, endY, REPLY_SLIDE_DURATION, Interp.pow2Out));
     }
 
     /** 发信：执行原回调、记录已回信、显示“已发信”，随后恢复完整回信正文
@@ -1182,7 +1270,7 @@ morph table
                 send.clearActions();
                 float targetY = -send.getHeight() / 2f;
                 send.actions(
-                    Actions.moveTo(send.x, targetY, REPLY_PAPER_EXIT_DURATION, Interp.pow2Out),
+                    moveTo(send.x, targetY, REPLY_PAPER_EXIT_DURATION, Interp.pow2Out),
                     Actions.run(() -> {
                         if(activeReplySend == send){
                             send.remove();
@@ -1194,7 +1282,7 @@ morph table
 
             // 信纸向左侧屏幕外加速移出（先慢后快 pow2In
             paper.actions(
-                Actions.moveTo(-paper.getWidth() - 24f, paper.y, REPLY_PAPER_EXIT_DURATION, Interp.pow2In),
+                moveTo(-paper.getWidth() - 24f, paper.y, REPLY_PAPER_EXIT_DURATION, Interp.pow2In),
                 Actions.run(() -> {
                     if(activeReplyPaper == paper){
                         removeReplyPaper();
@@ -1206,7 +1294,7 @@ morph table
             button.clearActions();
             float targetY = -button.getHeight() / 2f;
             button.actions(
-                Actions.moveTo(button.x, targetY, REPLY_SLIDE_DURATION, Interp.pow2Out),
+                moveTo(button.x, targetY, REPLY_SLIDE_DURATION, Interp.pow2Out),
                 Actions.run(() -> {
                     if(activeReplyButton == button){
                         button.remove();
@@ -1242,15 +1330,15 @@ morph table
         float miniY = y + h - REPLY_MINI_SIZE;
 
         activeDetail.clearActions();
-        activeDetail.actions(Actions.moveTo(detailX, y, REPLY_COLLAPSE_DURATION, Interp.pow2Out));
+        activeDetail.actions(moveTo(detailX, y, REPLY_COLLAPSE_DURATION, Interp.pow2Out));
 
         root.clearActions();
         root.actions(Actions.parallel(
-            Actions.moveTo(miniX, miniY, REPLY_COLLAPSE_DURATION, Interp.pow2Out),
-            Actions.sizeTo(REPLY_MINI_SIZE, REPLY_MINI_SIZE, REPLY_COLLAPSE_DURATION, Interp.pow2Out)
+            moveTo(miniX, miniY, REPLY_COLLAPSE_DURATION, Interp.pow2Out),
+            sizeTo(REPLY_MINI_SIZE, REPLY_MINI_SIZE, REPLY_COLLAPSE_DURATION, Interp.pow2Out)
         ));
         root.addAction(Actions.sequence(
-            Actions.delay(REPLY_COLLAPSE_DURATION / 2f),
+            delay(REPLY_COLLAPSE_DURATION / 2f),
             Actions.run(() -> {
                 if(activeReplyPaper != root) return;
                 content.visible = false;
@@ -1276,7 +1364,7 @@ morph table
             })
         ));
         root.addAction(Actions.sequence(
-            Actions.delay(REPLY_COLLAPSE_DURATION),
+            delay(REPLY_COLLAPSE_DURATION),
             Actions.run(() -> {
                 if(activeReplyPaper != root) return;
                 root.remove();
@@ -1307,7 +1395,7 @@ morph table
         float startY = y + h - REPLY_MINI_SIZE;
 
         activeDetail.clearActions();
-        activeDetail.actions(Actions.moveTo(detailX, y, REPLY_COLLAPSE_DURATION, Interp.pow2Out));
+        activeDetail.actions(moveTo(detailX, y, REPLY_COLLAPSE_DURATION, Interp.pow2Out));
 
         Table root = new Table();
         root.setBounds(startX, startY, REPLY_MINI_SIZE, REPLY_MINI_SIZE);
@@ -1343,11 +1431,11 @@ morph table
         activeReplyCollapseButton = collapse;
 
         root.actions(Actions.parallel(
-            Actions.moveTo(left, y, REPLY_COLLAPSE_DURATION, Interp.pow2Out),
-            Actions.sizeTo(w, h, REPLY_COLLAPSE_DURATION, Interp.pow2Out)
+            moveTo(left, y, REPLY_COLLAPSE_DURATION, Interp.pow2Out),
+            sizeTo(w, h, REPLY_COLLAPSE_DURATION, Interp.pow2Out)
         ));
         root.addAction(Actions.sequence(
-            Actions.delay(REPLY_COLLAPSE_DURATION / 2f),
+            delay(REPLY_COLLAPSE_DURATION / 2f),
             Actions.run(() -> {
                 if(activeReplyPaper != root) return;
                 if(activeReplyMiniButton == mini){
@@ -1361,7 +1449,7 @@ morph table
             })
         ));
         root.addAction(Actions.sequence(
-            Actions.delay(REPLY_COLLAPSE_DURATION),
+            delay(REPLY_COLLAPSE_DURATION),
             Actions.run(() -> {
                 if(activeReplyPaper != root) return;
                 root.setBounds(left, y, w, h);
