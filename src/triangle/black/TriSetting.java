@@ -2,8 +2,13 @@ package triangle.black;
 
 import arc.*;
 import arc.scene.style.TextureRegionDrawable;
+import arc.scene.ui.layout.Table;
+import arc.util.Align;
+import arc.util.Log;
 import mindustry.*;
 import mindustry.game.EventType.*;
+import mindustry.gen.Icon;
+import mindustry.ui.dialogs.BaseDialog;
 
 /**
  * 三角模组的设置逻辑集中入口：仅在游戏设置界面新增“三角”分类页
@@ -14,9 +19,13 @@ public class TriSetting{
 
     /** Tmail 动画速度挡位（1~5，默认3）。 */
     public static final String TMAIL_SPEED_KEY = "tri.tmail.animSpeed";
+    /** 以兼容模式运行 Tmail（使用旧版 UI 动效）。 */
+    public static final String TMAIL_COMPAT_KEY = "tri.tmail.compatMode";
 
     /** 是否已向设置界面添加“三角”设置页（防止 ClientLoadEvent 重复触发导致重复添加）。 */
     private static boolean settingsAdded = false;
+    /** 启动时快照的兼容模式值；运行中修改设置不会改变它，必须重启游戏。 */
+    private static boolean tmailCompatApplied = false;
 
     private TriSetting(){}
 
@@ -36,11 +45,39 @@ public class TriSetting{
         return tmailAnimMultiplierForStep(Core.settings.getInt(TMAIL_SPEED_KEY, 3));
     }
 
+    /** 是否以兼容模式运行 Tmail（旧版 UI 动效）；值在启动时快照，修改设置需重启生效。 */
+    public static boolean tmailCompatMode(){
+        return tmailCompatApplied;
+    }
+
+    /** 兼容模式修改后的重启提示；沿用原版 Mods.reload() 的 Core.app.exit() 退出方式。 */
+    private static void showTmailRestartDialog(){
+        BaseDialog dialog = new BaseDialog(Core.bundle.get("tri.tmail.compat.restart.title"));
+
+        // 文本与两个按钮放在同一个 Table 中，提示框直接显示这个 Table
+        Table panel = new Table();
+        panel.add(Core.bundle.get("tri.tmail.compat.restart"))
+            .wrap().width(420f).pad(16f).center().get().setAlignment(Align.center);
+        panel.row();
+
+        panel.button(Core.bundle.get("tri.tmail.compat.restartNow"), Icon.ok, () -> {
+            Log.info("Exiting to reload mods.");
+            Core.app.exit();
+        }).size(170f, 54f).pad(0f).row();
+
+        panel.button("@cancel", dialog::hide).size(170f, 54f).pad(0f);
+
+        dialog.cont.add(panel);
+        dialog.show();
+    }
+
     /**
      * 注册“三角”设置页。
      * 在 {@code triangle} 主类构造中调用一次即可。
      */
     public static void init(){
+        // 兼容模式只在启动时读取一次，运行中修改设置不会立即生效，必须重启游戏
+        tmailCompatApplied = Core.settings.getBool(TMAIL_COMPAT_KEY, false);
         // 在游戏设置界面新增“三角”设置页，含“启动时显示欢迎界面”开关，可随时重新打开弹窗
         Events.on(ClientLoadEvent.class, e -> {
             if(settingsAdded) return;
@@ -56,6 +93,7 @@ public class TriSetting{
                 t.sliderPref(TMAIL_SPEED_KEY, 3, 1, 5, 1,
                     value -> String.format(java.util.Locale.ROOT, "%.2f×",
                         tmailAnimMultiplierForStep(value)));
+                t.checkPref(TMAIL_COMPAT_KEY, false, value -> showTmailRestartDialog());
             });
         });
     }

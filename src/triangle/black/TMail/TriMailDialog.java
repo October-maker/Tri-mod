@@ -243,6 +243,10 @@ TmailLogo-1 / -2
      * 若收件箱已经打开，则直接刷新，不重复播放动画
      */
     public static void showWithIntro(boolean story){
+        if(TriSetting.tmailCompatMode()){
+            TriMailDialogLegacy.show(story);
+            return;
+        }
         if(Core.scene == null){
             show(story);
             return;
@@ -505,6 +509,10 @@ Tmail 页面内，动画结束后再调用 {@link #build(BaseDialog)}
 
     /** 打开收件箱并立即构建内容（不播放 Logo 动画；供程序化刷新使用）。story=true 剧情 / false 资讯*/
     public static void show(boolean story){
+        if(TriSetting.tmailCompatMode()){
+            TriMailDialogLegacy.show(story);
+            return;
+        }
         openInbox(story);
         build(inbox);
     }
