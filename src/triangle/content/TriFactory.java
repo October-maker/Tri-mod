@@ -1,5 +1,6 @@
 package triangle.content;
 
+import arc.Core;
 import arc.graphics.Color;
 import mindustry.content.Items;
 import mindustry.content.Liquids;
@@ -143,6 +144,8 @@ public class TriFactory {
                         craftTime = 60f;
                         powerUse = 1f;
                         requiresResearch = true;
+                        unlockCondition = Recipe.tech(TriItems.WSteel);
+                        unlockConditionText = Core.bundle.get("tri.recipe.unlock.manufactureWSteel");
                     }},
                     // 碎甲弹 LHESH：聚乙烯 + 钢 + TNT
                     new Recipe() {{

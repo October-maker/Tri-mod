@@ -74,7 +74,12 @@ public class TriInbox{
     }
 
     public static boolean isRead(TriMail mail){
-        return Core.settings.getBool(READ_PREFIX + mail.key, false);
+        return isRead(mail.key);
+    }
+
+    /** 按稳定 key 查询已读状态（供配方解锁条件等外部逻辑使用）。 */
+    public static boolean isRead(String mailKey){
+        return Core.settings.getBool(READ_PREFIX + mailKey, false);
     }
 
     public static void markRead(TriMail mail){
@@ -97,7 +102,12 @@ public class TriInbox{
 
     /** 附件是否已被收取。 */
     public static boolean attachmentCollected(TriMail mail){
-        return Core.settings.getBool(ATTACH_PREFIX + mail.key, false);
+        return attachmentCollected(mail.key);
+    }
+
+    /** 按稳定 key 查询附件是否已收取。 */
+    public static boolean attachmentCollected(String mailKey){
+        return Core.settings.getBool(ATTACH_PREFIX + mailKey, false);
     }
 
     /** 收取附件：标记为已收取并执行附件动作（如强制解锁科技）。 */

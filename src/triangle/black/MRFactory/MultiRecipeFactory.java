@@ -2,6 +2,7 @@ package triangle.black.MRFactory;
 
 import arc.Core;
 import arc.Events;
+import arc.func.Boolp;
 import arc.func.Floatp;
 import arc.graphics.Color;
 import arc.graphics.g2d.Draw;
@@ -30,6 +31,7 @@ import mindustry.core.UI;
 import mindustry.ctype.ContentType;
 import mindustry.ctype.UnlockableContent;
 import mindustry.game.EventType.ContentInitEvent;
+import mindustry.game.Objectives;
 import mindustry.gen.Icon;
 import mindustry.gen.Tex;
 import mindustry.gen.Unit;
@@ -367,21 +369,86 @@ public class MultiRecipeFactory extends GenericCrafter{
     }
 
     /**
+     * 原版科技树“研究条件”中显示的额外条件。
+     * 条件未完成时，ResearchDialog 会在节点详情里显示该项。
+     */
+    public static class UnlockConditionObjective implements Objectives.Objective {
+        public final Boolp condition;
+        public final String text;
+
+        public UnlockConditionObjective(Boolp condition, String text){
+            this.condition = condition;
+            this.text = text;
+        }
+
+        @Override
+        public boolean complete(){
+            if(condition == null) return true;
+            try{
+                return condition.get();
+            }catch(Throwable t){
+                Log.err("[triangle] recipe unlock condition failed.", t);
+                return false;
+            }
+        }
+
+        @Override
+        public String display(){
+            return text != null && !text.isEmpty() ? text : Core.bundle.get("tri.recipe.unlockCondition");
+        }
+    }
+
+    /**
      * 配方研究条目：承载研究消耗与名称，不进入数据库，只通过科技树节点展示。
      */
     public static class RecipeResearch extends UnlockableContent {
         /** 研究消耗。 */
         public ItemStack[] cost;
+        /** 额外解锁条件；为空表示无额外条件。 */
+        public arc.func.Boolp unlockCondition;
+        /** 科技树“研究条件”中显示的文字。 */
+        public String unlockConditionText;
+
         public RecipeResearch(String name) {
             super(name);
         }
+
         @Override
         public ContentType getContentType() {
             return ContentType.error;
         }
+
         @Override
         public ItemStack[] researchRequirements() {
             return cost == null ? ItemStack.empty : cost;
+        }
+
+        /** 条件不满足时即使在科技树里点击研究，也不能真正解锁。 */
+        @Override
+        public boolean unlocked(){
+            if(unlockCondition != null){
+                try{
+                    if(!unlockCondition.get()) return false;
+                }catch(Throwable t){
+                    Log.err("[triangle] recipe unlock condition failed.", t);
+                    return false;
+                }
+            }
+            return super.unlocked();
+        }
+
+        /** 条件不满足时拦截 unlock，避免科技树绕过条件。 */
+        @Override
+        public void unlock(){
+            if(unlockCondition != null){
+                try{
+                    if(!unlockCondition.get()) return;
+                }catch(Throwable t){
+                    Log.err("[triangle] recipe unlock condition failed.", t);
+                    return;
+                }
+            }
+            super.unlock();
         }
     }
 
@@ -394,6 +461,8 @@ public class MultiRecipeFactory extends GenericCrafter{
         String rname = factory.name + "-" + index;
         RecipeResearch c = new RecipeResearch(rname);
         c.cost = r.researchCost != null ? r.researchCost : r.inputItem.toArray(ItemStack.class);
+        c.unlockCondition = r.unlockCondition;
+        c.unlockConditionText = r.unlockConditionText;
         c.localizedName = researchName(factory, r, index);
         c.uiIcon = researchIcon(factory, r, rname);
         // 研究条目不注册进 Vars.content；hideDatabase=true 使数据库的 select 过滤将其排除（官方隐藏方式），databaseTabs 清空确保不归属任何 tab。
@@ -427,6 +496,9 @@ public class MultiRecipeFactory extends GenericCrafter{
             return;
         }
         TechTree.TechNode node = new TechTree.TechNode(null, child, child.researchRequirements());
+        if(child instanceof RecipeResearch research && research.unlockCondition != null){
+            node.objectives.add(new UnlockConditionObjective(research.unlockCondition, research.unlockConditionText));
+        }
         if (!context.children.contains(node)) {
             context.children.add(node);
         }
@@ -434,10 +506,19 @@ public class MultiRecipeFactory extends GenericCrafter{
         node.planet = context.planet;
     }
 
-    /** 配方是否因“需要研究且尚未解锁”而处于锁定状态；沙盒模式视为已解锁。 */
+    /** 配方是否因额外条件或“需要研究且尚未解锁”而处于锁定状态。 */
     public static boolean isLocked(Recipe r) {
         if (r == null) return false;
-        // 沙盒模式（无限资源/自由建造）下，需研究的配方视为已解锁（其他情况保持需研究解锁）
+        // unlockCondition 只约束需要研究的配方；普通配方即使误设条件也保持原行为。
+        if (r.requiresResearch && r.unlockCondition != null) {
+            try {
+                if (!r.unlockCondition.get()) return true;
+            } catch (Throwable t) {
+                Log.err("[triangle] recipe unlock condition failed.", t);
+                return true;
+            }
+        }
+        // 沙盒模式（无限资源/自由建造）下，需研究的配方视为已解锁
         if (Vars.state.rules.infiniteResources) return false;
         return r.requiresResearch && (r.research == null || !r.research.unlocked());
     }
