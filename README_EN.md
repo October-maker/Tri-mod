@@ -29,7 +29,7 @@ Currently in the planning, the release of new planets is usually due to the emer
 
 ---
 ### Regarding exception handling
-If an exception occurs after loading the module, you can submit an issue on the GitHub page or join the module discussion group (QQ:469358412) to provide feedback on the error content
+If an exception occurs after loading the module, you can submit an issue on the GitHub page or join the module discussion group (QQ:469358412) to provide feedback on the error content\
 Remember to attach the error text, and if you can find the crash log, please upload it as well (it is stored in the "crashes" folder under the game folder). Otherwise, the author and group friends can do nothing but offer you a divination(#｀-_ゝ-)
 
 ---
