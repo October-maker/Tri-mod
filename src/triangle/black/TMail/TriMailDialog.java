@@ -18,21 +18,23 @@ import arc.scene.ui.TextButton;
 import arc.scene.ui.layout.Table;
 import arc.scene.event.Touchable;
 import arc.scene.style.TextureRegionDrawable;
+import arc.scene.style.Drawable;
 import arc.struct.ObjectMap;
 import arc.struct.Seq;
 import arc.util.Align;
 import arc.util.Time;
 import mindustry.gen.Tex;
+import mindustry.gen.Icon;
 import mindustry.ui.Styles;
 import mindustry.ui.dialogs.BaseDialog;
 import triangle.black.TriDraw;
 
 /**
- * 三角通讯收件箱界面
+ * 三角通讯收件箱界
  * 每封邮件固定大小卡片（圆角矩形包裹：上发件人、中分割线、下内容，过长省略）
  * 卡片竖直向下居中排列、可滚动；顶部居中分类栏（带未读角标）：全部 / 已读 / 未读 / 历史
- * 列表为空时显示灰色提示；详情页限宽
- * 打开时先在页面内播放 TmailLogo 入场动画，动画结束后邮件卡片组滑入
+ * 列表为空时显示灰色提示；详情页限
+ * 打开时先在页面内播放 TmailLogo 入场动画，动画结束后邮件卡片组滑
  */
 public class TriMailDialog{
 
@@ -42,28 +44,28 @@ public class TriMailDialog{
     private static final float CARD_HEIGHT = 76f;
     private static final float DETAIL_WIDTH = 560f;
 
-    /** TmailLogo 分帧滑入时长（秒）
+    /** TmailLogo 分帧滑入时长（秒
 */
     private static final float LOGO_PIECE_DURATION = 0.55f;
-    /** TmailLogo-2 相对 -1 的出发延迟（秒），形成上下交错拼合
+    /** TmailLogo-2 相对 -1 的出发延迟（秒），形成上下交错拼
 */
     private static final float LOGO_PIECE_STAGGER = 0.08f;
     /** 两片拼合后到完整 Logo 替换之间的停顿（秒）
 */
     private static final float LOGO_ASSEMBLE_HOLD = 0.12f;
-    /** 完整 TmailLogo 从中央移动到左侧停靠位的时长（秒）
+    /** 完整 TmailLogo 从中央移动到左侧停靠位的时长（秒
 */
     private static final float LOGO_COVER_MOVE_DURATION = 0.5f;
     /** 分帧滑入前与拼合时的放大倍数
 */
     private static final float LOGO_ASSEMBLE_SCALE = 1.15f;
-    /** 分帧起点超出页面边缘的距离（像素）
+    /** 分帧起点超出页面边缘的距离（像素
 */
     private static final float LOGO_OFFSCREEN_MARGIN = 24f;
     /** TmailLogo 宽度占屏幕宽度的比例
 */
     private static final float LOGO_WIDTH_RATIO = 0.56f;
-    /** TmailLogo 最大宽度（像素），避免大屏上过大
+    /** TmailLogo 最大宽度（像素），避免大屏上过
 */
     private static final float LOGO_MAX_WIDTH = 1000f;
     /** TmailLogo 停靠 x 比例：屏幕左
@@ -89,20 +91,23 @@ inbox.cont 的局部坐标）
     private static BaseDialog inbox;
     private static Filter filter = Filter.ALL;
     /** 当前收件箱作用域：true=战役剧情邮件（战役星
-TMail）；false=模组资讯邮件（主菜单 TMail）
+TMail）；false=模组资讯邮件（主菜单 TMail
 */
     private static boolean storyScope = true;
-    /** 收件箱打开时的全屏毛玻璃背景
+    /** 收件箱打开时的全屏毛玻璃背
 */
     private static TriBlurBackground blur;
     /** 收件箱内容整
-Table（供整体滑入动画）
+Table（供整体滑入动画
 */
     private static Table lastContent;
     /** 当前打开的信件详
 table（画面中心），以及其对应的缩略卡片（用于关闭时恢复显示）
 */
     private static Table activeDetail, activeDetailCard;
+    /** 详情根节点内的实际卡片内容（负责在缩略图/详情两种外观间切换）
+*/
+    private static Table activeDetailMorph;
     /** 详情卡片背后 / 返回缩略图时的全屏灰色半透明背景
 */
     private static Table activeDetailBg;
@@ -112,7 +117,7 @@ table（画面中心），以及其对应的缩略卡片（用于关闭时恢复
     /** 当前详情对应的邮件（关闭动画中途重建缩略图外观时使用）
 */
     private static TriMail activeDetailMail;
-    /** 对应缩略图在屏幕上的起始位置/尺寸（关闭时 morph table 回到这里）
+    /** 对应缩略图在屏幕上的起始位置/尺寸（关闭时 morph table 回到这里
 */
     private static float detailStartX, detailStartY, detailStartW, detailStartH;
     /** 防止关闭动画期间重复触发关闭
@@ -121,8 +126,20 @@ table（画面中心），以及其对应的缩略卡片（用于关闭时恢复
     /** 回信面板相关：详情下方的回信按钮、左侧空白信纸、信纸下方的发信按钮
 */
     private static TextButton activeReplyButton, activeReplySend;
+    private static TextButton activeReplyMiniButton, activeReplyCollapseButton;
     private static Table activeReplyPaper;
+    private static Table activeReplyPaperContent;
     private static TriMail activeReplyMail;
+    /** 回信纸收起按钮尺
+/ 收起展开动画时长
+*/
+    private static final float REPLY_MINI_SIZE = 44f;
+    private static final float REPLY_ICON_SIZE = 20f;
+    private static final float REPLY_ICON_FADE = 0.15f;
+    private static final float REPLY_COLLAPSE_DURATION = 0.35f;
+    /** 收起/展开动画进行中，防止重复点击
+*/
+    private static boolean replyToggleAnimating;
     /** 回信纸展开/按钮滑出/状态停
 打字机延迟时长（秒）
 */
@@ -130,6 +147,7 @@ table（画面中心），以及其对应的缩略卡片（用于关闭时恢复
     private static final float REPLY_SLIDE_DURATION = 0.25f;
     private static final float REPLY_PAPER_DELAY = 0.4f;
     private static final float REPLY_SENT_DURATION = 1.5f;
+    private static final float REPLY_PAPER_EXIT_DURATION = 0.2f;
     private static final float REPLY_GAP = 16f;
     /** 详情背后的全屏透明按钮：点击详情卡片外的部
 
@@ -142,7 +160,7 @@ refreshReadState 更新未读角标
 */
     private static final TextButton[] catButtons = new TextButton[4];
     private static final Filter[] CATS = { Filter.ALL, Filter.READ, Filter.UNREAD, Filter.HISTORY };
-    /** 当前邮件列表 Table（scroll 内容），供“未读”分类下移除已读卡片（轻量刷新，不重建收件箱）
+    /** 当前邮件列表 Table（scroll 内容），供“未读”分类下移除已读卡片（轻量刷新，不重建收件箱
 */
     private static Table listTable;
     /** 已构建卡片的发件
@@ -156,10 +174,10 @@ refreshReadState 局部更新未
 3/4 处）：打开详情时向右滑出、关闭详情后滑回此处
 */
     private static float contentHomeX, contentHomeY;
-    /** 收件箱内容滑入时长（先快后慢）
+    /** 收件箱内容滑入时长（先快后慢
 */
     private static final float SLIDE_IN_DURATION = 0.4f;
-    /** 打开/关闭详情时，背景 content 滑出（加速）/滑回（减速）时长（≤0.2s）
+    /** 打开/关闭详情时，背景 content 滑出（加速）/滑回（减速）时长（≤0.2s
 */
     private static final float CONTENT_SWEEP_DURATION = 0.2f;
 
@@ -174,14 +192,14 @@ TmailLogo 入场动画
 
     /**
      * 先播
-TmailLogo 入场动画，再打开战役剧情收件箱
+TmailLogo 入场动画，再打开战役剧情收件
      */
     public static void showWithIntro(){
         showWithIntro(true);
     }
 
     /**
-     * 先打开 Tmail 页面，再播放 TmailLogo 入场动画；动画结束后邮件卡片组滑入
+     * 先打开 Tmail 页面，再播放 TmailLogo 入场动画；动画结束后邮件卡片组滑
      *
      * <p>流程：立即创建并显示收件箱窗口（毛玻璃背
 + 空内容）
@@ -226,6 +244,7 @@ Tmail 页面内，动画结束后再调用 {@link #build(BaseDialog)}
                 if(activeDetail != null){
                     activeDetail.remove();
                     activeDetail = null;
+                    activeDetailMorph = null;
                     activeDetailCard = null;
                 }
                 activeDetailMail = null;
@@ -252,18 +271,14 @@ Tmail 页面内，动画结束后再调用 {@link #build(BaseDialog)}
     }
 
     /**
-     * 在已打开
-Tmail 页面内播
-TmailLogo 组合动画
+     * 在已打开Tmail 页面内播TmailLogo 组合动画
      *
      * <p>与开始界面（TriWelcome）类似：
      * TmailLogo-1 从页面上方滑入、TmailLogo-2 从页面下方滑入，两片在页面中央拼合；
-     * 随后完整
-TmailLogo 覆盖并替换两片，移动到页面左侧停靠；
+     * 随后完整TmailLogo 覆盖并替换两片，移动到页面左侧停靠；
      * 动画结束后移除黑色遮罩并构建/滑入邮件卡片
      *
-     * <p>整个 Logo 层是 {@code inbox.cont} 的子节点，与 content 一样位
-Tmail 页面内部
+     * <p>整个 Logo 层是 {@code inbox.cont} 的子节点，与 content 一样位Tmail 页面内部
      */
     private static void playLogoIntro(boolean story){
         cancelLogoIntro();
@@ -381,7 +396,7 @@ Tmail 页面内部
         logoIntro = layer;
     }
 
-    /** 移除当前 TmailLogo 层（关闭页面、重复打开或直接刷新时调用）
+    /** 移除当前 TmailLogo 层（关闭页面、重复打开或直接刷新时调用
 */
     private static void cancelLogoIntro(){
         if(logoIntro != null){
@@ -391,9 +406,7 @@ Tmail 页面内部
         tmailLogoTable = null;
     }
 
-    /** 打开/关闭信件详情时，
-TmailLogo 移到屏幕中央或移回左侧停靠位
-*/
+    /** 打开/关闭信件详情时，TmailLogo 移到屏幕中央或移回左侧停靠位*/
     private static void moveLogoToDetail(boolean centered){
         if(tmailLogoTable == null) return;
         float x = centered ? logoCenterX : logoHomeX;
@@ -402,18 +415,15 @@ TmailLogo 移到屏幕中央或移回左侧停靠位
         tmailLogoTable.actions(Actions.moveTo(x, y, LOGO_DETAIL_MOVE_DURATION, Interp.pow2Out));
     }
 
-    /** 打开收件箱并立即构建内容（不播放 Logo 动画；供程序化刷新使用）。story=true 剧情 / false 资讯
-*/
+    /** 打开收件箱并立即构建内容（不播放 Logo 动画；供程序化刷新使用）。story=true 剧情 / false 资讯*/
     public static void show(boolean story){
         openInbox(story);
         build(inbox);
     }
 
-    /** 重建收件箱内容（删除
-content 后，新建 content 并从屏幕右外侧滑入右 3/4 处）
-     *  删除
-content 的逻辑不内置在本方法——调用方须在调用前自行移除旧 content
-     *  （不同调用方可按不同样式删除：直接清空、淡出、滑出等）
+    /** 重建收件箱内容（删除content 后，新建 content 并从屏幕右外侧滑入右 3/4 处）
+     *  删除content 的逻辑不内置在本方法——调用方须在调用前自行移除旧 content
+     *  （不同调用方可按不同样式删除：直接清空、淡出、滑出等
 */
     private static void build(BaseDialog dlg){
         // 清空 content 的单元格（Element.remove 不会移除 Table  cell），再放 Logo
@@ -426,11 +436,8 @@ content 的逻辑不内置在本方法——调用方须在调用前自行移除
     }
 
     /**
-     * 清空 Tmail 页面内的 content 单元格，但保
-TmailLogo 层
-     * Table.clearChildren 会连
-cell 一起清除；因此先保
-Logo 层，清空后再重新挂回
+     * 清空 Tmail 页面内的 content 单元格，但保TmailLogo
+     * Table.clearChildren 会连cell 一起清除；因此先保 Logo 层，清空后再重新挂回
      */
     private static void clearPage(){
         Table logo = logoIntro;
@@ -443,10 +450,7 @@ Logo 层，清空后再重新挂回
         lastContent = null;
     }
 
-    /** 新建收件
-content 卡片列表：在屏幕右外侧新建（分类
-+ 卡片列表），随后滑入
-3/4 处
+    /** 新建收件content 卡片列表：在屏幕右外侧新建（分类+ 卡片列表），随后滑入3/4
      *  不内置删除旧 content 的逻辑——调用方须在调用前自行移除旧 content（可按不同样式删除）
      *  @param dlg 收件箱对话框；@param all 已解锁邮件列表快照；@param slideDuration 滑入时长（秒），可定制效
 */
@@ -491,15 +495,15 @@ content 卡片列表：在屏幕右外侧新建（分类
 
         dlg.cont.add(content).grow();
         // 先让父布局（cont）把 content 排到正确尺寸/位置（grow 填满），再让 content 子元素布局
-        // 随后冻结布局：位置改由手动控制（供整体滑入动画，不被 Table 布局覆盖）
+        // 随后冻结布局：位置改由手动控制（供整体滑入动画，不被 Table 布局覆盖
         dlg.cont.validate();
         content.validate();
         content.setLayoutEnabled(false);
         lastContent = content;
 
-        // 详情页存在时，点 Tmail 主界面（收件箱区域） 触发详情页关闭（避免叠加次序问题）
+        // 详情页存在时，点 Tmail 主界面（收件箱区域） 触发详情页关闭（避免叠加次序问题
         //  touchDown（按下瞬间）：先于子元素（卡片） touchUp/clicked 触发
-        // 因此点卡片时先关闭旧详情、随后卡片再打开新详情，不会误关新开的详情
+        // 因此点卡片时先关闭旧详情、随后卡片再打开新详情，不会误关新开的详
         content.addListener(new ClickListener(){
             @Override public boolean touchDown(InputEvent event, float x, float y, int pointer, KeyCode button){
                 if(activeDetail != null){
@@ -510,7 +514,7 @@ content 卡片列表：在屏幕右外侧新建（分类
         });
 
         // 方案1：延迟期间隐 content（本帧完全不可见，杜绝“中间闪 闪烁”）
-        // 延迟一帧后（此 Dialog.show()/父布局已稳定）在回调内定位屏幕右外 + 注册滑入动画—
+        // 延迟一帧后（此 Dialog.show()/父布局已稳定）在回调内定位屏幕右外 + 注册滑入动画
         // 定位动作发生在布局稳定之后，不会再被父 cont 的布局 validate 覆盖（setLayoutEnabled 只冻 content 自身布局，不阻止父重排）
         content.visible = false;
         Time.runTask(1f, () -> {
@@ -550,7 +554,7 @@ content 卡片列表：在屏幕右外侧新建（分类
         catButtons[catIndex(f)] = b; // 记录引用，供 refreshReadState 更新未读角标
     }
 
-    /** 分类栏按钮下标（ALL/READ/UNREAD/HISTORY 顺序）
+    /** 分类栏按钮下标（ALL/READ/UNREAD/HISTORY 顺序
 */
     private static int catIndex(Filter f){
         for(int i = 0; i < 4; i++) if(CATS[i] == f) return i;
@@ -559,7 +563,7 @@ content 卡片列表：在屏幕右外侧新建（分类
 
     /** 仅刷新已
 未读状态：更新分类栏未读角标；局部更新已存在卡片的发件人高亮；若当前是“未读”分类，将已读信件从列表移除
-     *  不重建整个收件箱（不 clearChildren cont），因此不会打断 content 的滑回动画
+     *  不重建整个收件箱（不 clearChildren cont），因此不会打断 content 的滑回动
 */
     private static void refreshReadState(){
         if(inbox == null || !inbox.isShown()) return;
@@ -630,7 +634,7 @@ content 卡片列表：在屏幕右外侧新建（分类
         return card;
     }
 
-    /** 构建与缩略图一致的卡片外观（不注册点击、不覆盖 senderLabels），供详情形变动画使用
+    /** 构建与缩略图一致的卡片外观（不注册点击、不覆盖 senderLabels），供详情形变动画使
 */
     private static void buildCardContent(Table card, TriMail mail){
         buildCardContent(card, mail, TriInbox.isRead(mail));
@@ -659,7 +663,7 @@ content 卡片列表：在屏幕右外侧新建（分类
     /**
      * 打开一封邮件：从被点击缩略卡片的屏幕位置生成一
 morph table
-     * 先保持卡片外观移动到画面中央，途中切换为详情内容
+     * 先保持卡片外观移动到画面中央，途中切换为详情内
      */
     private static void openMail(TriMail mail, Table mailCard){
         // 先记录点击时的已读外观，确保 morph 初始缩略图与用户看到的卡片一
@@ -682,7 +686,7 @@ morph table
         detailStartY = cardPos.y;
         // 缩略图卡片统一 list.add(card(m)).size(CARD_WIDTH, CARD_HEIGHT) 布局
         // 不读 Table.getWidth()/getHeight()：Table 的实测尺寸可能包含布局/内边距差异，
-        // 会导 morph Table 初始高度与缩略图对不上
+        // 会导 morph Table 初始高度与缩略图对不
         detailStartW = CARD_WIDTH;
         detailStartH = CARD_HEIGHT;
 
@@ -727,11 +731,17 @@ morph table
         // morph table 初始只放缩略图内容，不再包含隐藏的详情内容，避免其行 换行影响初始高度
         Table morph = new Table();
         buildCardContent(morph, mail, wasRead);
-        morph.setBounds(detailStartX, detailStartY, detailStartW, detailStartH);
-        Core.scene.root.addChild(morph);
-        morph.toFront();
 
-        activeDetail = morph;
+        // 详情根节点：morph 只是它的子卡片；回信按钮也挂在根节点上，
+        // 这样卡片收回/缩放时按钮会作为子节点一起移动
+        Table detailRoot = new Table();
+        detailRoot.add(morph).grow();
+        detailRoot.setBounds(detailStartX, detailStartY, detailStartW, detailStartH);
+        Core.scene.root.addChild(detailRoot);
+        detailRoot.toFront();
+
+        activeDetail = detailRoot;
+        activeDetailMorph = morph;
         activeDetailCard = mailCard;
         activeDetailMail = mail;
 
@@ -739,14 +749,14 @@ morph table
         float targetY = sh / 2f - dh / 2f;
 
         // 位置/尺寸同步过渡；正好在中点时替换为详情内容
-        morph.actions(Actions.parallel(
+        detailRoot.actions(Actions.parallel(
             Actions.moveTo(targetX, targetY, MORPH_DURATION, Interp.pow2Out),
             Actions.sizeTo(dw, dh, MORPH_DURATION, Interp.pow2Out)
         ));
-        morph.addAction(Actions.sequence(
+        detailRoot.addAction(Actions.sequence(
             Actions.delay(MORPH_DURATION / 2f),
             Actions.run(() -> {
-                if(activeDetail != morph) return;
+                if(activeDetail != detailRoot) return;
                 morph.clearChildren();
                 morph.background(TriDraw.whiteOutlined(Styles.grayPanel));
                 buildDetailContent(morph, mail, () -> {
@@ -755,11 +765,11 @@ morph table
                 morph.validate();
             })
         ));
-        morph.addAction(Actions.sequence(
+        detailRoot.addAction(Actions.sequence(
             Actions.delay(MORPH_DURATION),
             Actions.run(() -> {
-                if(activeDetail == morph){
-                    morph.setBounds(targetX, targetY, dw, dh);
+                if(activeDetail == detailRoot){
+                    detailRoot.setBounds(targetX, targetY, dw, dh);
                     // 详情卡片到位后，才显示回信按 / 已回信信
                     setupReplyUi(mail);
                 }
@@ -792,11 +802,13 @@ morph table
         if(closingDetail && !immediate) return;
 
         if(immediate){
+            closingDetail = false;
             removeReplyUi();
             detail.clearActions();
             detail.remove();
             removeDetailOverlays();
             activeDetail = null;
+            activeDetailMorph = null;
             activeDetailCard = null;
             activeDetailMail = null;
             closingDetail = false;
@@ -811,7 +823,7 @@ morph table
         }
 
         closingDetail = true;
-        removeReplyUi();
+        animateReplyUiOut();
         TriMail mail = activeDetailMail;
 
         // content 卡片组同步回移， morph table 同时到位
@@ -832,10 +844,13 @@ morph table
             Actions.delay(MORPH_DURATION / 2f),
             Actions.run(() -> {
                 if(activeDetail != detail || mail == null) return;
-                detail.clearChildren();
-                detail.background(TriDraw.whiteOutlined(Styles.grayPanel));
-                buildCardContent(detail, mail);
-                detail.validate();
+                Table morph = activeDetailMorph;
+                if(morph != null){
+                    morph.clearChildren();
+                    morph.background(TriDraw.whiteOutlined(Styles.grayPanel));
+                    buildCardContent(morph, mail);
+                    morph.validate();
+                }
             })
         ));
         // 双方到位：删 morph table，恢复原缩略
@@ -843,19 +858,21 @@ morph table
             Actions.delay(MORPH_DURATION),
             Actions.run(() -> {
                 if(activeDetail != detail) return;
+                closingDetail = false;
+                removeReplyUi();
                 detail.remove();
                 removeDetailOverlays();
                 activeDetail = null;
+                activeDetailMorph = null;
                 activeDetailCard = null;
                 activeDetailMail = null;
-                closingDetail = false;
                 if(mailCard != null) mailCard.visible = true;
                 refreshReadState();
             })
         ));
     }
 
-    /** 移除详情相关的全屏点击层与灰色背景
+    /** 移除详情相关的全屏点击层与灰色背
 */
     private static void removeDetailOverlays(){
         if(activeBackdrop != null){
@@ -868,20 +885,86 @@ morph table
         }
     }
 
-    /** 详情卡片到位后，按回信状态显示回信按钮或直接展开已回信信纸
+    /** 详情卡片到位后，按回信状态显示回信按钮或直接展开已回信信
 */
     private static void setupReplyUi(TriMail mail){
         if(activeDetail == null || activeDetailMail != mail || !mail.story || replyTextOf(mail).isEmpty()) return;
 
         activeReplyMail = mail;
         if(TriInbox.isReplied(mail)){
-            openReplyPaper(mail, true);
+            showReplyMiniButton(mail);
         }else{
             showReplyButton(mail);
         }
     }
 
-    /** 在详情卡片下方显示“回信”按钮，从卡片底部被覆盖处向下滑出
+    /** 已回信邮件首次打开详情时，回信区默认收起为详情卡左上角外侧的小图标按钮
+*/
+    private static void showReplyMiniButton(TriMail mail){
+        if(activeDetail == null || !activeDetail.hasParent()) return;
+        removeReplyMiniButton();
+
+        TextButton mini = iconButton();
+        // 挂在详情卡上，详情卡移动/缩放时按钮会一起跟随
+        mini.setBounds(-REPLY_MINI_SIZE - 10f,
+            activeDetail.getHeight() - REPLY_MINI_SIZE,
+            REPLY_MINI_SIZE, REPLY_MINI_SIZE);
+        mini.clicked(() -> {
+            if(replyToggleAnimating) return;
+            replyToggleAnimating = true;
+            expandReplyPaperFromMini(mail);
+        });
+        activeDetail.addChild(mini);
+        activeReplyMiniButton = mini;
+        fadeReplyIconIn(mini);
+    }
+
+    /** 无文字图标按钮；当前先用内置 chat 图标占位，之后替换为自建图标
+*/
+    private static TextButton iconButton(){
+        TextButton button = new TextButton("");
+        button.clearChildren();
+        Image icon = new Image(Icon.chat);
+        icon.color.a = 0f; // 默认隐藏，避免按钮刚创建时图标提前出
+        button.add(icon).size(REPLY_ICON_SIZE);
+        button.setSize(REPLY_MINI_SIZE, REPLY_MINI_SIZE);
+        return button;
+    }
+
+    private static Image iconOf(TextButton button){
+        if(button == null) return null;
+        for(Element child : button.getChildren()){
+            if(child instanceof Image) return (Image)child;
+        }
+        return null;
+    }
+
+    /** 按钮图标渐隐；与信纸缩放动画同时进行
+*/
+    private static void fadeReplyIconOut(TextButton button, float duration){
+        Image icon = iconOf(button);
+        if(icon == null) return;
+        icon.clearActions();
+        icon.actions(Actions.alpha(0f, duration, Interp.pow2In));
+    }
+
+    /** 按钮图标渐显；与信纸缩放动画同时进行
+*/
+    private static void fadeReplyIconIn(TextButton button, float duration){
+        Image icon = iconOf(button);
+        if(icon == null) return;
+        icon.clearActions();
+        icon.color.a = 0f;
+        icon.actions(Actions.alpha(1f, duration, Interp.pow2Out));
+    }
+
+    /** 静态出现（无缩放）时使用的短渐显
+*/
+    private static void fadeReplyIconIn(TextButton button){
+        fadeReplyIconIn(button, REPLY_ICON_FADE);
+    }
+
+    /** 在详情卡片下方显示“回信”按钮，从卡片底部被覆盖处向下滑
 */
     private static void showReplyButton(TriMail mail){
         if(activeDetail == null || !activeDetail.hasParent()) return;
@@ -891,12 +974,13 @@ morph table
         button.setSize(120f, 44f);
         button.clicked(() -> openReplyPaper(mail, false));
 
-        float x = activeDetail.x + activeDetail.getWidth() / 2f - button.getWidth() / 2f;
-        float endY = activeDetail.y - button.getHeight() - 10f;
-        float startY = activeDetail.y - button.getHeight() / 2f; // 一半藏在卡片后
+        // 作为详情根节点的子节点放在卡片下面，卡片移动/缩小时按钮会跟随
+        float x = activeDetail.getWidth() / 2f - button.getWidth() / 2f;
+        float endY = -button.getHeight() - 10f;
+        float startY = -button.getHeight() / 2f;
+
         button.setPosition(x, startY);
-        Core.scene.root.addChild(button);
-        activeDetail.toFront(); // 卡片盖住按钮上半部分
+        activeDetail.addChildAt(0, button); // 位于内部卡片之下，被卡片遮住上半部分
         activeReplyButton = button;
 
         button.actions(Actions.moveTo(x, endY, REPLY_SLIDE_DURATION, Interp.pow2Out));
@@ -910,6 +994,8 @@ morph table
         if(activeDetail == null || !activeDetail.hasParent()) return;
 
         removeReplyButton();
+        removeReplyMiniButton();
+        removeReplyCollapseButton();
         removeReplyPaper();
         activeReplyMail = mail;
 
@@ -925,20 +1011,45 @@ morph table
         activeDetail.clearActions();
         activeDetail.actions(Actions.moveTo(detailX, y, REPLY_LAYOUT_DURATION, Interp.pow2Out));
 
+        // 信纸根节点：内容卡片与发信按钮都是它的子节点，移 缩小时会一起跟
+        Table paperRoot = new Table();
+        paperRoot.setBounds(-w - 24f, y, w, h);
+
         Table paper = new Table();
         paper.top().left();
         paper.background(TriDraw.whiteOutlined(Styles.grayPanel));
-        paper.setBounds(left, y, w, h);
-        Core.scene.root.addChild(paper);
-        activeDetail.toFront(); // 两张卡片不重叠，但保持详情在上层
-        activeReplyPaper = paper;
+        paperRoot.add(paper).grow();
+
+        // 收起按钮挂在详情卡上，而不是会缩放的 paperRoot 上：
+        // 坐标固定在详情卡左侧、信纸右上角附近，信纸缩放时图标不会跟着乱跑。
+        TextButton collapse = iconButton();
+        float collapseX = -REPLY_GAP - REPLY_MINI_SIZE - 8f;
+        float collapseY = h - REPLY_MINI_SIZE - 8f;
+        collapse.setPosition(collapseX, collapseY);
+        collapse.visible = alreadyReplied; // 回信后才显示收起按钮
+        collapse.clicked(() -> {
+            if(replyToggleAnimating || !TriInbox.isReplied(mail)) return;
+            replyToggleAnimating = true;
+            collapseReplyPaper(mail);
+        });
+        activeDetail.addChild(collapse);
+
+        Core.scene.root.addChild(paperRoot);
+        activeDetail.toFront(); // 让详情卡上的收起按钮盖在信纸边缘之上
+        activeReplyPaper = paperRoot;
+        activeReplyPaperContent = paper;
+        activeReplyCollapseButton = collapse;
+        if(alreadyReplied) fadeReplyIconIn(collapse);
+
+        // 从屏幕左侧外滑入，先快后慢，落到详情卡左
+        paperRoot.actions(Actions.moveTo(left, y, REPLY_LAYOUT_DURATION, Interp.pow2Out));
 
         if(alreadyReplied){
             buildReplyPaperFull(paper, mail);
         }else{
             // 空白信纸停留一小段时间后，再播放回信打字机
             Time.runTask(REPLY_PAPER_DELAY * 60f, () -> {
-                if(activeReplyPaper == paper){
+                if(activeReplyPaperContent == paper){
                     buildReplyPaperTyping(paper, mail);
                 }
             });
@@ -946,7 +1057,7 @@ morph table
     }
 
     /** 信纸抬头：发件人 / 收件
-/ 分割线
+/ 分割
 */
     private static void buildReplyPaperHeader(Table paper, TriMail mail){
         paper.clearListeners();
@@ -966,7 +1077,7 @@ morph table
     }
 
     /** 已回
-发送完成后的完整信纸内容
+发送完成后的完整信纸内
 */
     private static void buildReplyPaperFull(Table paper, TriMail mail){
         paper.clearChildren();
@@ -1002,23 +1113,23 @@ morph table
         typedRef[0] = typed;
     }
 
-    /** 在信纸下方显示“发信”按钮，从信纸底部被覆盖处向下滑出
+    /** 在信纸下方显示“发信”按钮，从信纸底部被覆盖处向下滑
 */
     private static void showReplySendButton(Table paper, TriMail mail){
-        if(activeReplyPaper != paper) return;
+        if(activeReplyPaperContent != paper || activeReplyPaper == null) return;
         removeReplySend();
 
         TextButton send = new TextButton(bundle("tri.mail.send"));
         send.setSize(110f, 44f);
         send.clicked(() -> sendReply(paper, mail));
 
-        float x = paper.x + paper.getWidth() / 2f - send.getWidth() / 2f;
-        float endY = paper.y - send.getHeight() - 10f;
-        float startY = paper.y - send.getHeight() / 2f;
+        Table root = activeReplyPaper;
+        float x = root.getWidth() / 2f - send.getWidth() / 2f;
+        float endY = -send.getHeight() - 10f;
+        float startY = -send.getHeight() / 2f;
 
         send.setPosition(x, startY);
-        Core.scene.root.addChild(send);
-        paper.toFront(); // 信纸盖住按钮上半部分
+        root.addChildAt(0, send); // 位于信纸内容之下，被信纸遮住上半部分
         activeReplySend = send;
 
         send.actions(Actions.moveTo(x, endY, REPLY_SLIDE_DURATION, Interp.pow2Out));
@@ -1027,11 +1138,17 @@ morph table
     /** 发信：执行原回调、记录已回信、显示“已发信”，随后恢复完整回信正文
 */
     private static void sendReply(Table paper, TriMail mail){
-        if(activeReplyPaper != paper || TriInbox.isReplied(mail)) return;
+        if(activeReplyPaperContent != paper || TriInbox.isReplied(mail)) return;
 
         if(mail.onReply != null) mail.onReply.run();
         TriInbox.markReplied(mail);
         removeReplySend();
+
+        // 回信完成后才显示右上角收起按
+        if(activeReplyCollapseButton != null){
+            activeReplyCollapseButton.visible = true;
+            fadeReplyIconIn(activeReplyCollapseButton);
+        }
 
         paper.clearChildren();
         paper.center();
@@ -1040,16 +1157,231 @@ morph table
         refreshReadState();
 
         Time.runTask(REPLY_SENT_DURATION * 60f, () -> {
-            if(activeReplyPaper == paper){
+            if(activeReplyPaperContent == paper){
                 buildReplyPaperFull(paper, mail);
             }
         });
     }
 
+    /**
+     * 关闭详情时让回信相关元素先回收：
+     * - 回信按钮滑回详情卡片底部被覆盖的位置
+     * - 发信按钮滑回信纸底部被覆盖的位置
+     * - 已展开的信纸加速向左滑出屏幕
+     */
+    private static void animateReplyUiOut(){
+        // 关闭触发瞬间立即移除回信 icon；信纸/发信按钮仍按各自动画回收
+        removeReplyMiniButton();
+        removeReplyCollapseButton();
+        if(activeReplyPaper != null){
+            Table paper = activeReplyPaper;
+            paper.clearActions();
+
+            if(activeReplySend != null){
+                TextButton send = activeReplySend;
+                send.clearActions();
+                float targetY = -send.getHeight() / 2f;
+                send.actions(
+                    Actions.moveTo(send.x, targetY, REPLY_PAPER_EXIT_DURATION, Interp.pow2Out),
+                    Actions.run(() -> {
+                        if(activeReplySend == send){
+                            send.remove();
+                            activeReplySend = null;
+                        }
+                    })
+                );
+            }
+
+            // 信纸向左侧屏幕外加速移出（先慢后快 pow2In
+            paper.actions(
+                Actions.moveTo(-paper.getWidth() - 24f, paper.y, REPLY_PAPER_EXIT_DURATION, Interp.pow2In),
+                Actions.run(() -> {
+                    if(activeReplyPaper == paper){
+                        removeReplyPaper();
+                    }
+                })
+            );
+        }else if(activeReplyButton != null){
+            TextButton button = activeReplyButton;
+            button.clearActions();
+            float targetY = -button.getHeight() / 2f;
+            button.actions(
+                Actions.moveTo(button.x, targetY, REPLY_SLIDE_DURATION, Interp.pow2Out),
+                Actions.run(() -> {
+                    if(activeReplyButton == button){
+                        button.remove();
+                        activeReplyButton = null;
+                    }
+                })
+            );
+        }
+    }
+
+    /**
+     * 回信纸收起：信纸缩小到左上角小按钮，详情卡同时回到屏幕中央
+     * 中点隐藏信纸文字并出现图标，结尾替换为真正的小按钮
+     */
+    private static void collapseReplyPaper(TriMail mail){
+        Table root = activeReplyPaper;
+        Table content = activeReplyPaperContent;
+        if(root == null || content == null || activeDetail == null) return;
+
+        removeReplySend();
+        TextButton collapse = activeReplyCollapseButton;
+        if(collapse != null){
+            // 按钮边框立即消失，缩放中的边框由信纸 table 自己承担；仅图标继续渐隐
+            collapse.setStyle(Styles.nonet);
+            fadeReplyIconOut(collapse, REPLY_COLLAPSE_DURATION / 2f);
+        }
+
+        float sw = Core.graphics.getWidth();
+        float w = activeDetail.getWidth(), h = activeDetail.getHeight();
+        float detailX = (sw - w) / 2f;
+        float y = activeDetail.y;
+        float miniX = detailX - REPLY_MINI_SIZE - 10f;
+        float miniY = y + h - REPLY_MINI_SIZE;
+
+        activeDetail.clearActions();
+        activeDetail.actions(Actions.moveTo(detailX, y, REPLY_COLLAPSE_DURATION, Interp.pow2Out));
+
+        root.clearActions();
+        root.actions(Actions.parallel(
+            Actions.moveTo(miniX, miniY, REPLY_COLLAPSE_DURATION, Interp.pow2Out),
+            Actions.sizeTo(REPLY_MINI_SIZE, REPLY_MINI_SIZE, REPLY_COLLAPSE_DURATION, Interp.pow2Out)
+        ));
+        root.addAction(Actions.sequence(
+            Actions.delay(REPLY_COLLAPSE_DURATION / 2f),
+            Actions.run(() -> {
+                if(activeReplyPaper != root) return;
+                content.visible = false;
+                root.background(TriDraw.whiteOutlined(Styles.grayPanel));
+                if(collapse != null){
+                    collapse.remove();
+                    activeReplyCollapseButton = null;
+                }
+
+                // 收缩过半时小按钮出现，图标在后半段随信纸缩小同步渐显
+                TextButton mini = iconButton();
+                mini.setBounds(-REPLY_MINI_SIZE - 10f,
+                    activeDetail.getHeight() - REPLY_MINI_SIZE,
+                    REPLY_MINI_SIZE, REPLY_MINI_SIZE);
+                mini.clicked(() -> {
+                    if(replyToggleAnimating) return;
+                    replyToggleAnimating = true;
+                    expandReplyPaperFromMini(mail);
+                });
+                activeDetail.addChild(mini);
+                activeReplyMiniButton = mini;
+                fadeReplyIconIn(mini, REPLY_COLLAPSE_DURATION / 2f);
+            })
+        ));
+        root.addAction(Actions.sequence(
+            Actions.delay(REPLY_COLLAPSE_DURATION),
+            Actions.run(() -> {
+                if(activeReplyPaper != root) return;
+                root.remove();
+                activeReplyPaper = null;
+                activeReplyPaperContent = null;
+                activeReplyMail = mail;
+                replyToggleAnimating = false;
+            })
+        ));
+    }
+
+    /** 从小按钮展开回信纸：信纸从按钮尺寸放大到完整大小，详情卡右移
+*/
+    private static void expandReplyPaperFromMini(TriMail mail){
+        if(activeDetail == null) return;
+        TextButton mini = activeReplyMiniButton;
+        removeReplyCollapseButton();
+        removeReplyPaper();
+        activeReplyMail = mail;
+
+        float w = activeDetail.getWidth(), h = activeDetail.getHeight();
+        float sw = Core.graphics.getWidth();
+        float gap = REPLY_GAP;
+        float left = (sw - (w * 2f + gap)) / 2f;
+        float detailX = left + w + gap;
+        float y = activeDetail.y;
+        float startX = (sw - w) / 2f - REPLY_MINI_SIZE - 10f;
+        float startY = y + h - REPLY_MINI_SIZE;
+
+        activeDetail.clearActions();
+        activeDetail.actions(Actions.moveTo(detailX, y, REPLY_COLLAPSE_DURATION, Interp.pow2Out));
+
+        Table root = new Table();
+        root.setBounds(startX, startY, REPLY_MINI_SIZE, REPLY_MINI_SIZE);
+        root.background(TriDraw.whiteOutlined(Styles.grayPanel));
+
+        Table paper = new Table();
+        paper.top().left();
+        paper.background(TriDraw.whiteOutlined(Styles.grayPanel));
+        paper.visible = false;
+        root.add(paper).grow();
+
+        TextButton collapse = iconButton();
+        collapse.setPosition(-REPLY_GAP - REPLY_MINI_SIZE - 8f,
+            h - REPLY_MINI_SIZE - 8f);
+        collapse.visible = false;
+        collapse.clicked(() -> {
+            if(replyToggleAnimating || !TriInbox.isReplied(mail)) return;
+            replyToggleAnimating = true;
+            collapseReplyPaper(mail);
+        });
+        activeDetail.addChild(collapse);
+
+        Core.scene.root.addChild(root);
+        activeDetail.toFront(); // 小按钮/收起按钮属于详情卡，保持在信纸上方
+        if(mini != null){
+            mini.toFront();
+            // 边框立即消失，展开中的边框由信纸 table 负责
+            mini.setStyle(Styles.nonet);
+            fadeReplyIconOut(mini, REPLY_COLLAPSE_DURATION / 2f);
+        }
+        activeReplyPaper = root;
+        activeReplyPaperContent = paper;
+        activeReplyCollapseButton = collapse;
+
+        root.actions(Actions.parallel(
+            Actions.moveTo(left, y, REPLY_COLLAPSE_DURATION, Interp.pow2Out),
+            Actions.sizeTo(w, h, REPLY_COLLAPSE_DURATION, Interp.pow2Out)
+        ));
+        root.addAction(Actions.sequence(
+            Actions.delay(REPLY_COLLAPSE_DURATION / 2f),
+            Actions.run(() -> {
+                if(activeReplyPaper != root) return;
+                if(activeReplyMiniButton == mini){
+                    mini.remove();
+                    activeReplyMiniButton = null;
+                }
+                paper.visible = true;
+                root.background(null);
+                collapse.visible = TriInbox.isReplied(mail);
+                if(collapse.visible) fadeReplyIconIn(collapse, REPLY_COLLAPSE_DURATION / 2f);
+            })
+        ));
+        root.addAction(Actions.sequence(
+            Actions.delay(REPLY_COLLAPSE_DURATION),
+            Actions.run(() -> {
+                if(activeReplyPaper != root) return;
+                root.setBounds(left, y, w, h);
+                if(TriInbox.isReplied(mail)){
+                    buildReplyPaperFull(paper, mail);
+                }else{
+                    buildReplyPaperTyping(paper, mail);
+                }
+                replyToggleAnimating = false;
+            })
+        ));
+    }
+
     /** 移除详情下方回信按钮、左侧信纸与发信按钮
 */
     private static void removeReplyUi(){
+        replyToggleAnimating = false;
         removeReplyButton();
+        removeReplyMiniButton();
+        removeReplyCollapseButton();
         removeReplyPaper();
     }
 
@@ -1067,12 +1399,27 @@ morph table
         }
     }
 
+    private static void removeReplyMiniButton(){
+        if(activeReplyMiniButton != null){
+            activeReplyMiniButton.remove();
+            activeReplyMiniButton = null;
+        }
+    }
+
+    private static void removeReplyCollapseButton(){
+        if(activeReplyCollapseButton != null){
+            activeReplyCollapseButton.remove();
+            activeReplyCollapseButton = null;
+        }
+    }
+
     private static void removeReplyPaper(){
         removeReplySend();
         if(activeReplyPaper != null){
             activeReplyPaper.remove();
             activeReplyPaper = null;
         }
+        activeReplyPaperContent = null;
         activeReplyMail = null;
     }
 
@@ -1081,7 +1428,7 @@ morph table
 分割
 正文/附件/回信
 已读按钮
-     *  onExit 供关闭按钮与已读按钮共用（关闭详情：恢复卡片 + content 滑回）
+     *  onExit 供关闭按钮与已读按钮共用（关闭详情：恢复卡片 + content 滑回
 */
     private static void buildDetailContent(Table content, TriMail mail, Runnable onExit){
         content.top().left();
@@ -1136,25 +1483,27 @@ morph table
         TextButton readBtn = new TextButton(bundle("tri.mail.back"));
         if(TriInbox.isReadBtnClicked(mail)){
             readBtn.setDisabled(true); // 已读：disabled 不可按下
-            readBtn.getLabel().setColor(Color.gray); // 文字置灰（回归改动前）
+            readBtn.getLabel().setColor(Color.gray); // 文字置灰（回归改动前
         }
         readBtn.clicked(() -> {
-            TriInbox.markReadBtnClicked(mail); // 记忆置灰状态
+            TriInbox.markReadBtnClicked(mail); // 记忆置灰状
             readBtn.setDisabled(true); // 置灰 + 不可按下
-            readBtn.getLabel().setColor(Color.gray); // 文字置灰（回归改动前）
-            if(onExit != null) onExit.run(); // 触发同退出的行为：关闭详情（closeDetail 内已统一调用 refreshReadState）
+            readBtn.getLabel().setColor(Color.gray); // 文字置灰（回归改动前
+            if(onExit != null) onExit.run(); // 触发同退出的行为：关闭详情（closeDetail 内已统一调用 refreshReadState
         });
         content.add(readBtn).size(100f, 50f).pad(10);
     }
 
-    /** 回信正文：优先硬编码 replyText（中文示例信，不本地化）；否?bundle（tri.mail.reply.<key>）?*/
+    /** 回信正文：优先硬编码 replyText（中文示例信，不本地化）；否?bundle（tri.mail.reply.<key>
+*/
     private static String replyTextOf(TriMail mail){
         String text = mail.replyText != null ? mail.replyText : bundle("tri.mail.reply." + mail.key);
         if(mail.replyText == null && text.equals("tri.mail.reply." + mail.key)) return ""; // 未配置保持空
         return text;
     }
 
-    /** 按当前分类过滤（历史按最后阅读时间倒序）。传入已解锁邮件列表，避免重复遍历?*/
+    /** 按当前分类过滤（历史按最后阅读时间倒序）。传入已解锁邮件列表，避免重复遍
+*/
     private static Seq<TriMail> mailsFor(Filter f, Seq<TriMail> all){
         switch(f){
             case READ: return filter(all, true);
@@ -1164,11 +1513,12 @@ morph table
                 r.sort((a, b) -> Long.compare(TriInbox.readTime(b), TriInbox.readTime(a))); // 最后阅读的在前
                 return r;
             }
-            default: return all; // ALL，且限定当前作用域
+            default: return all; // ALL，且限定当前作用
         }
     }
 
-    /** 按已读状态过滤出新的列表（复用传入的解锁列表，不重复遍历 TriInbox）?*/
+    /** 按已读状态过滤出新的列表（复用传入的解锁列表，不重复遍历 TriInbox
+*/
     private static Seq<TriMail> filter(Seq<TriMail> all, boolean read){
         Seq<TriMail> r = new Seq<>();
         for(TriMail m : all) if(TriInbox.isRead(m) == read) r.add(m);
