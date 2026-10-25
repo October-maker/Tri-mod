@@ -1191,8 +1191,9 @@ morph table
         }
 
         Label[] typedRef = {null};
+        // 优先使用每封信的 replySpeed；未设置（<=0）时默认 1 字符/秒
         Label typed = TriDraw.typewriter(paper, text,
-            mail.replySpeed > 0 ? mail.replySpeed : 24f, Align.topLeft,
+            mail.replySpeed > 0 ? mail.replySpeed : 1f, Align.topLeft,
             () -> {
                 paper.row();
                 paper.add(typedRef[0]).left().top().growX().pad(12).row();
