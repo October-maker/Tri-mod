@@ -104,15 +104,23 @@ letters/info_about/
 - 打开 Tmail 的「模组资讯」页面时，如果距上次刷新超过 5 分钟，会自动请求最新版本；
 - 点击资讯页的「获取最新资讯」按钮会强制刷新；
 - 该按钮只在模组资讯页面显示，不会出现在战役剧情页面；
-- 请求失败时保留现有资讯，不会清空；
+- 只有 manifest 中全部信件都成功加载时才会替换现有资讯；任意一封失败则保留旧内容；
+- 请求失败时保留现有资讯，不会清空；手动刷新失败会显示提示；
 - 刷新成功后，远端资讯会替换内置的资讯邮件，并立即重建资讯列表。
 
 ## 本地缓存
 
-成功获取的资讯会缓存到：
+成功获取的资讯会按语言缓存到：
 
 ```text
-<Mindustry 数据目录>/tmail/tmail-modinfo-cache.json
+<Mindustry 数据目录>/tmail/tmail-modinfo-cache-<locale>.json
+```
+
+例如：
+
+```text
+tmail-modinfo-cache-zh_CN.json
+tmail-modinfo-cache-en.json
 ```
 
 缓存按语言保存。切换语言后，下次打开资讯页会重新请求对应语言。

@@ -9,6 +9,7 @@ import arc.graphics.g2d.Draw;
 import arc.graphics.g2d.Lines;
 import arc.graphics.g2d.TextureRegion;
 import arc.math.Mathf;
+import arc.scene.Action;
 import arc.scene.Element;
 import arc.scene.event.Touchable;
 import arc.scene.style.Drawable;
@@ -16,7 +17,6 @@ import arc.scene.ui.Label;
 import arc.struct.FloatSeq;
 import arc.struct.ObjectMap;
 import arc.util.Align;
-import arc.util.Time;
 import mindustry.Vars;
 import mindustry.mod.Mods.LoadedMod;
 import triangle.triangle;
@@ -97,8 +97,7 @@ public class TriDraw{
         };
         for(Fi f : candidates){
             if(f.exists()){
-                Texture tex = new Texture(new Pixmap(f));
-                return new TextureRegion(tex);
+                return loadTexture(f);
             }
         }
         // 兜底：在 assets/TriUI/（或 TriUI/）中按相对路径/文件名递归查找
@@ -110,8 +109,7 @@ public class TriDraw{
                     String suffix = "/" + name.replace('\\', '/') + ".png";
                     Fi found = ui.findAll(f -> f.path().replace('\\', '/').endsWith(suffix)).first();
                     if(found != null){
-                        Texture tex = new Texture(new Pixmap(found));
-                        return new TextureRegion(tex);
+                        return loadTexture(found);
                     }
                 }catch(Throwable ignored){
                     // 压缩包句柄可能不支持递归遍历，继续尝试下一个来源
@@ -119,6 +117,24 @@ public class TriDraw{
             }
         }
         return null;
+    }
+
+    /** 从文件创建独立纹理；Pixmap 上传后立即释放，避免 native 内存泄漏。 */
+    private static TextureRegion loadTexture(Fi file){
+        Pixmap pixmap = new Pixmap(file);
+        try{
+            return new TextureRegion(new Texture(pixmap));
+        }finally{
+            pixmap.dispose();
+        }
+    }
+
+    /** 释放本类创建的独立纹理（应用退出/模组卸载时调用）。 */
+    public static void dispose(){
+        for(TextureRegion region : fileCache.values()){
+            if(region.texture != null) region.texture.dispose();
+        }
+        fileCache.clear();
     }
 
     /** 逐级拼接 Fi 路径，兼容 ZipFi 不解析带斜杠的 child 路径。 */
@@ -203,8 +219,8 @@ public class TriDraw{
         return typewriter(host, text, speed, Align.center, null, null);
     }
 
-    /** 打字机：挂在宿主 update 上按字符/秒刷新文本。
-     *  @param host 场景中的宿主（其 update 回调将被本方法接管；host 始终在场景中 update 才会执行）
+    /** 打字机：通过宿主 Action 播放，按字符/秒刷新文本；不会覆盖宿主已有 update。
+     *  @param host 场景中的宿主（需持续 act；Action 会随宿主移除而停止）
      *  @param text 完整文本
      *  @param speed 字符/秒
      *  @param align 文本对齐（arc.util.Align）
@@ -216,23 +232,29 @@ public class TriDraw{
         typed.touchable = Touchable.disabled;
         typed.setWrap(true);
         typed.setAlignment(align);
-        int[] last = {0};
-        boolean[] firstDone = {false};
-        boolean[] finishDone = {false};
-        float start = Time.time;
-        host.update(() -> {
-            int shown = Math.min(text.length(), (int)((Time.time - start) * speed));
-            if(shown != last[0]){
-                last[0] = shown;
-                typed.setText(text.substring(0, shown));
-                if(shown > 0 && !firstDone[0]){
-                    firstDone[0] = true;
-                    if(onFirstChar != null) onFirstChar.run();
+        float charsPerSecond = Math.max(0f, speed);
+        host.addAction(new Action(){
+            float elapsed;
+            int shown;
+            boolean firstDone, finishDone;
+
+            @Override
+            public boolean act(float delta){
+                elapsed += delta;
+                int next = Math.min(text.length(), (int)(elapsed * charsPerSecond));
+                if(next != shown){
+                    shown = next;
+                    typed.setText(text.substring(0, shown));
+                    if(shown > 0 && !firstDone){
+                        firstDone = true;
+                        if(onFirstChar != null) onFirstChar.run();
+                    }
                 }
-            }
-            if(shown >= text.length() && !finishDone[0]){
-                finishDone[0] = true;
-                if(onFinish != null) onFinish.run();
+                if(shown >= text.length() && !finishDone){
+                    finishDone = true;
+                    if(onFinish != null) onFinish.run();
+                }
+                return shown >= text.length();
             }
         });
         return typed;

@@ -45,10 +45,13 @@ public class TriInbox{
         mails.add(mail);
     }
 
-    /** 用远端资讯邮件替换现有资讯信件；战役剧情邮件保持不变。 */
+    /** 用远端资讯邮件替换现有资讯信件；战役剧情邮件及其他来源邮件保持不变。 */
     public static void replaceInfoMails(Seq<TriMail> replacement){
         for(int i = mails.size - 1; i >= 0; i--){
-            if(!mails.get(i).story) mails.remove(i);
+            TriMail mail = mails.get(i);
+            if(!mail.story && (mail.key.startsWith("modinfo-") || mail.key.equals("info_about"))){
+                mails.remove(i);
+            }
         }
         mails.addAll(replacement);
     }

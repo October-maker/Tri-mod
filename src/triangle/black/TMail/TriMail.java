@@ -60,7 +60,7 @@ public class TriMail{
         this(key, sender, subject, body, unlocked, story, attachment, onCollect, onReply, replyText, -1f);
     }
 
-    /** 全参数构造器：可同时指定回信打字机速度（replySpeed 字符/秒；&lt;=0 默认 1）。 */
+    /** 全参数构造器：可同时指定回信打字机速度（replySpeed 字符/秒；&lt;=0 默认 60）。 */
     public TriMail(String key, String sender, String subject, String body, Boolp unlocked, boolean story, String attachment, Runnable onCollect, Runnable onReply, String replyText, float replySpeed){
         this.key = key;
         this.sender = sender;

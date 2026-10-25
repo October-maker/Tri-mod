@@ -56,6 +56,7 @@ public class TriBlurBackground extends Element{
         "  gl_FragColor = vec4(sum.rgb, sum.a * u_alpha);\n" +
         "}\n";
 
+    @SuppressWarnings("this-escape")
     public TriBlurBackground(){
         float w = Core.graphics.getWidth(), h = Core.graphics.getHeight();
         setSize(w, h);
@@ -76,6 +77,20 @@ public class TriBlurBackground extends Element{
             Log.info("TMail blur created, fbo ok, size=" + fw + "x" + fh);
         }catch(Throwable t){
             Log.err("TMail blur capture failed: " + t);
+        }
+    }
+
+    @Override
+    public boolean remove(){
+        disposeFbo();
+        return super.remove();
+    }
+
+    /** 释放截图 FBO；Tmail 关闭时通过 remove() 自动调用。 */
+    public void disposeFbo(){
+        if(fbo != null){
+            fbo.dispose();
+            fbo = null;
         }
     }
 

@@ -218,7 +218,7 @@ public class TriWelcome{
         textBox.setPosition(cx - textW / 2f, textCy - textH / 2f + 50f);
         // 打字机：复用 TriDraw.typewriter（Time.time + 字符/秒 + update 刷新 substring）
         String full = open + "\n" + word + "\n" + remind + "\n" + stop;
-        float typeSpeed = 5f; // 字符/秒
+        float typeSpeed = 12f * 60f; // 字符/秒
         Label typed = TriDraw.typewriter(textBox, full, typeSpeed, Align.center, null, null);
         textBox.add(typed).grow().pad(4);
         intro.add(textBox);

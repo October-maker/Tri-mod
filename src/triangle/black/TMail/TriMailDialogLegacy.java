@@ -22,7 +22,9 @@ import mindustry.ui.dialogs.BaseDialog;
 import triangle.black.TriDraw;
 
 /**
- * 三角通讯收件箱界面。
+ * 旧版 Tmail 的冻结快照，仅供“以兼容模式运行 Tmail”使用。
+ * 不在这里新增功能；新功能和修复应写入 TriMailDialog。
+ *
  * 每封邮件固定大小卡片（圆角矩形包裹：上发件人、中分割线、下内容，过长省略）；
  * 卡片竖直向下居中排列、可滚动；顶部居中分类栏（带未读角标）：全部 / 已读 / 未读 / 历史；
  * 列表为空时显示灰色提示；详情页限宽。
@@ -169,7 +171,7 @@ public class TriMailDialogLegacy{
         if(TriInbox.hasAttachment(mail)){
             Image div2 = new Image(Tex.whiteui, Color.gray);
             content.add(div2).growX().height(2).padLeft(12).padRight(12).row();
-            content.add("[accent]附件：" + mail.attachment).left().growX().pad(12).row();
+            content.add("[accent]" + bundle("tri.mail.attachment") + mail.attachment).left().growX().pad(12).row();
 
             TextButton collect = new TextButton(bundle("tri.mail.collect"));
             boolean done = TriInbox.attachmentCollected(mail);

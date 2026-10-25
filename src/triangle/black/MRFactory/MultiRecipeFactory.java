@@ -82,6 +82,7 @@ public class MultiRecipeFactory extends GenericCrafter{
     /**
      * 创建多配方工厂；注册动态输入消费器与电力消费器，并启用旋转与配置面板。
      */
+    @SuppressWarnings("this-escape")
     public MultiRecipeFactory(String name) {
         super(name);
         // 注册自定义消费器
