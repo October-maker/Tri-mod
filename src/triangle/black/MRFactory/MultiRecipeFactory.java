@@ -426,6 +426,7 @@ public class MultiRecipeFactory extends GenericCrafter{
         /** 条件不满足时即使在科技树里点击研究，也不能真正解锁。 */
         @Override
         public boolean unlocked(){
+            if(Vars.state != null && Vars.state.rules.infiniteResources) return true;
             if(unlockCondition != null){
                 try{
                     if(!unlockCondition.get()) return false;
@@ -440,6 +441,10 @@ public class MultiRecipeFactory extends GenericCrafter{
         /** 条件不满足时拦截 unlock，避免科技树绕过条件。 */
         @Override
         public void unlock(){
+            if(Vars.state != null && Vars.state.rules.infiniteResources){
+                super.unlock();
+                return;
+            }
             if(unlockCondition != null){
                 try{
                     if(!unlockCondition.get()) return;
@@ -509,6 +514,8 @@ public class MultiRecipeFactory extends GenericCrafter{
     /** 配方是否因额外条件或“需要研究且尚未解锁”而处于锁定状态。 */
     public static boolean isLocked(Recipe r) {
         if (r == null) return false;
+        // 沙盒模式：所有配方、研究节点和额外解锁条件都视为已满足。
+        if (Vars.state != null && Vars.state.rules.infiniteResources) return false;
         // unlockCondition 只约束需要研究的配方；普通配方即使误设条件也保持原行为。
         if (r.requiresResearch && r.unlockCondition != null) {
             try {
@@ -518,8 +525,6 @@ public class MultiRecipeFactory extends GenericCrafter{
                 return true;
             }
         }
-        // 沙盒模式（无限资源/自由建造）下，需研究的配方视为已解锁
-        if (Vars.state.rules.infiniteResources) return false;
         return r.requiresResearch && (r.research == null || !r.research.unlocked());
     }
 

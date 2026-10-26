@@ -16,6 +16,7 @@ import mindustry.world.draw.DrawGlowRegion;
 import mindustry.world.draw.DrawMulti;
 import triangle.black.MRFactory.MultiRecipeFactory;
 import triangle.black.MRFactory.Recipe;
+import triangle.black.MRFactory.StackedMultiRecipeFactory;
 
 import static mindustry.type.ItemStack.with;
 
@@ -46,7 +47,8 @@ public class TriFactory {
             oilCatalyticCrackingTower,USYHydrothermalReactor,USYMixer,oilHydrocrackingTower,oilCatalyticReformingTower,oilAromaticHydrocarbonComplex,oilCokingHydrogenationTower,oilSteamCrackingTower,oilTubularReactor;
 
     // ---- 多配方工厂（配方在 Java 中声明） ----
-    public static MultiRecipeFactory BulletFactory,liquidFillingMachine,liquidPourer,boiler;
+    public static StackedMultiRecipeFactory BulletFactory,liquidFillingMachine,liquidPourer;
+    public static MultiRecipeFactory boiler;
 
     /** 创建全部工厂方块并声明多配方工厂的配方（由 {@code triangle.loadContent()} 调用）。 */
     public static void load(){
@@ -109,13 +111,15 @@ public class TriFactory {
 
         // ---- 多配方工厂 ----
         // 子弹工厂
-        BulletFactory = new MultiRecipeFactory("BulletFactory"){{
+        BulletFactory = new StackedMultiRecipeFactory("BulletFactory"){{
             size = 4;
             health = 20;
             itemCapacity = 20;
             liquidCapacity = 20;
             requirements(Category.crafting, with(TriItems.Cu,10,TriItems.TiAlloy,30,TriItems.FeSteel,20,TriItems.MonocrystallineSi,10));
             drawer = new DrawMulti(new DrawDefault(), new DrawFlame(Color.valueOf("E58760")));
+            maxLayers = 1;
+            stackUpgrade(3, with(TriItems.TiAlloy, 30,TriItems.Al,20));
             recipes.add(
                     // 说明：powerUse 单位为“每 tick（1/60 秒）”，每秒消耗 = powerUse × 60（如 20f/60f = 20/秒）
                     // 破甲弹 LHEAT：铜 + 钢 + TNT
@@ -190,12 +194,14 @@ public class TriFactory {
             );
         }};
         // 液体装桶机：水/卤水 + 玻璃 → 对应桶装物品
-        liquidFillingMachine = new MultiRecipeFactory("liquidFillingMachine"){{
+        liquidFillingMachine = new StackedMultiRecipeFactory("liquidFillingMachine"){{
             size = 3;
             health = 50;
             itemCapacity = 40;
             liquidCapacity = 120;
             requirements(Category.crafting, with(TriItems.Cu,10,TriItems.TiAlloy,10,TriItems.FeSteel,20,Items.metaglass,10));
+            maxLayers = 1;
+            stackUpgrade(5, with(TriItems.TiAlloy, 30,TriItems.Al,15));
             drawer = new DrawMulti(
                     new DrawDefault(),
                     new DrawGlowRegion(){{
@@ -222,12 +228,14 @@ public class TriFactory {
             );
         }};
         // 液体倒桶机：桶装物品 → 对应液体，与装桶机互为逆过程
-        liquidPourer = new MultiRecipeFactory("liquidPourer"){{
+        liquidPourer = new StackedMultiRecipeFactory("liquidPourer"){{
             size = 3;
             health = 50;
             itemCapacity = 40;
             liquidCapacity = 120;
             requirements(Category.crafting, with(TriItems.Cu,10,TriItems.TiAlloy,10,TriItems.FeSteel,15,Items.metaglass,15));
+            maxLayers = 1;
+            stackUpgrade(5, with(TriItems.TiAlloy, 30,TriItems.Al,15));
             drawer = new DrawMulti(
                     new DrawDefault(),
                     new DrawGlowRegion(){{
