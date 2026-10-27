@@ -30,6 +30,7 @@ import mindustry.Vars;
 import mindustry.core.UI;
 import mindustry.ctype.ContentType;
 import mindustry.ctype.UnlockableContent;
+import mindustry.entities.units.BuildPlan;
 import mindustry.game.EventType.ContentInitEvent;
 import mindustry.game.Objectives;
 import mindustry.gen.Icon;
@@ -40,6 +41,7 @@ import mindustry.type.*;
 import mindustry.ui.Bar;
 import mindustry.ui.Styles;
 import mindustry.world.Block;
+import mindustry.world.Tile;
 import mindustry.world.blocks.heat.HeatBlock;
 import mindustry.world.blocks.heat.HeatConsumer;
 import mindustry.world.blocks.payloads.BuildPayload;
@@ -65,6 +67,12 @@ import triangle.black.TriDraw;
 public class MultiRecipeFactory extends GenericCrafter{
     /** 本工厂的全部配方，顺序即编号顺序。 */
     public Seq<Recipe> recipes = new Seq<>();
+    /** 是否允许同实例堆叠；由具体工厂在内容加载前设置。 */
+    public boolean stackable = false;
+    /** 最大堆叠层数（含基础层）；堆叠变体按该值预生成。 */
+    public int stackLimit = 8;
+    /** 是否创建配方研究节点；堆叠变体复用基础工厂的节点。 */
+    public boolean registerResearch = true;
 
     /** 全部物品输出种类（用于统一物流输出）。 */
     public Seq<Item> itemOutput = new Seq<>();
@@ -102,6 +110,35 @@ public class MultiRecipeFactory extends GenericCrafter{
         rotate = true;
         rotateDraw = false;
         configurable = true; // 允许打开配置面板（手动选定配方 / 自动匹配开关）
+    }
+
+    /** 放置计划实际建造的方块；堆叠工厂在这里切换为固定层数变体。 */
+    @Override
+    public Block getReplacement(BuildPlan req, Seq<BuildPlan> plans){
+        if(stackable){
+            Block variant = StackedMultiRecipeFactory.nextVariant(this, req);
+            if(variant != null) return variant;
+        }
+        return super.getReplacement(req, plans);
+    }
+
+    /** 允许同实例覆盖放置，作为堆叠入口。 */
+    @Override
+    public boolean canPlaceOn(Tile tile, mindustry.game.Team team, int rotation){
+        if(stackable && tile != null && tile.build != null){
+            Block existing = tile.build.block;
+            boolean chain = existing == this
+                || (existing instanceof StackedMultiRecipeFactory variant && variant.baseFactory == this);
+            if(chain && StackedMultiRecipeFactory.layersOf(existing) < stackLimit) return true;
+        }
+        return super.canPlaceOn(tile, team, rotation);
+    }
+
+    @Override
+    public boolean canReplace(Block other){
+        if(stackable && other == this) return true;
+        if(stackable && other instanceof StackedMultiRecipeFactory variant && variant.baseFactory == this) return true;
+        return super.canReplace(other);
     }
 
     /**
@@ -350,7 +387,7 @@ public class MultiRecipeFactory extends GenericCrafter{
         // 为需要研究的配方创建研究条目（对象创建不依赖科技树，可在此进行）
         for (int i = 0; i < recipes.size; i++) {
             Recipe r = recipes.get(i);
-            if (r.requiresResearch) {
+            if (registerResearch && r.requiresResearch) {
                 r.research = createResearch(this, r, i + 1);
             }
         }
@@ -359,6 +396,7 @@ public class MultiRecipeFactory extends GenericCrafter{
         // 此时原版科技树（SerpuloTechTree）已完全加载，且工厂自身的科技树节点已就位，
         // 避免在 init() 阶段 TechTree.all 尚未包含工厂节点导致 find 返回 null 而无法挂载。
         Events.on(ContentInitEvent.class, e -> {
+            if (!registerResearch) return;
             for (int i = 0; i < recipes.size; i++) {
                 Recipe r = recipes.get(i);
                 if (r.requiresResearch && r.research != null) {

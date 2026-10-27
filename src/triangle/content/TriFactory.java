@@ -16,6 +16,7 @@ import mindustry.world.draw.DrawGlowRegion;
 import mindustry.world.draw.DrawMulti;
 import triangle.black.MRFactory.MultiRecipeFactory;
 import triangle.black.MRFactory.Recipe;
+import triangle.black.MRFactory.StackedMultiRecipeFactory;
 
 import static mindustry.type.ItemStack.with;
 
@@ -372,5 +373,12 @@ public class TriFactory {
 //                    }}//TiRollingMill
 //            );
 //        }};
+        // ---- 可堆叠变体：基础工厂仍只有一层，覆盖放置时替换为 2..stackLimit 层变体 ----
+        BulletFactory.stackable = true;
+        liquidFillingMachine.stackable = true;
+        liquidPourer.stackable = true;
+        StackedMultiRecipeFactory.registerVariants(BulletFactory);
+        StackedMultiRecipeFactory.registerVariants(liquidFillingMachine);
+        StackedMultiRecipeFactory.registerVariants(liquidPourer);
     }
 }
