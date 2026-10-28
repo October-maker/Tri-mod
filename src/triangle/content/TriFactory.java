@@ -115,6 +115,7 @@ public class TriFactory {
             health = 20;
             itemCapacity = 20;
             liquidCapacity = 20;
+            stackLimit = 3;
             requirements(Category.crafting, with(TriItems.Cu,10,TriItems.TiAlloy,30,TriItems.FeSteel,20,TriItems.MonocrystallineSi,10));
             drawer = new DrawMulti(new DrawDefault(), new DrawFlame(Color.valueOf("E58760")));
             recipes.add(
@@ -164,7 +165,7 @@ public class TriFactory {
                         inputItem.add(new ItemStack(TriItems.FeSteel,5));
                         inputItem.add(new ItemStack(TriItems.TNT,12));
                         outputItem.add(new ItemStack(TriItems.BHE,1));
-                        craftTime = 120f;
+                        craftTime = 60f;
                         powerUse = 120f/60f;
                         requiresResearch = true;
                     }},
@@ -174,7 +175,7 @@ public class TriFactory {
                         inputItem.add(new ItemStack(TriItems.FeSteel,4));
                         inputItem.add(new ItemStack(TriItems.TNT,7));
                         outputItem.add(new ItemStack(TriItems.BHEAT, 1));
-                        craftTime = 150f;
+                        craftTime = 90f;
                         powerUse = 220f/60f;
                         requiresResearch = true;
                     }},
@@ -184,7 +185,7 @@ public class TriFactory {
                         inputItem.add(new ItemStack(TriItems.FeSteel,4));
                         inputItem.add(new ItemStack(TriItems.TNT,6));
                         outputItem.add(new ItemStack(TriItems.BHESH,1));
-                        craftTime = 150f;
+                        craftTime = 90f;
                         powerUse = 180f/60f;
                         requiresResearch = true;
                     }}
@@ -196,6 +197,7 @@ public class TriFactory {
             health = 50;
             itemCapacity = 40;
             liquidCapacity = 120;
+            verticalStackPanels = true;
             requirements(Category.crafting, with(TriItems.Cu,10,TriItems.TiAlloy,10,TriItems.FeSteel,20,Items.metaglass,10));
             drawer = new DrawMulti(
                     new DrawDefault(),
@@ -228,6 +230,7 @@ public class TriFactory {
             health = 50;
             itemCapacity = 40;
             liquidCapacity = 120;
+            verticalStackPanels = true;
             requirements(Category.crafting, with(TriItems.Cu,10,TriItems.TiAlloy,10,TriItems.FeSteel,15,Items.metaglass,15));
             drawer = new DrawMulti(
                     new DrawDefault(),

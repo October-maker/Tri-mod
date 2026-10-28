@@ -3,8 +3,6 @@ package triangle.black.MRFactory;
 import arc.Core;
 import arc.Events;
 import arc.graphics.Color;
-import arc.graphics.g2d.Draw;
-import arc.graphics.g2d.Fill;
 import arc.scene.ui.Button;
 import arc.scene.ui.Image;
 import arc.scene.ui.ScrollPane;
@@ -13,7 +11,6 @@ import arc.scene.ui.layout.Table;
 import arc.struct.IntMap;
 import arc.struct.ObjectMap;
 import arc.struct.Seq;
-import arc.util.Align;
 import arc.util.Strings;
 import arc.util.io.Reads;
 import arc.util.io.Writes;
@@ -25,7 +22,6 @@ import mindustry.gen.Building;
 import mindustry.gen.Icon;
 import mindustry.gen.Tex;
 import mindustry.gen.Unit;
-import mindustry.graphics.Pal;
 import mindustry.type.Item;
 import mindustry.type.ItemStack;
 import mindustry.type.Liquid;
@@ -34,7 +30,9 @@ import mindustry.ui.Fonts;
 import mindustry.ui.Styles;
 import mindustry.world.Block;
 import mindustry.world.Tile;
-import mindustry.world.meta.BuildVisibility;
+import mindustry.world.draw.DrawBlock;
+import mindustry.world.draw.DrawDefault;
+import triangle.black.TriSetting;
 
 /**
  * 固定层数的多配方工厂方块。
@@ -98,6 +96,27 @@ public class StackedMultiRecipeFactory extends MultiRecipeFactory{
         return null;
     }
 
+    /** 达到上限时返回当前顶层方块，防止放置计划落回基础方块。 */
+    public static Block topVariant(MultiRecipeFactory current, BuildPlan req){
+        if(current == null || req == null || Vars.world == null) return null;
+        Tile tile = Vars.world.tile(req.x, req.y);
+        if(tile == null || tile.build == null) return null;
+        MultiRecipeFactory currentBase = baseOf(current);
+        MultiRecipeFactory existingBase = baseOf(tile.build.block);
+        if(currentBase == null || currentBase != existingBase) return null;
+        return tile.build.block;
+    }
+
+    /** 当前格子的工厂链是否已达到上限。 */
+    public static boolean atStackLimit(MultiRecipeFactory current, int x, int y){
+        if(current == null || Vars.world == null) return false;
+        Tile tile = Vars.world.tile(x, y);
+        if(tile == null || tile.build == null) return false;
+        MultiRecipeFactory base = baseOf(current);
+        if(base == null || baseOf(tile.build.block) != base) return false;
+        return layersOf(tile.build.block) >= Math.max(2, base.stackLimit);
+    }
+
     private static MultiRecipeFactory baseOf(Block block){
         if(block instanceof StackedMultiRecipeFactory stacked) return stacked.baseFactory;
         if(block instanceof MultiRecipeFactory factory) return factory;
@@ -113,6 +132,8 @@ public class StackedMultiRecipeFactory extends MultiRecipeFactory{
         size = base.size;
         health = base.health;
         armor = base.armor;
+        // 未初始化时基础工厂可能仍是 -1，init() 后会再次按层数修正。
+        buildTime = base.buildTime >= 0f ? base.buildTime * layerCount : base.buildTime;
         itemCapacity = base.itemCapacity * layerCount;
         liquidCapacity = base.liquidCapacity * layerCount;
         requirements = base.requirements;
@@ -132,7 +153,10 @@ public class StackedMultiRecipeFactory extends MultiRecipeFactory{
         configurable = true;
         checkItemOutputFullness = base.checkItemOutputFullness;
         checkLiquidOutputFullness = base.checkLiquidOutputFullness;
+        verticalStackPanels = base.verticalStackPanels;
         stackable = layerCount < Math.max(2, base.stackLimit);
+        // 顶层变体不能再被覆盖替换，否则会绕过堆叠上限。
+        replaceable = stackable && base.replaceable;
         registerResearch = false;
         hideDatabase = true;
         databaseTabs.clear();
@@ -145,8 +169,23 @@ public class StackedMultiRecipeFactory extends MultiRecipeFactory{
     }
 
     @Override
+    public void init(){
+        super.init();
+        if(baseFactory != null){
+            // 单层建造时间 × 层数；基础工厂尚未初始化时用变体自己算出的单层时间。
+            float single = baseFactory.buildTime >= 0f ? baseFactory.buildTime : buildTime;
+            buildTime = single * layerCount;
+        }
+    }
+
+    @Override
     public void load(){
+        // 不要用变体名重新加载基础工厂的 drawer：
+        // DrawFlame 等会寻找 “变体名-flame” 贴图，找不到就回退成 ohno。
+        DrawBlock baseDrawer = baseFactory == null ? null : baseFactory.drawer;
+        drawer = new DrawDefault();
         super.load();
+        drawer = baseDrawer;
         if(baseFactory != null){
             region = baseFactory.region;
             fullIcon = baseFactory.fullIcon;
@@ -173,7 +212,11 @@ public class StackedMultiRecipeFactory extends MultiRecipeFactory{
 
     @Override
     public boolean canReplace(Block other){
-        if(other != null && sameChain(other)) return true;
+        if(other != null && sameChain(other)){
+            // 只允许“上一层覆盖下一层”。顶层变体仍可作为新方块覆盖 7 层，
+            // 但它自己不能再被更高层覆盖（replaceable=false 负责拦截旧方块方向）。
+            return layerCount == layersOf(other) + 1;
+        }
         return super.canReplace(other);
     }
 
@@ -417,8 +460,14 @@ public class StackedMultiRecipeFactory extends MultiRecipeFactory{
         @Override
         public void buildConfiguration(Table table){
             table.clearChildren();
-            Table row = new Table();
-            row.top().left();
+
+            int mode = TriSetting.stackLayout();
+            boolean factoryVertical = baseFactory != null ? baseFactory.verticalStackPanels : verticalStackPanels;
+            boolean vertical = mode == 1 || (mode == 0 && factoryVertical);
+            float panelWidth = 560f;
+
+            Table content = new Table();
+            content.top().left();
 
             for(int i = 0; i < layers.size; i++){
                 final int index = i;
@@ -529,13 +578,24 @@ public class StackedMultiRecipeFactory extends MultiRecipeFactory{
                     }
                 });
 
-                row.add(panel).top().left().pad(4).width(560f);
+                if(vertical){
+                    // 不固定宽度，让面板收缩到配方列表的自然宽度。
+                    content.add(panel).top().left().pad(4f).row();
+                }else{
+                    content.add(panel).top().left().pad(4f);
+                }
             }
 
-            ScrollPane pane = new ScrollPane(row);
-            pane.setScrollingDisabled(false, true);
-            pane.setFadeScrollBars(false);
-            table.add(pane).grow();
+            if(vertical){
+                ScrollPane pane = new ScrollPane(content);
+                // 竖直排列保留固定高度和纵向滚动；宽度由内部面板列表的自然宽度决定。
+                pane.setScrollingDisabled(true, false);
+                pane.setFadeScrollBars(false);
+                table.add(pane).height(600f);
+            }else{
+                // 横向排列回退到旧版：不使用 ScrollPane，全部面板直接展开。
+                table.add(content).grow();
+            }
         }
 
         @Override
@@ -544,11 +604,8 @@ public class StackedMultiRecipeFactory extends MultiRecipeFactory{
             if(layerCount <= 1 || Fonts.outline == null) return;
             float cx = x + size * 4f;
             float cy = y + size * 8f - 8f;
-            Draw.color(0f, 0f, 0f, 0.65f);
-            Fill.rect(cx - 12f, cy - 10f, 24f, 15f);
-            Draw.color(Pal.accent);
-            Fonts.outline.draw(String.valueOf(layerCount), cx, cy, Color.white, 0.45f, false, Align.center);
-            Draw.reset();
+            // 只画带描边的数字，不画背景块，保持透明底。
+            Fonts.outline.draw(String.valueOf(layerCount), cx, cy, Color.white, 0.45f, false, arc.util.Align.center);
         }
     }
 }

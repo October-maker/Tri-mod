@@ -71,6 +71,8 @@ public class MultiRecipeFactory extends GenericCrafter{
     public boolean stackable = false;
     /** 最大堆叠层数（含基础层）；堆叠变体按该值预生成。 */
     public int stackLimit = 8;
+    /** 堆叠变体配置面板是否默认竖直排列（false = 现有的横向排列）。 */
+    public boolean verticalStackPanels = false;
     /** 是否创建配方研究节点；堆叠变体复用基础工厂的节点。 */
     public boolean registerResearch = true;
 
@@ -118,6 +120,10 @@ public class MultiRecipeFactory extends GenericCrafter{
         if(stackable){
             Block variant = StackedMultiRecipeFactory.nextVariant(this, req);
             if(variant != null) return variant;
+            // 已达上限时把计划固定到当前顶层方块；顶层 replaceable=false，
+            // 避免把已有堆叠替换回基础方块。
+            Block top = StackedMultiRecipeFactory.topVariant(this, req);
+            if(top != null) return top;
         }
         return super.getReplacement(req, plans);
     }
@@ -137,8 +143,18 @@ public class MultiRecipeFactory extends GenericCrafter{
     @Override
     public boolean canReplace(Block other){
         if(stackable && other == this) return true;
-        if(stackable && other instanceof StackedMultiRecipeFactory variant && variant.baseFactory == this) return true;
+        if(stackable && other instanceof StackedMultiRecipeFactory variant
+            && variant.baseFactory == this && variant.stackable) return true;
         return super.canReplace(other);
+    }
+
+    @Override
+    public void drawPlace(int x, int y, int rotation, boolean valid){
+        super.drawPlace(x, y, rotation, valid);
+        if((stackable || this instanceof StackedMultiRecipeFactory)
+            && StackedMultiRecipeFactory.atStackLimit(this, x, y)){
+            drawPlaceText(Core.bundle.get("tri.stack.limit"), x, y, false);
+        }
     }
 
     /**
@@ -345,6 +361,12 @@ public class MultiRecipeFactory extends GenericCrafter{
             o.add(new Image(content.uiIcon)).size(32f).scaling(Scaling.fit);
         }));
         StatValues.withTooltip(stack, content);
+        // 配置面板里的图标只保留悬停提示，不再点击打开内容详情页。
+        for(int i = stack.getListeners().size - 1; i >= 0; i--){
+            if(stack.getListeners().get(i) instanceof arc.scene.event.ClickListener){
+                stack.removeListener(stack.getListeners().get(i));
+            }
+        }
         table.add(stack);
         return table;
     }
