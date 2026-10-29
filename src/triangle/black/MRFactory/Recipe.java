@@ -40,6 +40,11 @@ public class Recipe {
     /** 可选：显式研究消耗，覆盖默认的 inputItem。 */
     public ItemStack[] researchCost;
     /**
+     * 研究节点详情页描述的本地化 key；null 时自动使用
+     * {@code tri.research.<工厂名>-<配方编号>.description}。
+     */
+    public String researchDescriptionKey = null;
+    /**
      * 额外解锁条件；null 表示不附加条件。
      * 仅在 {@link #requiresResearch} 为 true 时生效；研究节点和配方都必须满足该条件。
      */
@@ -73,7 +78,8 @@ public class Recipe {
      *   <li>{@code String + 数值/布尔} → 设置字段，支持 {@code "power"}、{@code "time"}、
      *       {@code "heatReq"}、{@code "heatOut"}、{@code "heatEnabled"}、{@code "stopLowTemperature"}、
      *       {@code "stopUndervoltage"}、{@code "requiresResearch"}、{@code "recipeMaxEfficiency"}；
-     *       {@code "unlockCondition"} 接受 {@link Boolp}；{@code "unlockConditionText"} 接受字符串。</li>
+     *       {@code "unlockCondition"} 接受 {@link Boolp}；{@code "unlockConditionText"} 接受字符串；
+     *       {@code "researchDescriptionKey"} 接受字符串。</li>
      * </ul>
      * 参数个数为奇数说明配置笔误，最后一个参数会被忽略，同时输出警告。
      */
@@ -115,6 +121,8 @@ public class Recipe {
                     unlockCondition = condition;
                 } else if (key.equals("unlockConditionText") && val instanceof String text) {
                     unlockConditionText = text;
+                } else if (key.equals("researchDescriptionKey") && val instanceof String text) {
+                    researchDescriptionKey = text;
                 } else if (key.equals("recipeMaxEfficiency")) {
                     recipeMaxEfficiency = value;
                 }

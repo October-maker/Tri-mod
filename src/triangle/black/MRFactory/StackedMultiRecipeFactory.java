@@ -66,15 +66,25 @@ public class StackedMultiRecipeFactory extends MultiRecipeFactory{
         copyBase(base);
     }
 
-    /** 为基础工厂预生成 2..stackLimit 层变体。 */
+    /** 为基础工厂预生成 2..stackLimit 层变体；可重复调用以补齐后增加的上限。 */
     public static void registerVariants(MultiRecipeFactory base){
-        if(base == null || !base.stackable || variants.containsKey(base)) return;
-        Seq<StackedMultiRecipeFactory> list = new Seq<>();
+        if(base == null || !base.stackable) return;
+        Seq<StackedMultiRecipeFactory> list = variants.get(base);
+        if(list == null){
+            list = new Seq<>();
+            variants.put(base, list);
+        }
         int max = Math.max(2, base.stackLimit);
         for(int i = 2; i <= max; i++){
-            list.add(new StackedMultiRecipeFactory(base, i));
+            int layer = i;
+            if(!list.contains(v -> v.layerCount == layer)){
+                list.add(new StackedMultiRecipeFactory(base, layer));
+            }
         }
-        variants.put(base, list);
+        for(StackedMultiRecipeFactory variant : list){
+            variant.stackable = variant.layerCount < max;
+            variant.replaceable = variant.stackable && base.replaceable;
+        }
     }
 
     /** 根据放置目标选择下一层变体；只接受链上的同实例工厂。 */
@@ -88,6 +98,7 @@ public class StackedMultiRecipeFactory extends MultiRecipeFactory{
         if(currentBase == null || currentBase != existingBase) return null;
 
         int next = layersOf(tile.build.block) + 1;
+        if(next > currentBase.stackLimitNow()) return null;
         Seq<StackedMultiRecipeFactory> list = variants.get(currentBase);
         if(list == null) return null;
         for(StackedMultiRecipeFactory variant : list){
@@ -114,7 +125,7 @@ public class StackedMultiRecipeFactory extends MultiRecipeFactory{
         if(tile == null || tile.build == null) return false;
         MultiRecipeFactory base = baseOf(current);
         if(base == null || baseOf(tile.build.block) != base) return false;
-        return layersOf(tile.build.block) >= Math.max(2, base.stackLimit);
+        return layersOf(tile.build.block) >= Math.max(1, base.stackLimitNow());
     }
 
     private static MultiRecipeFactory baseOf(Block block){
@@ -204,7 +215,8 @@ public class StackedMultiRecipeFactory extends MultiRecipeFactory{
     @Override
     public boolean canPlaceOn(Tile tile, Team team, int rotation){
         if(tile != null && tile.build != null && sameChain(tile.build.block)
-            && layersOf(tile.build.block) + 1 == layerCount){
+            && layersOf(tile.build.block) + 1 == layerCount
+            && layerCount <= baseFactory.stackLimitNow()){
             return true;
         }
         return super.canPlaceOn(tile, team, rotation);
