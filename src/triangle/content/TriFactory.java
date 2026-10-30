@@ -47,7 +47,8 @@ public class TriFactory {
             oilCatalyticCrackingTower,USYHydrothermalReactor,USYMixer,oilHydrocrackingTower,oilCatalyticReformingTower,oilAromaticHydrocarbonComplex,oilCokingHydrogenationTower,oilSteamCrackingTower,oilTubularReactor;
 
     // ---- 多配方工厂（配方在 Java 中声明） ----
-    public static MultiRecipeFactory BulletFactory,liquidFillingMachine,liquidPourer,boiler;
+    public static StackedMultiRecipeFactory BulletFactory,liquidFillingMachine,liquidPourer;
+    public static MultiRecipeFactory boiler;
 
     /** 创建全部工厂方块并声明多配方工厂的配方（由 {@code triangle.loadContent()} 调用）。 */
     public static void load(){
@@ -118,6 +119,8 @@ public class TriFactory {
             stackLimit = 3;
             requirements(Category.crafting, with(TriItems.Cu,10,TriItems.TiAlloy,30,TriItems.FeSteel,20,TriItems.MonocrystallineSi,10));
             drawer = new DrawMulti(new DrawDefault(), new DrawFlame(Color.valueOf("E58760")));
+            maxLayers = 1;
+            stackUpgrade(3, with(TriItems.TiAlloy, 30,TriItems.Al,20));
             recipes.add(
                     // 说明：powerUse 单位为“每 tick（1/60 秒）”，每秒消耗 = powerUse × 60（如 20f/60f = 20/秒）
                     // 破甲弹 LHEAT：铜 + 钢 + TNT
@@ -200,6 +203,8 @@ public class TriFactory {
             stackLimit = 5;
             verticalStackPanels = true;
             requirements(Category.crafting, with(TriItems.Cu,10,TriItems.TiAlloy,10,TriItems.FeSteel,20,Items.metaglass,10));
+            maxLayers = 1;
+            stackUpgrade(5, with(TriItems.TiAlloy, 30,TriItems.Al,15));
             drawer = new DrawMulti(
                     new DrawDefault(),
                     new DrawGlowRegion(){{
@@ -234,6 +239,8 @@ public class TriFactory {
             stackLimit = 5;
             verticalStackPanels = true;
             requirements(Category.crafting, with(TriItems.Cu,10,TriItems.TiAlloy,10,TriItems.FeSteel,15,Items.metaglass,15));
+            maxLayers = 1;
+            stackUpgrade(5, with(TriItems.TiAlloy, 30,TriItems.Al,15));
             drawer = new DrawMulti(
                     new DrawDefault(),
                     new DrawGlowRegion(){{
