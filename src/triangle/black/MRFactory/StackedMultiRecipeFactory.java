@@ -59,11 +59,38 @@ public class StackedMultiRecipeFactory extends MultiRecipeFactory{
     public final MultiRecipeFactory baseFactory;
     public final int layerCount;
 
+    @SuppressWarnings("this-escape")
     public StackedMultiRecipeFactory(MultiRecipeFactory base, int layerCount){
-        super(base.name + "-stack" + layerCount);
+        super(base.plainName() + "-stack" + layerCount);
         this.baseFactory = base;
         this.layerCount = layerCount;
         copyBase(base);
+        // 基础工厂的 ConsumePowerRecipe 只统计“当前配方”的耗电；
+        // 堆叠体需要把所有层的耗电相加后交给电网。
+        powerConsumer = new StackedPowerConsume();
+        consume(powerConsumer);
+    }
+
+    /** 堆叠工厂的电力需求 = 所有层当前配方的 powerUse 之和。 */
+    public static class StackedPowerConsume extends ConsumePowerRecipe{
+        public StackedPowerConsume(){
+            super(build -> null);
+        }
+
+        @Override
+        public float requestedPower(Building build){
+            return build instanceof StackedMultiRecipeFactory.StackedBuild stacked
+                ? stacked.totalPowerUse()
+                : super.requestedPower(build);
+        }
+
+        @Override
+        public boolean isUndervoltage(Building build){
+            if(build instanceof StackedMultiRecipeFactory.StackedBuild stacked){
+                return stacked.hasUndervoltageLayer();
+            }
+            return super.isUndervoltage(build);
+        }
     }
 
     /** 为基础工厂预生成 2..stackLimit 层变体；可重复调用以补齐后增加的上限。 */
@@ -287,6 +314,47 @@ public class StackedMultiRecipeFactory extends MultiRecipeFactory{
                 }
             }
             clampStorage();
+            // 新变体替换旧建筑后，让所在电网立即重新统计需求。
+            Core.app.post(this::refreshPowerGraph);
+        }
+
+        @Override
+        public void onProximityUpdate(){
+            super.onProximityUpdate();
+            refreshPowerGraph();
+        }
+
+        private void refreshPowerGraph(){
+            if(power == null || power.graph == null) return;
+            if(!power.graph.all.contains(this)){
+                power.graph.add(this);
+            }
+            power.graph.update();
+        }
+
+        /** 所有层当前配方的电力需求总和。 */
+        public float totalPowerUse(){
+            float total = 0f;
+            for(LayerState layer : layers){
+                int index = layer.recipeIndex >= 0 ? layer.recipeIndex : layer.selectedIndex;
+                if(index >= 0 && index < recipes.size){
+                    total += recipes.get(index).powerUse;
+                }
+            }
+            return total;
+        }
+
+        /** 任意一层处于欠压即停状态。 */
+        public boolean hasUndervoltageLayer(){
+            if(power == null || power.status >= 1f) return false;
+            for(LayerState layer : layers){
+                int index = layer.recipeIndex >= 0 ? layer.recipeIndex : layer.selectedIndex;
+                if(index >= 0 && index < recipes.size){
+                    Recipe recipe = recipes.get(index);
+                    if(recipe.powerUse > 0 && recipe.stopUndervoltage) return true;
+                }
+            }
+            return false;
         }
 
         @Override

@@ -26,7 +26,6 @@ import arc.util.io.Reads;
 import arc.util.io.Writes;
 import mindustry.content.Items;
 import mindustry.content.Liquids;
-import mindustry.content.TechTree;
 import mindustry.Vars;
 import mindustry.core.UI;
 import mindustry.ctype.ContentType;
@@ -229,7 +228,7 @@ public class MultiRecipeFactory extends GenericCrafter{
      */
     public MultiRecipeFactory stackUpgrade(int layers, ItemStack[] cost, String descriptionKey){
         if(layers <= 1) return this;
-        String contentName = name + "-stack-" + layers;
+        String contentName = plainName() + "-stack-" + layers;
         RecipeResearch tech = new RecipeResearch(contentName);
         tech.cost = cost == null ? ItemStack.empty : cost;
         String baseName = displayName();
@@ -639,7 +638,7 @@ public class MultiRecipeFactory extends GenericCrafter{
      * 图标可用 atlas 中的“工厂名-配方编号.png”覆盖，否则回退到首个产出物图标。
      */
     public static UnlockableContent createResearch(UnlockableContent factory, Recipe r, int index) {
-        String rname = factory.name + "-" + index;
+        String rname = plainName(factory) + "-" + index;
         RecipeResearch c = new RecipeResearch(rname);
         c.cost = r.researchCost != null ? r.researchCost : r.inputItem.toArray(ItemStack.class);
         c.unlockCondition = r.unlockCondition;
@@ -648,7 +647,7 @@ public class MultiRecipeFactory extends GenericCrafter{
         c.uiIcon = researchIcon(factory, r, index, rname);
         c.description = researchDescription(factory, r, index, rname);
         // 研究条目不注册进 Vars.content；hideDatabase=true 使数据库的 select 过滤将其排除（官方隐藏方式），databaseTabs 清空确保不归属任何 tab。
-        // 仅通过科技树（TechNode）显示。挂载（addResearchNode）在 ContentInitEvent 之后进行。
+        // 仅通过科技树（TechNode）显示。挂载由 SerTriTechTree 在 ContentInitEvent 后处理。
         c.hideDatabase = true;
         c.databaseTabs.clear();
         return c;
@@ -732,24 +731,6 @@ public class MultiRecipeFactory extends GenericCrafter{
         if(validIcon(fallback)) return fallback;
         fallback = Core.atlas.find(name);
         return validIcon(fallback) ? fallback : fallbackIcon();
-    }
-
-    /** 将研究条目节点挂到工厂科技树节点之后；工厂节点缺失时输出警告并跳过。 */
-    public static void addResearchNode(UnlockableContent parent, UnlockableContent child) {
-        TechTree.TechNode context = TechTree.all.find(t -> t.content == parent);
-        if (context == null) {
-            Log.warn("[triangle] factory '@' not found in tech tree; research node '@' not attached.", parent.name, child.name);
-            return;
-        }
-        TechTree.TechNode node = new TechTree.TechNode(null, child, child.researchRequirements());
-        if(child instanceof RecipeResearch research && research.unlockCondition != null){
-            node.objectives.add(new UnlockConditionObjective(research.unlockCondition, research.unlockConditionText));
-        }
-        if (!context.children.contains(node)) {
-            context.children.add(node);
-        }
-        node.parent = context;
-        node.planet = context.planet;
     }
 
     /** 配方是否因额外条件或“需要研究且尚未解锁”而处于锁定状态。 */

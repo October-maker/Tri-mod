@@ -8,6 +8,7 @@ import mindustry.content.Blocks;
 import mindustry.content.TechTree;
 import mindustry.ctype.UnlockableContent;
 import mindustry.game.EventType;
+import triangle.black.MRFactory.MultiRecipeFactory;
 
 /**
  * 把 Java 注册的方块接入赛普罗（Serpulo）科技树。
@@ -104,6 +105,11 @@ public class SerTriTechTree {
         // 创建并挂载。构造函数会自动把节点注册进 TechTree.all 并设置 child.techNode；
         // 因以 null 父级创建，需手动补全 parent 与继承父级 planet。
         TechTree.TechNode node = new TechTree.TechNode(null, child, child.researchRequirements());
+        if(child instanceof MultiRecipeFactory.RecipeResearch research
+            && research.unlockCondition != null){
+            node.objectives.add(new MultiRecipeFactory.UnlockConditionObjective(
+                research.unlockCondition, research.unlockConditionText));
+        }
         context.children.add(node);
         node.parent = context;
         node.planet = context.planet;
