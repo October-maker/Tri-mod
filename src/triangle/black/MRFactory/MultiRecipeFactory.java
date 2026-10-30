@@ -8,6 +8,7 @@ import arc.graphics.Color;
 import arc.graphics.g2d.Draw;
 import arc.graphics.g2d.Lines;
 import arc.graphics.g2d.TextureRegion;
+import arc.graphics.g2d.TextureAtlas.AtlasRegion;
 import arc.math.Mathf;
 import arc.scene.style.Drawable;
 import arc.scene.ui.Button;
@@ -30,6 +31,7 @@ import mindustry.Vars;
 import mindustry.core.UI;
 import mindustry.ctype.ContentType;
 import mindustry.ctype.UnlockableContent;
+import mindustry.entities.units.BuildPlan;
 import mindustry.game.EventType.ContentInitEvent;
 import mindustry.game.Objectives;
 import mindustry.gen.Icon;
@@ -40,12 +42,14 @@ import mindustry.type.*;
 import mindustry.ui.Bar;
 import mindustry.ui.Styles;
 import mindustry.world.Block;
+import mindustry.world.Tile;
 import mindustry.world.blocks.heat.HeatBlock;
 import mindustry.world.blocks.heat.HeatConsumer;
 import mindustry.world.blocks.payloads.BuildPayload;
 import mindustry.world.blocks.production.GenericCrafter;
 import mindustry.world.meta.*;
 import triangle.black.TriDraw;
+import triangle.content.SerTriTechTree;
 
 /**
  * 多配方工厂：一台方块内置多条 {@link Recipe}，可按输入自动匹配，也可手动锁定配方。
@@ -65,6 +69,18 @@ import triangle.black.TriDraw;
 public class MultiRecipeFactory extends GenericCrafter{
     /** 本工厂的全部配方，顺序即编号顺序。 */
     public Seq<Recipe> recipes = new Seq<>();
+    /** 是否允许同实例堆叠；由具体工厂在内容加载前设置。 */
+    public boolean stackable = false;
+    /** 最大堆叠层数（含基础层）；堆叠变体按该值预生成。 */
+    public int stackLimit = 8;
+    /** 战役科技增长线；为空时 stackLimitNow() 直接返回 stackLimit。 */
+    public Seq<StackUpgrade> stackUpgrades = new Seq<>();
+    /** 已创建的自动堆叠研究节点数量，用于标题序号。 */
+    private int stackResearchCount = 0;
+    /** 堆叠变体配置面板是否默认竖直排列（false = 现有的横向排列）。 */
+    public boolean verticalStackPanels = false;
+    /** 是否创建配方研究节点；堆叠变体复用基础工厂的节点。 */
+    public boolean registerResearch = true;
 
     /** 全部物品输出种类（用于统一物流输出）。 */
     public Seq<Item> itemOutput = new Seq<>();
@@ -102,6 +118,156 @@ public class MultiRecipeFactory extends GenericCrafter{
         rotate = true;
         rotateDraw = false;
         configurable = true; // 允许打开配置面板（手动选定配方 / 自动匹配开关）
+    }
+
+    /** 放置计划实际建造的方块；堆叠工厂在这里切换为固定层数变体。 */
+    @Override
+    public Block getReplacement(BuildPlan req, Seq<BuildPlan> plans){
+        if(stackable){
+            Block variant = StackedMultiRecipeFactory.nextVariant(this, req);
+            if(variant != null) return variant;
+            // 已达上限时把计划固定到当前顶层方块；顶层 replaceable=false，
+            // 避免把已有堆叠替换回基础方块。
+            Block top = StackedMultiRecipeFactory.topVariant(this, req);
+            if(top != null) return top;
+        }
+        return super.getReplacement(req, plans);
+    }
+
+    /** 允许同实例覆盖放置，作为堆叠入口。 */
+    @Override
+    public boolean canPlaceOn(Tile tile, mindustry.game.Team team, int rotation){
+        if(stackable && tile != null && tile.build != null){
+            Block existing = tile.build.block;
+            boolean chain = existing == this
+                || (existing instanceof StackedMultiRecipeFactory variant && variant.baseFactory == this);
+            if(chain && StackedMultiRecipeFactory.layersOf(existing) < stackLimitNow()) return true;
+        }
+        return super.canPlaceOn(tile, team, rotation);
+    }
+
+    @Override
+    public boolean canReplace(Block other){
+        if(stackable && other == this) return true;
+        if(stackable && other instanceof StackedMultiRecipeFactory variant
+            && variant.baseFactory == this && variant.stackable) return true;
+        return super.canReplace(other);
+    }
+
+    @Override
+    public void drawPlace(int x, int y, int rotation, boolean valid){
+        super.drawPlace(x, y, rotation, valid);
+        if((stackable || this instanceof StackedMultiRecipeFactory)
+            && StackedMultiRecipeFactory.atStackLimit(this, x, y)){
+            drawPlaceText(Core.bundle.get("tri.stack.limit"), x, y, false);
+        }
+    }
+
+    /** 一条堆叠层数科技增长线。 */
+    public static class StackUpgrade{
+        public final UnlockableContent tech;
+        public final int layers;
+
+        public StackUpgrade(UnlockableContent tech, int layers){
+            this.tech = tech;
+            this.layers = layers;
+        }
+    }
+
+    /**
+     * 添加一个已有的科技节点作为堆叠层数增长条件。
+     * 需要在该工厂 registerVariants 之前调用，或再次调用 registerVariants。
+     */
+    public MultiRecipeFactory stackUpgrade(UnlockableContent tech, int layers){
+        if(layers <= 1) return this;
+        stackUpgrades.add(new StackUpgrade(tech, layers));
+        stackLimit = Math.max(stackLimit, layers);
+        return this;
+    }
+
+    /**
+     * 自动创建一个隐藏的堆叠层数研究节点（挂在当前工厂科技树节点下）。
+     * cost 为研究消耗；研究完成后 stackLimitNow() 提升到 layers。
+     */
+    public MultiRecipeFactory stackUpgrade(int layers, ItemStack[] cost){
+        return stackUpgrade(layers, cost, null);
+    }
+
+    /** 工厂在 bundle 中配置的显示名；未配置时回退到内部 name。 */
+    public String displayName(){
+        // Content.name 对 Java 内容可能已经带有 mod 前缀（triangle-BulletFactory），
+        // 因此直接用完整 name 拼 block 键，不能再次叠加 mod 前缀。
+        String key = "block." + name + ".name";
+        String value = Core.bundle.get(key, "");
+        if(value == null || value.isEmpty()){
+            value = Core.bundle.get("block.triangle-" + plainName() + ".name", "");
+        }
+        if(value != null && !value.isEmpty()) return value;
+        if(localizedName != null && !localizedName.isEmpty()) return localizedName;
+        return name;
+    }
+
+    /** 不含 mod 前缀的内容名，用于稳定的 bundle 键。 */
+    public String plainName(){
+        return plainName(this);
+    }
+
+    private static String plainName(UnlockableContent content){
+        if(content == null) return "";
+        String prefix = content.minfo != null && content.minfo.mod != null
+            ? content.minfo.mod.name + "-" : null;
+        if(prefix != null && content.name.startsWith(prefix)){
+            return content.name.substring(prefix.length());
+        }
+        return content.name;
+    }
+
+    /**
+     * 自动创建堆叠研究节点，并指定详情描述 key。
+     * descriptionKey 为 null 时自动使用
+     * {@code tri.research.<工厂名>-stack-<层数>.description}。
+     */
+    public MultiRecipeFactory stackUpgrade(int layers, ItemStack[] cost, String descriptionKey){
+        if(layers <= 1) return this;
+        String contentName = name + "-stack-" + layers;
+        RecipeResearch tech = new RecipeResearch(contentName);
+        tech.cost = cost == null ? ItemStack.empty : cost;
+        String baseName = displayName();
+        int upgradeIndex = ++stackResearchCount;
+        tech.localizedName = Core.bundle.format("tri.research.stackName", baseName, upgradeIndex);
+        tech.uiIcon = stackResearchIcon(layers);
+        String descKey = descriptionKey != null
+            ? descriptionKey
+            : "tri.research." + plainName() + "-stack-" + layers + ".description";
+        tech.description = Core.bundle.get(descKey, "");
+        if(tech.description == null || tech.description.isEmpty()){
+            // 兼容使用完整内容名（含 mod 前缀）的旧键。
+            tech.description = Core.bundle.get(
+                "tri.research." + contentName + ".description", "");
+        }
+        tech.hideDatabase = true;
+        tech.databaseTabs.clear();
+        stackUpgrades.add(new StackUpgrade(tech, layers));
+        stackLimit = Math.max(stackLimit, layers);
+        Events.on(ContentInitEvent.class, event -> {
+            // 方块 load() 完成后 uiIcon 才可靠，这里再解析一次覆盖贴图/工厂图标。
+            tech.uiIcon = stackResearchIcon(layers);
+            SerTriTechTree.addNodeLater(this, tech);
+        });
+        return this;
+    }
+
+    /** 当前实际允许的堆叠层数；未配置科技增长线时直接使用 stackLimit。 */
+    public int stackLimitNow(){
+        if(Vars.state != null && Vars.state.rules.infiniteResources) return stackLimit;
+        if(stackUpgrades.isEmpty()) return stackLimit;
+        int limit = 1;
+        for(StackUpgrade upgrade : stackUpgrades){
+            if(upgrade.tech == null || upgrade.tech.unlocked()){
+                limit = Math.max(limit, upgrade.layers);
+            }
+        }
+        return Math.min(stackLimit, limit);
     }
 
     /**
@@ -308,6 +474,12 @@ public class MultiRecipeFactory extends GenericCrafter{
             o.add(new Image(content.uiIcon)).size(32f).scaling(Scaling.fit);
         }));
         StatValues.withTooltip(stack, content);
+        // 配置面板里的图标只保留悬停提示，不再点击打开内容详情页。
+        for(int i = stack.getListeners().size - 1; i >= 0; i--){
+            if(stack.getListeners().get(i) instanceof arc.scene.event.ClickListener){
+                stack.removeListener(stack.getListeners().get(i));
+            }
+        }
         table.add(stack);
         return table;
     }
@@ -350,7 +522,7 @@ public class MultiRecipeFactory extends GenericCrafter{
         // 为需要研究的配方创建研究条目（对象创建不依赖科技树，可在此进行）
         for (int i = 0; i < recipes.size; i++) {
             Recipe r = recipes.get(i);
-            if (r.requiresResearch) {
+            if (registerResearch && r.requiresResearch) {
                 r.research = createResearch(this, r, i + 1);
             }
         }
@@ -359,10 +531,14 @@ public class MultiRecipeFactory extends GenericCrafter{
         // 此时原版科技树（SerpuloTechTree）已完全加载，且工厂自身的科技树节点已就位，
         // 避免在 init() 阶段 TechTree.all 尚未包含工厂节点导致 find 返回 null 而无法挂载。
         Events.on(ContentInitEvent.class, e -> {
+            if (!registerResearch) return;
             for (int i = 0; i < recipes.size; i++) {
                 Recipe r = recipes.get(i);
-                if (r.requiresResearch && r.research != null) {
-                    addResearchNode(this, r.research);
+                if (r.requiresResearch && r.research instanceof RecipeResearch research) {
+                    // 物品/方块贴图在 ContentInit 时才全部就绪；此时重新解析，避免 ohno。
+                    research.uiIcon = researchIcon(this, r, i + 1, this.name + "-" + (i + 1));
+                    research.description = researchDescription(this, r, i + 1, this.name + "-" + (i + 1));
+                    SerTriTechTree.addNodeLater(this, research);
                 }
             }
         });
@@ -469,7 +645,8 @@ public class MultiRecipeFactory extends GenericCrafter{
         c.unlockCondition = r.unlockCondition;
         c.unlockConditionText = r.unlockConditionText;
         c.localizedName = researchName(factory, r, index);
-        c.uiIcon = researchIcon(factory, r, rname);
+        c.uiIcon = researchIcon(factory, r, index, rname);
+        c.description = researchDescription(factory, r, index, rname);
         // 研究条目不注册进 Vars.content；hideDatabase=true 使数据库的 select 过滤将其排除（官方隐藏方式），databaseTabs 清空确保不归属任何 tab。
         // 仅通过科技树（TechNode）显示。挂载（addResearchNode）在 ContentInitEvent 之后进行。
         c.hideDatabase = true;
@@ -484,13 +661,77 @@ public class MultiRecipeFactory extends GenericCrafter{
         return factory.name + "-" + index;
     }
 
-    private static TextureRegion researchIcon(UnlockableContent factory, Recipe r, String rname) {
-        // 用户覆盖文件："工厂名-配方编号.png" → atlas 名
-        if (Core.atlas.has(rname)) return Core.atlas.find(rname);
-        if (!r.outputItem.isEmpty()) return r.outputItem.first().item.uiIcon;
-        if (!r.outputLiquid.isEmpty()) return r.outputLiquid.first().liquid.uiIcon;
-        if (!r.outputPayload.isEmpty()) return r.outputPayload.first().item.uiIcon;
-        return factory.uiIcon;
+    private static String researchDescription(UnlockableContent factory, Recipe r, int index, String rname) {
+        // 优先使用显式 key，否则使用不含 mod 前缀的稳定自动 key。
+        String descKey = r.researchDescriptionKey != null
+            ? r.researchDescriptionKey
+            : "tri.research." + plainName(factory) + "-" + index + ".description";
+        String desc = Core.bundle.get(descKey, "");
+        if(desc == null || desc.isEmpty()){
+            // 兼容使用完整内容名（含 mod 前缀）的键。
+            desc = Core.bundle.get("tri.research." + rname + ".description", "");
+        }
+        return desc == null ? "" : desc;
+    }
+
+    private static TextureRegion researchIcon(UnlockableContent factory, Recipe r, int index, String rname) {
+        String plain = plainName(factory);
+        // 覆盖贴图命名：<工厂名>-<配方编号>，同时兼容带 mod 前缀和 -recipe- 写法。
+        String[] overrides = {
+            plain + "-" + index,
+            factory.name + "-" + index,
+            plain + "-recipe-" + index,
+            factory.name + "-recipe-" + index
+        };
+        for(String override : overrides){
+            if(Core.atlas.has(override)) return Core.atlas.find(override);
+        }
+        // 默认使用第一项产物贴图；skip 掉 ohno/error 区域。
+        for(ItemStack stack : r.outputItem){
+            if(validIcon(stack.item.uiIcon)) return stack.item.uiIcon;
+        }
+        for(LiquidStack stack : r.outputLiquid){
+            if(validIcon(stack.liquid.uiIcon)) return stack.liquid.uiIcon;
+        }
+        for(PayloadStack stack : r.outputPayload){
+            if(validIcon(stack.item.uiIcon)) return stack.item.uiIcon;
+        }
+        if(validIcon(factory.uiIcon)) return factory.uiIcon;
+        return fallbackIcon();
+    }
+
+    /** 判断贴图是否真的存在，而不是 atlas 的 error/ohno 回退区域。 */
+    private static boolean validIcon(TextureRegion region){
+        if(region == null || !region.found()) return false;
+        if(region instanceof AtlasRegion atlas && "error".equals(atlas.name)) return false;
+        return true;
+    }
+
+    /** 最后一层可控回退，避免把 error 区域交给科技树。 */
+    private static TextureRegion fallbackIcon(){
+        TextureRegion white = Core.atlas.find("white");
+        return validIcon(white) ? white : Core.atlas.find("error");
+    }
+
+    /** 堆叠节点贴图：默认工厂贴图，可用 <工厂名>-stack-<层数>.png 等覆盖。 */
+    private TextureRegion stackResearchIcon(int layers){
+        String plain = plainName();
+        String[] overrides = {
+            plain + "-stack-" + layers,
+            name + "-stack-" + layers,
+            plain + "-stack",
+            name + "-stack"
+        };
+        for(String override : overrides){
+            if(Core.atlas.has(override)) return Core.atlas.find(override);
+        }
+        if(validIcon(uiIcon)) return uiIcon;
+        if(validIcon(fullIcon)) return fullIcon;
+        if(validIcon(region)) return region;
+        TextureRegion fallback = Core.atlas.find(plain);
+        if(validIcon(fallback)) return fallback;
+        fallback = Core.atlas.find(name);
+        return validIcon(fallback) ? fallback : fallbackIcon();
     }
 
     /** 将研究条目节点挂到工厂科技树节点之后；工厂节点缺失时输出警告并跳过。 */
@@ -514,7 +755,7 @@ public class MultiRecipeFactory extends GenericCrafter{
     /** 配方是否因额外条件或“需要研究且尚未解锁”而处于锁定状态。 */
     public static boolean isLocked(Recipe r) {
         if (r == null) return false;
-        // 沙盒模式：所有配方、研究节点和额外解锁条件都视为已满足。
+        // 沙盒模式：所有配方、研究条目和额外解锁条件都视为已满足。
         if (Vars.state != null && Vars.state.rules.infiniteResources) return false;
         // unlockCondition 只约束需要研究的配方；普通配方即使误设条件也保持原行为。
         if (r.requiresResearch && r.unlockCondition != null) {

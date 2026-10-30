@@ -8,7 +8,10 @@ import arc.util.Log;
 import mindustry.*;
 import mindustry.game.EventType.*;
 import mindustry.gen.Icon;
+import mindustry.ui.Styles;
 import mindustry.ui.dialogs.BaseDialog;
+import mindustry.ui.dialogs.SettingsMenuDialog.SettingsTable;
+import mindustry.ui.dialogs.SettingsMenuDialog.SettingsTable.Setting;
 
 /**
  * 三角模组的设置逻辑集中入口：仅在游戏设置界面新增“三角”分类页
@@ -21,6 +24,13 @@ public class TriSetting{
     public static final String TMAIL_SPEED_KEY = "tri.tmail.animSpeed";
     /** 以兼容模式运行 Tmail（使用旧版 UI 动效）。 */
     public static final String TMAIL_COMPAT_KEY = "tri.tmail.compatMode";
+    /** 堆叠工厂配置面板布局：0=跟随各工厂设置，1=全部竖直，2=全部横向。 */
+    public static final String STACK_LAYOUT_KEY = "tri.stackLayout";
+
+    /** 当前堆叠工厂配置面板布局模式。 */
+    public static int stackLayout(){
+        return Math.max(0, Math.min(2, Core.settings.getInt(STACK_LAYOUT_KEY, 0)));
+    }
 
     /** 是否已向设置界面添加“三角”设置页（防止 ClientLoadEvent 重复触发导致重复添加）。 */
     private static boolean settingsAdded = false;
@@ -94,6 +104,28 @@ public class TriSetting{
                     value -> String.format(java.util.Locale.ROOT, "%.2f×",
                         tmailAnimMultiplierForStep(value)));
                 t.checkPref(TMAIL_COMPAT_KEY, false, value -> showTmailRestartDialog());
+
+                // 堆叠工厂配置面板布局：默认 / 全部竖直 / 全部横向
+                t.pref(new Setting(STACK_LAYOUT_KEY){
+                    @Override
+                    public void add(SettingsTable table){
+                        table.add(Core.bundle.get("tri.stackLayout.name")).left().padTop(8f).row();
+                        table.table(row -> {
+                            String[] labels = {
+                                Core.bundle.get("tri.stackLayout.default"),
+                                Core.bundle.get("tri.stackLayout.vertical"),
+                                Core.bundle.get("tri.stackLayout.horizontal")
+                            };
+                            for(int i = 0; i < labels.length; i++){
+                                int value = i;
+                                row.button(labels[i], Styles.flatToggleMenut,
+                                    () -> Core.settings.put(STACK_LAYOUT_KEY, value))
+                                    .size(180f, 40f).pad(2f)
+                                    .update(button -> button.setChecked(stackLayout() == value));
+                            }
+                        }).left().row();
+                    }
+                });
             });
         });
     }

@@ -3,160 +3,241 @@ package triangle.black.MRFactory;
 import arc.Core;
 import arc.Events;
 import arc.graphics.Color;
-import arc.graphics.g2d.Draw;
-import arc.graphics.g2d.Fill;
 import arc.scene.ui.Button;
 import arc.scene.ui.Image;
-import arc.scene.ui.Label;
 import arc.scene.ui.ScrollPane;
 import arc.scene.ui.TextButton;
 import arc.scene.ui.layout.Table;
 import arc.struct.IntMap;
+import arc.struct.ObjectMap;
 import arc.struct.Seq;
-import arc.util.Align;
 import arc.util.Strings;
 import arc.util.io.Reads;
 import arc.util.io.Writes;
 import mindustry.Vars;
+import mindustry.entities.units.BuildPlan;
 import mindustry.game.EventType.BlockBuildBeginEvent;
-import mindustry.ctype.UnlockableContent;
+import mindustry.game.Team;
+import mindustry.gen.Building;
 import mindustry.gen.Icon;
-import mindustry.gen.Unit;
 import mindustry.gen.Tex;
-import mindustry.graphics.Pal;
-import mindustry.ui.Fonts;
-import mindustry.ui.Styles;
-import mindustry.world.Tile;
-import mindustry.world.Block;
+import mindustry.gen.Unit;
 import mindustry.type.Item;
 import mindustry.type.ItemStack;
 import mindustry.type.Liquid;
 import mindustry.type.LiquidStack;
+import mindustry.ui.Fonts;
+import mindustry.ui.Styles;
+import mindustry.world.Block;
+import mindustry.world.Tile;
+import mindustry.world.draw.DrawBlock;
+import mindustry.world.draw.DrawDefault;
+import triangle.black.TriSetting;
 
 /**
- * 方案 A：在单个 Building 内保存多个独立生产层。
+ * 固定层数的多配方工厂方块。
  *
- * <p>层与层共享物品/液体库存、电力和热量；每层拥有自己的配方选择、
- * 自动模式和 craft 进度。堆叠上限、科技增长线与跨工厂兼容列表分别配置。
- *
- * <p>本类不影响原有 {@link MultiRecipeFactory}；通过把需要支持堆叠的工厂实例
- * 改为本类来启用。
+ * <p>基础 {@link MultiRecipeFactory} 只保留一层；当玩家把同实例工厂覆盖到已有工厂上时，
+ * 放置计划会被替换成这里的 2 层 / 3 层 / ... 变体。每个变体是一个独立 Block，
+ * 容量、生产线程数和配置面板数在方块属性中静态确定。
  */
 public class StackedMultiRecipeFactory extends MultiRecipeFactory{
 
-    /** 该实例的基础最大层数；<=0 时回退到科技增长线或 3。 */
-    public int maxLayers = 3;
-    /** 按科技解锁的最大层数增长线；每项的 tech 为空表示无条件。 */
-    public Seq<StackUpgrade> stackUpgrades = new Seq<>();
-
-    /** 旧建筑到新建筑的迁移缓存。 */
-    private static final IntMap<StackedBuild> pendingMigrations = new IntMap<>();
+    /** 基础工厂 -> 全部堆叠变体。 */
+    private static final ObjectMap<MultiRecipeFactory, Seq<StackedMultiRecipeFactory>> variants = new ObjectMap<>();
+    /** 放置前捕获的旧建筑，用于迁移库存和层状态。 */
+    private static final IntMap<Building> pending = new IntMap<>();
 
     static{
-        // placeBegan 在部分放置路径中拿不到旧建筑；事件在替换前提供 tile.build。
         Events.on(BlockBuildBeginEvent.class, event -> {
-            if(event.breaking || event.tile == null) return;
-            if(event.tile.build instanceof StackedBuild existing){
-                pendingMigrations.put(event.tile.pos(), existing);
+            if(!event.breaking && event.tile != null && event.tile.build != null){
+                pending.put(event.tile.pos(), event.tile.build);
             }
         });
     }
 
-    public StackedMultiRecipeFactory(String name){
-        super(name);
+    public final MultiRecipeFactory baseFactory;
+    public final int layerCount;
+
+    public StackedMultiRecipeFactory(MultiRecipeFactory base, int layerCount){
+        super(base.name + "-stack" + layerCount);
+        this.baseFactory = base;
+        this.layerCount = layerCount;
+        copyBase(base);
     }
 
-    /** 添加一条战役科技层数增长线。 */
-    public StackedMultiRecipeFactory stackUpgrade(UnlockableContent tech, int layers){
-        stackUpgrades.add(new StackUpgrade(tech, layers));
-        return this;
-    }
-
-    /**
-     * 为工厂创建一个独立的堆叠层数研究节点。
-     * 节点挂在当前工厂的科技树节点下；研究完成后 maxLayersNow() 才会取该层数。
-     */
-    public StackedMultiRecipeFactory stackUpgrade(int layers, ItemStack[] cost){
-        String contentName = name + "-stack-" + layers;
-        RecipeResearch tech = new RecipeResearch(contentName);
-        tech.cost = cost == null ? ItemStack.empty : cost;
-        tech.localizedName = (localizedName == null || localizedName.isEmpty() ? name : localizedName) + " Stack " + layers;
-        tech.uiIcon = uiIcon;
-        tech.hideDatabase = true;
-        tech.databaseTabs.clear();
-        stackUpgrades.add(new StackUpgrade(tech, layers));
-        Events.on(mindustry.game.EventType.ContentInitEvent.class, event -> addResearchNode(this, tech));
-        return this;
-    }
-
-    /** 当前允许的最大层数；沙盒取全部增长线中的最高值。 */
-    public int maxLayersNow(){
-        int max = maxLayers > 0 ? maxLayers : 3;
-        if(Vars.state != null && Vars.state.rules.infiniteResources){
-            for(StackUpgrade upgrade : stackUpgrades){
-                max = Math.max(max, upgrade.layers);
-            }
-            return max;
+    /** 为基础工厂预生成 2..stackLimit 层变体；可重复调用以补齐后增加的上限。 */
+    public static void registerVariants(MultiRecipeFactory base){
+        if(base == null || !base.stackable) return;
+        Seq<StackedMultiRecipeFactory> list = variants.get(base);
+        if(list == null){
+            list = new Seq<>();
+            variants.put(base, list);
         }
-        for(StackUpgrade upgrade : stackUpgrades){
-            if(upgrade.tech == null || upgrade.tech.unlocked()){
-                max = Math.max(max, upgrade.layers);
+        int max = Math.max(2, base.stackLimit);
+        for(int i = 2; i <= max; i++){
+            int layer = i;
+            if(!list.contains(v -> v.layerCount == layer)){
+                list.add(new StackedMultiRecipeFactory(base, layer));
             }
         }
-        return max;
-    }
-
-    public static class StackUpgrade{
-        public final UnlockableContent tech;
-        public final int layers;
-
-        public StackUpgrade(UnlockableContent tech, int layers){
-            this.tech = tech;
-            this.layers = layers;
+        for(StackedMultiRecipeFactory variant : list){
+            variant.stackable = variant.layerCount < max;
+            variant.replaceable = variant.stackable && base.replaceable;
         }
     }
 
-    /** 是否允许从已有建筑升级到当前方块。 */
+    /** 根据放置目标选择下一层变体；只接受链上的同实例工厂。 */
+    public static Block nextVariant(MultiRecipeFactory current, BuildPlan req){
+        if(current == null || req == null || Vars.world == null) return null;
+        Tile tile = Vars.world.tile(req.x, req.y);
+        if(tile == null || tile.build == null) return null;
+
+        MultiRecipeFactory currentBase = baseOf(current);
+        MultiRecipeFactory existingBase = baseOf(tile.build.block);
+        if(currentBase == null || currentBase != existingBase) return null;
+
+        int next = layersOf(tile.build.block) + 1;
+        if(next > currentBase.stackLimitNow()) return null;
+        Seq<StackedMultiRecipeFactory> list = variants.get(currentBase);
+        if(list == null) return null;
+        for(StackedMultiRecipeFactory variant : list){
+            if(variant.layerCount == next) return variant;
+        }
+        return null;
+    }
+
+    /** 达到上限时返回当前顶层方块，防止放置计划落回基础方块。 */
+    public static Block topVariant(MultiRecipeFactory current, BuildPlan req){
+        if(current == null || req == null || Vars.world == null) return null;
+        Tile tile = Vars.world.tile(req.x, req.y);
+        if(tile == null || tile.build == null) return null;
+        MultiRecipeFactory currentBase = baseOf(current);
+        MultiRecipeFactory existingBase = baseOf(tile.build.block);
+        if(currentBase == null || currentBase != existingBase) return null;
+        return tile.build.block;
+    }
+
+    /** 当前格子的工厂链是否已达到上限。 */
+    public static boolean atStackLimit(MultiRecipeFactory current, int x, int y){
+        if(current == null || Vars.world == null) return false;
+        Tile tile = Vars.world.tile(x, y);
+        if(tile == null || tile.build == null) return false;
+        MultiRecipeFactory base = baseOf(current);
+        if(base == null || baseOf(tile.build.block) != base) return false;
+        return layersOf(tile.build.block) >= Math.max(1, base.stackLimitNow());
+    }
+
+    private static MultiRecipeFactory baseOf(Block block){
+        if(block instanceof StackedMultiRecipeFactory stacked) return stacked.baseFactory;
+        if(block instanceof MultiRecipeFactory factory) return factory;
+        return null;
+    }
+
+    public static int layersOf(Block block){
+        if(block instanceof StackedMultiRecipeFactory stacked) return stacked.layerCount;
+        return block instanceof MultiRecipeFactory ? 1 : 0;
+    }
+
+    private void copyBase(MultiRecipeFactory base){
+        size = base.size;
+        health = base.health;
+        armor = base.armor;
+        // 未初始化时基础工厂可能仍是 -1，init() 后会再次按层数修正。
+        buildTime = base.buildTime >= 0f ? base.buildTime * layerCount : base.buildTime;
+        itemCapacity = base.itemCapacity * layerCount;
+        liquidCapacity = base.liquidCapacity * layerCount;
+        requirements = base.requirements;
+        category = base.category;
+        // 不能设为 hidden：原版 validPlace 会拒绝不可放置方块。
+        // 用 placeablePlayer=false 从建造菜单隐藏，同时保留替换放置能力。
+        buildVisibility = base.buildVisibility;
+        placeablePlayer = false;
+        rotate = base.rotate;
+        rotateDraw = base.rotateDraw;
+        drawer = base.drawer;
+        update = base.update;
+        hasItems = base.hasItems;
+        hasLiquids = base.hasLiquids;
+        hasPower = base.hasPower;
+        consumesPower = base.consumesPower;
+        configurable = true;
+        checkItemOutputFullness = base.checkItemOutputFullness;
+        checkLiquidOutputFullness = base.checkLiquidOutputFullness;
+        verticalStackPanels = base.verticalStackPanels;
+        stackable = layerCount < Math.max(2, base.stackLimit);
+        // 顶层变体不能再被覆盖替换，否则会绕过堆叠上限。
+        replaceable = stackable && base.replaceable;
+        registerResearch = false;
+        hideDatabase = true;
+        databaseTabs.clear();
+        recipes.addAll(base.recipes);
+
+        String baseName = base.localizedName == null ? base.name : base.localizedName;
+        localizedName = baseName + " ×" + layerCount;
+        description = base.description;
+        uiIcon = base.uiIcon;
+    }
+
     @Override
-    public boolean canPlaceOn(Tile tile, mindustry.game.Team team, int rotation){
-        if(tile != null && tile.build instanceof StackedBuild existing
-            && StackCompatibility.canStack(this, existing.block)
-            && existing.layers.size < maxLayersNow()){
-            return true;
+    public void init(){
+        super.init();
+        if(baseFactory != null){
+            // 单层建造时间 × 层数；基础工厂尚未初始化时用变体自己算出的单层时间。
+            float single = baseFactory.buildTime >= 0f ? baseFactory.buildTime : buildTime;
+            buildTime = single * layerCount;
         }
-        return super.canPlaceOn(tile, team, rotation);
     }
 
-    /** 原版替换判定：允许堆叠工厂覆盖同格旧工厂。 */
     @Override
-    public boolean canReplace(Block other){
-        if(other instanceof StackedMultiRecipeFactory && StackCompatibility.canStack(this, other)){
-            return true;
+    public void load(){
+        // 不要用变体名重新加载基础工厂的 drawer：
+        // DrawFlame 等会寻找 “变体名-flame” 贴图，找不到就回退成 ohno。
+        DrawBlock baseDrawer = baseFactory == null ? null : baseFactory.drawer;
+        drawer = new DrawDefault();
+        super.load();
+        drawer = baseDrawer;
+        if(baseFactory != null){
+            region = baseFactory.region;
+            fullIcon = baseFactory.fullIcon;
+            uiIcon = baseFactory.uiIcon;
         }
-        return super.canReplace(other);
     }
 
     @Override
     public void placeBegan(Tile tile, Block previous){
-        if(tile != null && tile.build instanceof StackedBuild existing
-            && StackCompatibility.canStack(this, existing.block)){
-            pendingMigrations.put(tile.pos(), existing);
+        if(tile != null && tile.build != null){
+            pending.put(tile.pos(), tile.build);
         }
         super.placeBegan(tile, previous);
     }
 
     @Override
-    public void drawPlace(int x, int y, int rotation, boolean valid){
-        super.drawPlace(x, y, rotation, valid);
-        Tile tile = Vars.world == null ? null : Vars.world.tile(x, y);
-        if(tile != null && tile.build instanceof StackedBuild existing
-            && StackCompatibility.canStack(this, existing.block)
-            && existing.layers.size >= maxLayersNow()){
-            drawPlaceText(Core.bundle.get("tri.stack.limit"), x, y, false);
+    public boolean canPlaceOn(Tile tile, Team team, int rotation){
+        if(tile != null && tile.build != null && sameChain(tile.build.block)
+            && layersOf(tile.build.block) + 1 == layerCount
+            && layerCount <= baseFactory.stackLimitNow()){
+            return true;
         }
+        return super.canPlaceOn(tile, team, rotation);
     }
 
-    /** 一层独立生产状态。 */
+    @Override
+    public boolean canReplace(Block other){
+        if(other != null && sameChain(other)){
+            // 只允许“上一层覆盖下一层”。顶层变体仍可作为新方块覆盖 7 层，
+            // 但它自己不能再被更高层覆盖（replaceable=false 负责拦截旧方块方向）。
+            return layerCount == layersOf(other) + 1;
+        }
+        return super.canReplace(other);
+    }
+
+    private boolean sameChain(Block block){
+        if(block == null) return false;
+        if(block == baseFactory) return true;
+        return block instanceof StackedMultiRecipeFactory stacked && stacked.baseFactory == baseFactory;
+    }
+
     public static class LayerState{
         public int recipeIndex = -1;
         public int selectedIndex = -1;
@@ -169,55 +250,48 @@ public class StackedMultiRecipeFactory extends MultiRecipeFactory{
 
         public StackedBuild(){
             super();
-            layers.add(new LayerState());
+            for(int i = 0; i < layerCount; i++) layers.add(new LayerState());
+        }
+
+        private void ensureLayers(){
+            while(layers.size < layerCount) layers.add(new LayerState());
+            while(layers.size > layerCount) layers.remove(layers.size - 1);
         }
 
         @Override
         public void created(){
             super.created();
-            if(layers.isEmpty()) layers.add(new LayerState());
+            ensureLayers();
 
-            StackedBuild old = pendingMigrations.remove(tile.pos());
+            Building old = pending.remove(tile.pos());
             if(old != null && old != this){
-                layers.clear();
-                for(LayerState layer : old.layers){
-                    layers.add(copyLayer(layer));
-                }
                 if(items != null && old.items != null) items.set(old.items);
-                copyLiquids(old);
-                if(layers.size < block().maxLayersNow()){
-                    layers.add(new LayerState());
+                if(liquids != null && old.liquids != null){
+                    old.liquids.each((liquid, amount) -> liquids.add(liquid, amount));
+                }
+                if(old instanceof StackedBuild stacked){
+                    for(int i = 0; i < Math.min(layers.size, stacked.layers.size); i++){
+                        LayerState src = stacked.layers.get(i);
+                        LayerState dst = layers.get(i);
+                        dst.recipeIndex = src.recipeIndex;
+                        dst.selectedIndex = src.selectedIndex;
+                        dst.auto = src.auto;
+                        dst.progress = src.progress;
+                    }
+                }else if(old instanceof MultiRecipeFactoryBuild base){
+                    LayerState dst = layers.first();
+                    dst.recipeIndex = base.recipeIndex;
+                    dst.selectedIndex = base.selectedIndex;
+                    dst.auto = base.auto;
+                    dst.progress = base.progress;
                 }
             }
-            while(layers.size > Math.max(1, block().maxLayersNow())){
-                layers.remove(layers.size - 1);
-            }
-            normalizeLayers();
             clampStorage();
-        }
-
-        private StackedMultiRecipeFactory block(){
-            return StackedMultiRecipeFactory.this;
-        }
-
-        private LayerState copyLayer(LayerState src){
-            LayerState out = new LayerState();
-            out.recipeIndex = src.recipeIndex;
-            out.selectedIndex = src.selectedIndex;
-            out.auto = src.auto;
-            out.progress = src.progress;
-            return out;
-        }
-
-        private void copyLiquids(StackedBuild old){
-            if(liquids == null || old.liquids == null) return;
-            old.liquids.each((liquid, amount) -> liquids.add(liquid, amount));
         }
 
         @Override
         public void updateTile(){
-            if(layers.isEmpty()) layers.add(new LayerState());
-
+            ensureLayers();
             for(LayerState layer : layers){
                 recipeIndex = layer.recipeIndex;
                 selectedIndex = layer.selectedIndex;
@@ -234,35 +308,19 @@ public class StackedMultiRecipeFactory extends MultiRecipeFactory{
             clampStorage();
         }
 
-        private void normalizeLayers(){
-            for(LayerState layer : layers){
-                if(layer.selectedIndex >= recipes.size) layer.selectedIndex = -1;
-                if(layer.recipeIndex >= recipes.size) layer.recipeIndex = -1;
-            }
-        }
-
         @Override
         public int getMaximumAccepted(Item item){
-            // 原版 itemCapacity 是每种物品的容量，不是全物品总量。
-            return Math.max(0, itemCapacityPerType() - (items == null ? 0 : items.get(item)));
+            return Math.max(0, itemCapacity - (items == null ? 0 : items.get(item)));
         }
 
         @Override
-        public boolean acceptItem(mindustry.gen.Building source, Item item){
-            return items != null && items.get(item) < itemCapacityPerType() && super.acceptItem(source, item);
+        public boolean acceptItem(Building source, Item item){
+            return items != null && items.get(item) < itemCapacity && super.acceptItem(source, item);
         }
 
         @Override
-        public boolean acceptLiquid(mindustry.gen.Building source, Liquid liquid){
-            return liquids != null && liquidTotal() < capacityLiquids() && super.acceptLiquid(source, liquid);
-        }
-
-        private int itemCapacityPerType(){
-            return Math.max(0, itemCapacity) * Math.max(1, layers.size);
-        }
-
-        private float capacityLiquids(){
-            return Math.max(0f, liquidCapacity) * Math.max(1, layers.size);
+        public boolean acceptLiquid(Building source, Liquid liquid){
+            return liquids != null && liquidTotal() < liquidCapacity && super.acceptLiquid(source, liquid);
         }
 
         private float liquidTotal(){
@@ -273,12 +331,12 @@ public class StackedMultiRecipeFactory extends MultiRecipeFactory{
         public boolean canOutputForRecipe(Recipe recipe){
             if(checkItemOutputFullness){
                 for(ItemStack output : recipe.outputItem){
-                    if(items.get(output.item) + output.amount > itemCapacityPerType()) return false;
+                    if(items.get(output.item) + output.amount > itemCapacity) return false;
                 }
             }
             if(checkLiquidOutputFullness){
                 for(LiquidStack output : recipe.outputLiquid){
-                    if(liquids.get(output.liquid) + output.amount > capacityLiquids()) return false;
+                    if(liquids.get(output.liquid) + output.amount > liquidCapacity) return false;
                 }
             }
             return true;
@@ -296,7 +354,7 @@ public class StackedMultiRecipeFactory extends MultiRecipeFactory{
                 if(currentRecipe.outputLiquid.isEmpty()) return true;
                 boolean allFull = true;
                 for(LiquidStack output : currentRecipe.outputLiquid){
-                    if(liquids.get(output.liquid) >= capacityLiquids() - 0.001f){
+                    if(liquids.get(output.liquid) >= liquidCapacity - 0.001f){
                         if(!dumpExtraLiquid) return false;
                     }else{
                         allFull = false;
@@ -307,44 +365,26 @@ public class StackedMultiRecipeFactory extends MultiRecipeFactory{
             return enabled;
         }
 
-        /** 缩容时销毁每种物品/液体超出当前容量的部分。 */
+        /** 缩容/替换时销毁超出容量的部分；物品按每种独立计算。 */
         public void clampStorage(){
-            // 物品容量是每种物品独立计算的，不能按 items.total() 截断。
-            int itemCap = itemCapacityPerType();
-            if(items != null && itemCap >= 0){
+            if(items != null){
                 Seq<ItemStack> stacks = new Seq<>();
                 items.each((item, amount) -> stacks.add(new ItemStack(item, amount)));
                 for(ItemStack stack : stacks){
-                    if(stack.amount > itemCap){
-                        items.remove(stack.item, stack.amount - itemCap);
+                    if(stack.amount > itemCapacity){
+                        items.remove(stack.item, stack.amount - itemCapacity);
                     }
                 }
             }
 
-            float liquidCap = capacityLiquids();
             if(liquids == null) return;
-            while(liquidTotal() > liquidCap + 0.0001f){
+            while(liquidTotal() > liquidCapacity + 0.0001f){
                 Seq<LiquidStack> stacks = new Seq<>();
                 liquids.each((liquid, amount) -> stacks.add(new LiquidStack(liquid, amount)));
                 if(stacks.isEmpty()) break;
                 LiquidStack first = stacks.first();
-                liquids.remove(first.liquid, Math.min(first.amount, liquidTotal() - liquidCap));
+                liquids.remove(first.liquid, Math.min(first.amount, liquidTotal() - liquidCapacity));
             }
-        }
-
-        /** 逐层拆除；返回该层建造材料，超出容量部分随后销毁。 */
-        public boolean removeLayer(int index){
-            if(layers.size <= 1 || index < 0 || index >= layers.size) return false;
-            layers.remove(index);
-
-            ItemStack[] req = requirements;
-            if(req != null && items != null){
-                for(ItemStack stack : req){
-                    items.add(stack.item, stack.amount);
-                }
-            }
-            clampStorage();
-            return true;
         }
 
         @Override
@@ -359,14 +399,9 @@ public class StackedMultiRecipeFactory extends MultiRecipeFactory{
 
         @Override
         public void configured(Unit unit, Object value){
-            if(value instanceof int[] arr){
-                ensureLayerCount(arr.length);
-                for(int i = 0; i < arr.length && i < layers.size; i++){
-                    setSelection(layers.get(i), arr[i]);
-                }
-            }else if(value instanceof String text){
+            if(value instanceof String text){
                 String[] parts = text.isEmpty() ? new String[0] : text.split(",");
-                ensureLayerCount(parts.length);
+                ensureLayers();
                 for(int i = 0; i < parts.length && i < layers.size; i++){
                     try{
                         setSelection(layers.get(i), Integer.parseInt(parts[i].trim()));
@@ -375,17 +410,13 @@ public class StackedMultiRecipeFactory extends MultiRecipeFactory{
                     }
                 }
             }else if(value instanceof Integer integer){
-                ensureLayerCount(1);
-                setSelection(layers.first(), integer);
+                LayerState layer = layers.first();
+                setSelection(layer, integer);
+            }else if(value instanceof int[] arr){
+                for(int i = 0; i < arr.length && i < layers.size; i++) setSelection(layers.get(i), arr[i]);
             }else{
                 super.configured(unit, value);
             }
-        }
-
-        private void ensureLayerCount(int count){
-            count = Math.max(1, Math.min(Math.max(1, block().maxLayersNow()), count));
-            while(layers.size < count) layers.add(new LayerState());
-            while(layers.size > count && layers.size > 1) layers.remove(layers.size - 1);
         }
 
         private void setSelection(LayerState layer, int value){
@@ -406,6 +437,7 @@ public class StackedMultiRecipeFactory extends MultiRecipeFactory{
         @Override
         public void write(Writes write){
             super.write(write);
+            ensureLayers();
             write.i(layers.size);
             for(LayerState layer : layers){
                 write.i(layer.auto ? -1 : layer.selectedIndex);
@@ -418,7 +450,6 @@ public class StackedMultiRecipeFactory extends MultiRecipeFactory{
             super.read(read, revision);
             if(revision >= 2){
                 int count = Math.max(1, read.i());
-                count = Math.min(count, Math.max(1, block().maxLayersNow()));
                 layers.clear();
                 for(int i = 0; i < count; i++){
                     LayerState layer = new LayerState();
@@ -432,21 +463,27 @@ public class StackedMultiRecipeFactory extends MultiRecipeFactory{
                 LayerState layer = new LayerState();
                 layer.auto = auto;
                 layer.selectedIndex = selectedIndex;
+                layer.progress = progress;
                 layers.add(layer);
             }
-            normalizeLayers();
-            clampStorage();
+            ensureLayers();
         }
 
         @Override
         public void buildConfiguration(Table table){
             table.clearChildren();
-            Table row = new Table();
-            row.top().left();
+
+            int mode = TriSetting.stackLayout();
+            boolean factoryVertical = baseFactory != null ? baseFactory.verticalStackPanels : verticalStackPanels;
+            boolean vertical = mode == 1 || (mode == 0 && factoryVertical);
+            float panelWidth = 560f;
+
+            Table content = new Table();
+            content.top().left();
+
             for(int i = 0; i < layers.size; i++){
                 final int index = i;
                 LayerState layer = layers.get(i);
-
                 Table panel = new Table(Tex.button);
                 panel.top().left().margin(4f);
                 panel.add(Core.bundle.format("tri.stack.layer", i + 1)).left().pad(4).row();
@@ -489,15 +526,6 @@ public class StackedMultiRecipeFactory extends MultiRecipeFactory{
                     refresh.run();
                 });
                 panel.add(autoBtn).size(240f, 46f).padBottom(6f).row();
-
-                TextButton remove = new TextButton(Core.bundle.get("tri.stack.remove"));
-                remove.setDisabled(layers.size <= 1);
-                remove.clicked(() -> {
-                    if(removeLayer(index)){
-                        configure(config());
-                        buildConfiguration(table);
-                    }
-                });
 
                 panel.table(cont -> {
                     for(int r = 0; r < recipes.size; r++){
@@ -549,7 +577,6 @@ public class StackedMultiRecipeFactory extends MultiRecipeFactory{
                             c.add(check).size(32f).padLeft(8f);
                         }).fillX().row();
                     }
-                    cont.add(remove).size(180f, 36f).padTop(6f).row();
                 }).growX();
 
                 refresh.run();
@@ -563,33 +590,34 @@ public class StackedMultiRecipeFactory extends MultiRecipeFactory{
                     }
                 });
 
-                row.add(panel).top().left().pad(4).width(560f);
+                if(vertical){
+                    // 不固定宽度，让面板收缩到配方列表的自然宽度。
+                    content.add(panel).top().left().pad(4f).row();
+                }else{
+                    content.add(panel).top().left().pad(4f);
+                }
             }
 
-            ScrollPane pane = new ScrollPane(row);
-            pane.setScrollingDisabled(false, true);
-            pane.setFadeScrollBars(false);
-            table.add(pane).grow();
-        }
-
-        private String recipeName(Recipe recipe, int index){
-            if(!recipe.outputItem.isEmpty()) return recipe.outputItem.first().item.localizedName;
-            if(!recipe.outputLiquid.isEmpty()) return recipe.outputLiquid.first().liquid.localizedName;
-            if(!recipe.outputPayload.isEmpty()) return recipe.outputPayload.first().item.localizedName;
-            return "Recipe " + (index + 1);
+            if(vertical){
+                ScrollPane pane = new ScrollPane(content);
+                // 竖直排列保留固定高度和纵向滚动；宽度由内部面板列表的自然宽度决定。
+                pane.setScrollingDisabled(true, false);
+                pane.setFadeScrollBars(false);
+                table.add(pane).height(600f);
+            }else{
+                // 横向排列回退到旧版：不使用 ScrollPane，全部面板直接展开。
+                table.add(content).grow();
+            }
         }
 
         @Override
         public void draw(){
             super.draw();
-            if(layers.size <= 1 || Fonts.outline == null) return;
+            if(layerCount <= 1 || Fonts.outline == null) return;
             float cx = x + size * 4f;
             float cy = y + size * 8f - 8f;
-            Draw.color(0f, 0f, 0f, 0.65f);
-            Fill.rect(cx - 12f, cy - 10f, 24f, 15f);
-            Draw.color(Pal.accent);
-            Fonts.outline.draw(String.valueOf(layers.size), cx, cy, Color.white, 0.45f, false, Align.center);
-            Draw.reset();
+            // 只画带描边的数字，不画背景块，保持透明底。
+            Fonts.outline.draw(String.valueOf(layerCount), cx, cy, Color.white, 0.45f, false, arc.util.Align.center);
         }
     }
 }

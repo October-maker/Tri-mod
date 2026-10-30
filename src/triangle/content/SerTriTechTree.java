@@ -1,6 +1,7 @@
 package triangle.content;
 
 import arc.Events;
+import arc.struct.Seq;
 import arc.util.Log;
 import mindustry.Vars;
 import mindustry.content.Blocks;
@@ -16,6 +17,11 @@ import mindustry.game.EventType;
  * 以及完整科技树均已加载完成，能可靠地找到父节点。
  */
 public class SerTriTechTree {
+
+    /** 延迟到本类所有 addNode 事件之后再挂载的节点。 */
+    private static final Seq<Runnable> pendingNodes = new Seq<>();
+    /** ContentInitEvent 是否已经执行完毕；之后的新节点直接挂载。 */
+    private static boolean contentInitDone = false;
 
     /** 注册科技树节点（由 {@code triangle.loadContent()} 调用）。 */
     public static void load(){
@@ -48,6 +54,30 @@ public class SerTriTechTree {
         Events.on(EventType.ContentInitEvent.class, e -> addNode(TriFactory.oilHydrocrackingTower, TriFactory.oilCatalyticReformingTower));
         Events.on(EventType.ContentInitEvent.class, e -> addNode(TriFactory.oilCatalyticReformingTower, TriFactory.oilAromaticHydrocarbonComplex));
         Events.on(EventType.ContentInitEvent.class, e -> addNode(TriFactory.oilAromaticHydrocarbonComplex, TriFactory.ExplosiveMixer));
+
+        // 多配方工厂的堆叠研究节点：必须在工厂自身节点已由上面的 addNode 挂载后再挂载。
+        Events.on(EventType.ContentInitEvent.class, e -> {
+            for(Runnable pending : pendingNodes){
+                pending.run();
+            }
+            pendingNodes.clear();
+            contentInitDone = true;
+        });
+    }
+
+    /**
+     * 延迟挂载 Java 定义内容的科技树节点。
+     * 多配方工厂本身通过本类 addNode 挂载，因此其堆叠研究节点不能在同一个
+     * ContentInitEvent 监听器中立即挂载；这里排到本类末尾统一执行。
+     */
+    public static void addNodeLater(UnlockableContent parent, UnlockableContent child){
+        // 本类 flush 监听器注册得较早，配方节点的事件可能在其之后才注册。
+        // 此时不能再入队，否则不会再有 flush，节点会从科技树里消失。
+        if(contentInitDone){
+            addNode(parent, child);
+        }else{
+            pendingNodes.add(() -> addNode(parent, child));
+        }
     }
 
     /**

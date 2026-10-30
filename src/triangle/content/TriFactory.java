@@ -110,12 +110,13 @@ public class TriFactory {
         Condenser = new GenericCrafter("Condenser"){{}};
 
         // ---- 多配方工厂 ----
-        // 子弹工厂
-        BulletFactory = new StackedMultiRecipeFactory("BulletFactory"){{
+        // 弹药加工厂
+        BulletFactory = new MultiRecipeFactory("BulletFactory"){{
             size = 4;
             health = 20;
             itemCapacity = 20;
             liquidCapacity = 20;
+            stackLimit = 3;
             requirements(Category.crafting, with(TriItems.Cu,10,TriItems.TiAlloy,30,TriItems.FeSteel,20,TriItems.MonocrystallineSi,10));
             drawer = new DrawMulti(new DrawDefault(), new DrawFlame(Color.valueOf("E58760")));
             maxLayers = 1;
@@ -167,7 +168,7 @@ public class TriFactory {
                         inputItem.add(new ItemStack(TriItems.FeSteel,5));
                         inputItem.add(new ItemStack(TriItems.TNT,12));
                         outputItem.add(new ItemStack(TriItems.BHE,1));
-                        craftTime = 120f;
+                        craftTime = 60f;
                         powerUse = 120f/60f;
                         requiresResearch = true;
                     }},
@@ -177,7 +178,7 @@ public class TriFactory {
                         inputItem.add(new ItemStack(TriItems.FeSteel,4));
                         inputItem.add(new ItemStack(TriItems.TNT,7));
                         outputItem.add(new ItemStack(TriItems.BHEAT, 1));
-                        craftTime = 150f;
+                        craftTime = 90f;
                         powerUse = 220f/60f;
                         requiresResearch = true;
                     }},
@@ -187,18 +188,20 @@ public class TriFactory {
                         inputItem.add(new ItemStack(TriItems.FeSteel,4));
                         inputItem.add(new ItemStack(TriItems.TNT,6));
                         outputItem.add(new ItemStack(TriItems.BHESH,1));
-                        craftTime = 150f;
+                        craftTime = 90f;
                         powerUse = 180f/60f;
                         requiresResearch = true;
                     }}
             );
         }};
-        // 液体装桶机：水/卤水 + 玻璃 → 对应桶装物品
-        liquidFillingMachine = new StackedMultiRecipeFactory("liquidFillingMachine"){{
+        // 液体装罐器：水/卤水 + 玻璃 → 对应桶装物品
+        liquidFillingMachine = new MultiRecipeFactory("liquidFillingMachine"){{
             size = 3;
             health = 50;
             itemCapacity = 40;
             liquidCapacity = 120;
+            stackLimit = 5;
+            verticalStackPanels = true;
             requirements(Category.crafting, with(TriItems.Cu,10,TriItems.TiAlloy,10,TriItems.FeSteel,20,Items.metaglass,10));
             maxLayers = 1;
             stackUpgrade(5, with(TriItems.TiAlloy, 30,TriItems.Al,15));
@@ -227,12 +230,14 @@ public class TriFactory {
                 }}
             );
         }};
-        // 液体倒桶机：桶装物品 → 对应液体，与装桶机互为逆过程
-        liquidPourer = new StackedMultiRecipeFactory("liquidPourer"){{
+        // 液体排倒器：桶装物品 → 对应液体，与装罐器互为逆过程
+        liquidPourer = new MultiRecipeFactory("liquidPourer"){{
             size = 3;
             health = 50;
             itemCapacity = 40;
             liquidCapacity = 120;
+            stackLimit = 5;
+            verticalStackPanels = true;
             requirements(Category.crafting, with(TriItems.Cu,10,TriItems.TiAlloy,10,TriItems.FeSteel,15,Items.metaglass,15));
             maxLayers = 1;
             stackUpgrade(5, with(TriItems.TiAlloy, 30,TriItems.Al,15));
@@ -380,5 +385,24 @@ public class TriFactory {
 //                    }}//TiRollingMill
 //            );
 //        }};
+        // ---- 可堆叠变体：基础工厂仍只有一层，覆盖放置时替换为 2..stackLimit 层变体 ----
+        BulletFactory.stackable = true;
+        BulletFactory.stackUpgrade(3, with(
+                TriItems.Al, 120,
+                TriItems.TiAlloy, 150
+        ));
+        liquidFillingMachine.stackable = true;
+        liquidFillingMachine.stackUpgrade(5, with(
+                TriItems.Al, 90,
+                TriItems.TiAlloy, 80
+        ));
+        liquidPourer.stackable = true;
+        liquidPourer.stackUpgrade(5, with(
+                TriItems.Al, 90,
+                TriItems.TiAlloy, 80
+        ));
+        StackedMultiRecipeFactory.registerVariants(BulletFactory);
+        StackedMultiRecipeFactory.registerVariants(liquidFillingMachine);
+        StackedMultiRecipeFactory.registerVariants(liquidPourer);
     }
 }
