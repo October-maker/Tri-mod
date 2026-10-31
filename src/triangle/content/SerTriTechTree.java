@@ -39,6 +39,11 @@ public class SerTriTechTree {
         Events.on(EventType.ContentInitEvent.class, e -> addNode(TriFactory.saltDistillationFurnace, TriFactory.liquidFillingMachine));
         Events.on(EventType.ContentInitEvent.class, e -> addNode(TriFactory.liquidFillingMachine, TriFactory.liquidPourer));
 
+        // WCarbideFurnace 从 JSON 转为 Java 后，补回原 research: CoElectrolyticCell。
+        Events.on(EventType.ContentInitEvent.class, e -> addNode(TriFactory.CoElectrolyticCell, TriFactory.WCarbideFurnace));
+        // WSteelMixingFurnace 从 JSON 转为 Java 后，补回原 research: WCarbideFurnace。
+        Events.on(EventType.ContentInitEvent.class, e -> addNode(TriFactory.WCarbideFurnace, TriFactory.WSteelMixingFurnace));
+
         // ---- 石油化工 ----
         // 注意依赖顺序：addNode 要求父节点已在科技树中
         Events.on(EventType.ContentInitEvent.class, e -> addNode(TriFactory.IodinationPurificationFurnace, TriFactory.oilElectricDesaltingTank));

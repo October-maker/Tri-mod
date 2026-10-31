@@ -36,9 +36,14 @@ public class TriFactory {
 
     // ---- 常规单配方工厂（物品/液体加工） ----
     public static GenericCrafter
-            electrolyticCell,oxygenReductionFurnace,IExtractor,IodinationPurificationFurnace,bauxiteElectrolyticCell,VBlastFurnace,VBlastFurnaceBlowing,VacuumAluminothermicGenerator,CoSulfationRoaster,WSteelMixingFurnace,WCarbideFurnace,
+            electrolyticCell,oxygenReductionFurnace,IExtractor,IodinationPurificationFurnace,bauxiteElectrolyticCell,VBlastFurnace,VBlastFurnaceBlowing,VacuumAluminothermicGenerator,CoSulfationRoaster,
             FeBlastFurnace,TiRollingMill,SCombustionVessel,AcidReactionKettle,AcidResistantHeater,saltDistillationFurnace,SaltMixingPool,CuElectrolyticRefiningPool,NickelDiaphragmElectrolyzer,alkalineElectrolyzer,CopperConcentrator,CoElectrolyticCell,
             CrThermiteReactionChamber,armoredSinteringFurnace,Condenser;
+
+    /** WC / 原版碳化物双配方碳化钨炉。 */
+    public static MultiRecipeFactory WCarbideFurnace;
+    /** WC / 原版碳化物双配方钨钢混合炉。 */
+    public static MultiRecipeFactory WSteelMixingFurnace;
 
     // ---- 热量相关工厂（产热 / 耗热） ----
     public static HeatProducer SAbsorptionTower,FeMixingPool;
@@ -94,8 +99,76 @@ public class TriFactory {
         CoSulfationRoaster = new GenericCrafter("CoSulfationRoaster"){{}};
         CopperConcentrator = new GenericCrafter("CopperConcentrator"){{}};
         CoElectrolyticCell = new GenericCrafter("CoElectrolyticCell"){{}};
-        WCarbideFurnace = new GenericCrafter("WCarbideFurnace"){{}};
-        WSteelMixingFurnace = new GenericCrafter("WSteelMixingFurnace"){{}};
+        WCarbideFurnace = new MultiRecipeFactory("WCarbideFurnace"){{
+            size = 3;
+            health = 120;
+            itemCapacity = 40;
+            squareSprite = true;
+            researchCostMultiplier = 0.75f;
+            buildCostMultiplier = 0.8f;
+            drawer = new DrawMulti(
+                    new DrawDefault(),
+                    glow("FFFFFF99"),
+                    new DrawFlame()
+            );
+            updateEffect = Fx.none;
+            requirements(Category.crafting, with(
+                    TriItems.Cu, 15,
+                    Items.graphite, 35,
+                    TriItems.FeSteel, 15,
+                    TriItems.MonocrystallineSi, 18
+            ));
+            recipes.add(new Recipe(){{
+                inputItem.add(new ItemStack(Items.tungsten, 6));
+                inputItem.add(new ItemStack(Items.coal, 3));
+                outputItem.add(new ItemStack(TriItems.WC, 10));
+                craftTime = 60f;
+                powerUse = 4f;
+            }});
+            // 使用原版碳化物作为中间产物，避免与模组 WC 的命名/定义争议。
+            recipes.add(new Recipe(){{
+                inputItem.add(new ItemStack(Items.tungsten, 6));
+                inputItem.add(new ItemStack(Items.coal, 3));
+                outputItem.add(new ItemStack(Items.carbide, 5));
+                craftTime = 60f;
+                powerUse = 4f;
+            }});
+        }};
+        WSteelMixingFurnace = new MultiRecipeFactory("WSteelMixingFurnace"){{
+            size = 5;
+            health = 120;
+            itemCapacity = 40;
+            squareSprite = true;
+            researchCostMultiplier = 0.75f;
+            buildCostMultiplier = 0.8f;
+            drawer = new DrawMulti(
+                    new DrawDefault(),
+                    glow("FFFFFF99"),
+                    new DrawFlame()
+            );
+            updateEffect = Fx.none;
+            requirements(Category.crafting, with(
+                    TriItems.Cu, 20,
+                    TriItems.TiAlloy, 45,
+                    TriItems.FeSteel, 25,
+                    TriItems.MonocrystallineSi, 18
+            ));
+            recipes.add(new Recipe(){{
+                inputItem.add(new ItemStack(TriItems.WC, 10));
+                inputItem.add(new ItemStack(TriItems.Co, 4));
+                outputItem.add(new ItemStack(TriItems.WSteel, 10));
+                craftTime = 60f;
+                powerUse = 4f;
+            }});
+            // 使用原版碳化物作为中间产物，避免与模组 WC 的命名/定义争议。
+            recipes.add(new Recipe(){{
+                inputItem.add(new ItemStack(Items.carbide, 5));
+                inputItem.add(new ItemStack(TriItems.Co, 4));
+                outputItem.add(new ItemStack(TriItems.WSteel, 10));
+                craftTime = 60f;
+                powerUse = 4f;
+            }});
+        }};
         CrThermiteReactionChamber = new GenericCrafter("CrThermiteReactionChamber"){{}};
         armoredSinteringFurnace = new GenericCrafter("armoredSinteringFurnace"){{}};
         Condenser = new GenericCrafter("Condenser"){{}};
