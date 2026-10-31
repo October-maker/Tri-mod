@@ -25,7 +25,7 @@
 			{
 			"type": "DrawGlowRegion",
 			"color": "FFFFFF99",
-			"layer": 110,
+			"layer": 31,
 			"suffix": "-glow",
 			"glowIntensity":0,
 			},

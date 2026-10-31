@@ -22,6 +22,7 @@
 			"DrawFlame"
 	        {
             "type": "DrawGlowRegion", // 绘制发光区域效果。
+            "layer": 31,
             "alpha": 0.7, // 发光效果的透明度。
             "color": "FFB300", // 发光颜色，以十六进制颜色代码表示。
             "suffix": "-glow",

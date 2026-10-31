@@ -25,7 +25,7 @@
 			{
 			"type": "DrawGlowRegion", // 使用 "DrawGlowRegion" 组件来添加发光效果。
 			"color": "FFFFFF99", // 指定发光的颜色，以十六进制表示。
-			"layer": 110,
+			"layer": 31,
 			"suffix": "-glow",
 			"glowIntensity":0,
 			},

@@ -5,6 +5,7 @@ import arc.graphics.Color;
 import mindustry.content.Items;
 import mindustry.content.Liquids;
 import mindustry.content.Fx;
+import mindustry.graphics.Layer;
 import mindustry.type.Category;
 import mindustry.type.ItemStack;
 import mindustry.type.LiquidStack;
@@ -239,7 +240,7 @@ public class TriFactory {
                     new Recipe() {{
                         inputItem.add(new ItemStack(TriItems.Cu, 5));
                         inputItem.add(new ItemStack(TriItems.FeSteel,4));
-                        inputItem.add(new ItemStack(TriItems.TNT,7));
+                        inputItem.add(new ItemStack(TriItems.TNT,6));
                         outputItem.add(new ItemStack(TriItems.BHEAT, 1));
                         craftTime = 90f;
                         powerUse = 220f/60f;
@@ -271,7 +272,7 @@ public class TriFactory {
                     new DrawGlowRegion(){{
                         suffix = "-glow";
                         color = Color.valueOf("FFFFFF99");
-                        layer = 110;
+                        layer = Layer.blockAdditive;
                     }}
             );
             recipes.add(
@@ -305,7 +306,7 @@ public class TriFactory {
                     new DrawGlowRegion(){{
                         suffix = "-glow";
                         color = Color.valueOf("FFFFFF99");
-                        layer = 110;
+                        layer = Layer.blockAdditive;
                     }}
             );
             recipes.add(
@@ -893,9 +894,9 @@ public class TriFactory {
                 outputLiquid.add(new LiquidStack(TriLiquids.oilEthylene, 0.14f));
                 outputLiquid.add(new LiquidStack(TriLiquids.oilGasoline, 0.06f));
                 craftTime = 30f;
-                powerUse = 5f;
+                powerUse = 2f;
                 heatEnabled = true;
-                heatRequirement = 20f;
+                heatRequirement = 5f;
                 recipeMaxEfficiency = 4f;
                 stopLowTemperature = true;
                 stopUndervoltage = true;
@@ -922,7 +923,7 @@ public class TriFactory {
             ));
             recipes.add(new Recipe(){{
                 inputLiquid.add(new LiquidStack(TriLiquids.oilEthylene, 0.14f));
-                outputItem.add(new ItemStack(TriItems.PE, 14));
+                outputItem.add(new ItemStack(TriItems.PE, 4));
                 craftTime = 60f;
                 powerUse = 7.5f;
             }});
@@ -930,7 +931,7 @@ public class TriFactory {
         // 高热配方
         recipes.add(new Recipe(){{
                 inputLiquid.add(new LiquidStack(TriLiquids.oilEthylene, 0.14f));
-                outputItem.add(new ItemStack(TriItems.PE, 14));
+                outputItem.add(new ItemStack(TriItems.PE, 4));
                 craftTime = 60f;
                 powerUse = 2f;
                 heatEnabled = true;
@@ -1038,7 +1039,7 @@ public class TriFactory {
     private static DrawBlock glow(String hex){
         return new DrawGlowRegion(){{
             color = Color.valueOf(hex);
-            layer = 60f;
+            layer = Layer.blockAdditive;
             suffix = "-glow";
             glowIntensity = 0.3f;
         }};
