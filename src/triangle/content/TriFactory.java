@@ -55,7 +55,8 @@ public class TriFactory {
     // ---- 石油化工线 ----
     public static GenericCrafter oilElectricDesaltingTank;
     public static MultiRecipeFactory oilPrimaryAtmosphericDistillationTower,oilSecondaryAtmosphericDistillationTower,oilVacuumDistillationColumn,
-            oilCatalyticCrackingTower,USYHydrothermalReactor,USYMixer,oilHydrocrackingTower,oilCatalyticReformingTower,oilAromaticHydrocarbonComplex,oilCokingHydrogenationTower,oilSteamCrackingTower,oilTubularReactor;
+            oilCatalyticCrackingTower,oilHydrocrackingTower,oilCatalyticReformingTower,oilAromaticHydrocarbonComplex,oilCokingHydrogenationTower,oilSteamCrackingTower,oilTubularReactor;
+    public static GenericCrafter USYHydrothermalReactor,USYMixer;
 
     // ---- 多配方工厂（配方在 Java 中声明） ----
     public static MultiRecipeFactory BulletFactory,liquidFillingMachine,liquidPourer;
@@ -99,6 +100,11 @@ public class TriFactory {
         CoSulfationRoaster = new GenericCrafter("CoSulfationRoaster"){{}};
         CopperConcentrator = new GenericCrafter("CopperConcentrator"){{}};
         CoElectrolyticCell = new GenericCrafter("CoElectrolyticCell"){{}};
+        CrThermiteReactionChamber = new GenericCrafter("CrThermiteReactionChamber"){{}};
+        armoredSinteringFurnace = new GenericCrafter("armoredSinteringFurnace"){{}};
+        Condenser = new GenericCrafter("Condenser"){{}};
+
+        // ---- 多配方工厂 ----
         WCarbideFurnace = new MultiRecipeFactory("WCarbideFurnace"){{
             size = 3;
             health = 120;
@@ -169,11 +175,6 @@ public class TriFactory {
                 powerUse = 4f;
             }});
         }};
-        CrThermiteReactionChamber = new GenericCrafter("CrThermiteReactionChamber"){{}};
-        armoredSinteringFurnace = new GenericCrafter("armoredSinteringFurnace"){{}};
-        Condenser = new GenericCrafter("Condenser"){{}};
-
-        // ---- 多配方工厂 ----
         // 弹药加工厂
         BulletFactory = new MultiRecipeFactory("BulletFactory"){{
             size = 4;
@@ -488,12 +489,12 @@ public class TriFactory {
                     TriItems.TiAlloy, 15
             ));
             // 原 JSON 的 GenericCrafter 配方；效率提升为 4 倍（craftTime 30 → 7.5）。
-            craftTime = 7.5f;
+            craftTime = 30f;
             outputItem = new ItemStack(Items.scrap, 1);
-            outputLiquid = new LiquidStack(TriLiquids.oilCrude, 0.5f);
+            outputLiquid = new LiquidStack(TriLiquids.oilCrude, 2f);
             consumePower(4f);
-            consumeLiquid(Liquids.oil, 0.7f);
-            consumeLiquid(Liquids.water, 0.4f);
+            consumeLiquid(Liquids.oil, 2.8f);
+            consumeLiquid(Liquids.water, 1.6f);
             updateEffect = Fx.none;
             databaseTag = "Oil";
         }};
@@ -536,7 +537,7 @@ public class TriFactory {
                 craftTime = 30f;
                 powerUse = 2f;
                 heatEnabled = true;
-                heatRequirement = 20f;
+                heatRequirement = 10f;
                 recipeMaxEfficiency = 4f;
                 stopLowTemperature = true;
                 stopUndervoltage = true;
@@ -581,7 +582,7 @@ public class TriFactory {
                 craftTime = 30f;
                 powerUse = 2f;
                 heatEnabled = true;
-                heatRequirement = 20f;
+                heatRequirement = 10f;
                 recipeMaxEfficiency = 4f;
                 stopLowTemperature = true;
                 stopUndervoltage = true;
@@ -624,7 +625,7 @@ public class TriFactory {
                 craftTime = 30f;
                 powerUse = 2f;
                 heatEnabled = true;
-                heatRequirement = 20f;
+                heatRequirement = 10f;
                 recipeMaxEfficiency = 4f;
                 stopLowTemperature = true;
                 stopUndervoltage = true;
@@ -670,7 +671,7 @@ public class TriFactory {
                 craftTime = 30f;
                 powerUse = 2f;
                 heatEnabled = true;
-                heatRequirement = 20f;
+                heatRequirement = 5f;
                 recipeMaxEfficiency = 4f;
                 stopLowTemperature = true;
                 stopUndervoltage = true;
@@ -718,7 +719,7 @@ public class TriFactory {
                 craftTime = 30f;
                 powerUse = 2f;
                 heatEnabled = true;
-                heatRequirement = 20f;
+                heatRequirement = 7f;
                 recipeMaxEfficiency = 4f;
                 stopLowTemperature = true;
                 stopUndervoltage = true;
@@ -762,7 +763,7 @@ public class TriFactory {
                 craftTime = 30f;
                 powerUse = 2f;
                 heatEnabled = true;
-                heatRequirement = 20f;
+                heatRequirement = 5f;
                 recipeMaxEfficiency = 4f;
                 stopLowTemperature = true;
                 stopUndervoltage = true;
@@ -802,7 +803,7 @@ public class TriFactory {
                 craftTime = 30f;
                 powerUse = 2f;
                 heatEnabled = true;
-                heatRequirement = 20f;
+                heatRequirement = 3f;
                 recipeMaxEfficiency = 4f;
                 stopLowTemperature = true;
                 stopUndervoltage = true;
@@ -849,7 +850,7 @@ public class TriFactory {
                 craftTime = 30f;
                 powerUse = 2f;
                 heatEnabled = true;
-                heatRequirement = 20f;
+                heatRequirement = 7f;
                 recipeMaxEfficiency = 4f;
                 stopLowTemperature = true;
                 stopUndervoltage = true;
@@ -892,7 +893,7 @@ public class TriFactory {
                 outputLiquid.add(new LiquidStack(TriLiquids.oilEthylene, 0.14f));
                 outputLiquid.add(new LiquidStack(TriLiquids.oilGasoline, 0.06f));
                 craftTime = 30f;
-                powerUse = 2f;
+                powerUse = 5f;
                 heatEnabled = true;
                 heatRequirement = 20f;
                 recipeMaxEfficiency = 4f;
@@ -933,14 +934,14 @@ public class TriFactory {
                 craftTime = 60f;
                 powerUse = 2f;
                 heatEnabled = true;
-                heatRequirement = 20f;
+                heatRequirement = 5f;
                 recipeMaxEfficiency = 4f;
                 stopLowTemperature = true;
                 stopUndervoltage = true;
             }});
         }};
 
-        USYHydrothermalReactor = new MultiRecipeFactory("USYHydrothermalReactor"){{
+        USYHydrothermalReactor = new GenericCrafter("USYHydrothermalReactor"){{
             size = 5;
             health = 50;
             itemCapacity = 40;
@@ -959,42 +960,26 @@ public class TriFactory {
                     TriItems.FeSteel, 45,
                     TriItems.TiAlloy, 15
             ));
-            recipes.add(new Recipe(){{
-                inputItem.add(new ItemStack(TriItems.bauxite, 1));
-                inputItem.add(new ItemStack(TriItems.SiSand, 4));
-                inputItem.add(new ItemStack(TriItems.NaOH, 1));
-                inputLiquid.add(new LiquidStack(TriLiquids.liquidAmmonia, 0.1f));
-                inputLiquid.add(new LiquidStack(Liquids.water, 0.4f));
-                outputItem.add(new ItemStack(TriItems.USYmolecularSieve, 5));
-                craftTime = 60f;
-                powerUse = 7.5f;
-            }});
-
-        // 高热配方
-        recipes.add(new Recipe(){{
-                inputItem.add(new ItemStack(TriItems.bauxite, 1));
-                inputItem.add(new ItemStack(TriItems.SiSand, 4));
-                inputItem.add(new ItemStack(TriItems.NaOH, 1));
-                inputLiquid.add(new LiquidStack(TriLiquids.liquidAmmonia, 0.1f));
-                inputLiquid.add(new LiquidStack(Liquids.water, 0.4f));
-                outputItem.add(new ItemStack(TriItems.USYmolecularSieve, 5));
-                craftTime = 60f;
-                powerUse = 2f;
-                heatEnabled = true;
-                heatRequirement = 20f;
-                recipeMaxEfficiency = 4f;
-                stopLowTemperature = true;
-                stopUndervoltage = true;
-            }});
+            craftTime = 60f;
+            consumePower(7.5f);
+            consumeItems(
+                    new ItemStack(TriItems.bauxite, 1),
+                    new ItemStack(TriItems.SiSand, 4),
+                    new ItemStack(TriItems.NaOH, 1)
+            );
+            consumeLiquid(TriLiquids.liquidAmmonia, 0.1f);
+            consumeLiquid(Liquids.water, 0.4f);
+            outputItem = new ItemStack(TriItems.USYmolecularSieve, 5);
+            databaseTag = "Oil";
         }};
 
-        USYMixer = new MultiRecipeFactory("USYMixer"){{
+        USYMixer = new GenericCrafter("USYMixer"){{
             size = 3;
             health = 50;
             itemCapacity = 40;
             liquidCapacity = 120;
-            squareSprite = true;
             rotate = false;
+            squareSprite = true;
             researchCostMultiplier = 0.75f;
             buildCostMultiplier = 0.8f;
             hasLiquids = true;
@@ -1006,27 +991,14 @@ public class TriFactory {
                     TriItems.FeSteel, 35,
                     TriItems.TiAlloy, 15
             ));
-            recipes.add(new Recipe(){{
-                inputItem.add(new ItemStack(TriItems.USYmolecularSieve, 1));
-                inputItem.add(new ItemStack(TriItems.kaolin, 5));
-                outputItem.add(new ItemStack(TriItems.USY, 5));
-                craftTime = 60f;
-                powerUse = 3.2f;
-            }});
-
-        // 高热配方
-        recipes.add(new Recipe(){{
-                inputItem.add(new ItemStack(TriItems.USYmolecularSieve, 1));
-                inputItem.add(new ItemStack(TriItems.kaolin, 5));
-                outputItem.add(new ItemStack(TriItems.USY, 5));
-                craftTime = 60f;
-                powerUse = 2f;
-                heatEnabled = true;
-                heatRequirement = 20f;
-                recipeMaxEfficiency = 4f;
-                stopLowTemperature = true;
-                stopUndervoltage = true;
-            }});
+            craftTime = 60f;
+            consumePower(3.2f);
+            consumeItems(
+                    new ItemStack(TriItems.USYmolecularSieve, 1),
+                    new ItemStack(TriItems.kaolin, 5)
+            );
+            outputItem = new ItemStack(TriItems.USY, 5);
+            databaseTag = "Oil";
         }};
 
         // 高热配方已在各工厂中直接通过 recipes.add 声明。
@@ -1040,9 +1012,7 @@ public class TriFactory {
             oilAromaticHydrocarbonComplex,
             oilCokingHydrogenationTower,
             oilSteamCrackingTower,
-            oilTubularReactor,
-            USYHydrothermalReactor,
-            USYMixer
+            oilTubularReactor
         };
 
         // 所有石油化工配方欠压即跳闸。
@@ -1068,9 +1038,9 @@ public class TriFactory {
     private static DrawBlock glow(String hex){
         return new DrawGlowRegion(){{
             color = Color.valueOf(hex);
-            layer = 110f;
+            layer = 60f;
             suffix = "-glow";
-            glowIntensity = 0f;
+            glowIntensity = 0.3f;
         }};
     }
 
