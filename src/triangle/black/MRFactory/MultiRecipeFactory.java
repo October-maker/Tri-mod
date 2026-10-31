@@ -976,21 +976,31 @@ public class MultiRecipeFactory extends GenericCrafter{
 
         /** 检查该配方的物品/液体输出是否还有足够容量。 */
         public boolean canOutputForRecipe(Recipe recipe) {
-            // 检查物品输出容量
-            if (checkItemOutputFullness) {
+            // 检查物品输出容量：只有所有物品输出都满时才停止。
+            if (checkItemOutputFullness && !recipe.outputItem.isEmpty()) {
+                boolean allFull = true;
                 for (ItemStack output : recipe.outputItem) {
-                    if (items.get(output.item) + output.amount > itemCapacity) {
-                        return false;
+                    if (items.get(output.item) < itemCapacity) {
+                        allFull = false;
+                        break;
                     }
+                }
+                if (allFull) {
+                    return false;
                 }
             }
 
-            // 检查液体输出容量
-            if (checkLiquidOutputFullness) {
+            // 检查液体输出容量：与原版一致，只有所有液体输出都满时才停止。
+            if (checkLiquidOutputFullness && !recipe.outputLiquid.isEmpty()) {
+                boolean allFull = true;
                 for (LiquidStack output : recipe.outputLiquid) {
-                    if (liquids.get(output.liquid) + output.amount > liquidCapacity) {
-                        return false;
+                    if (liquids.get(output.liquid) < liquidCapacity - 0.001f) {
+                        allFull = false;
+                        break;
                     }
+                }
+                if (allFull) {
+                    return false;
                 }
             }
 
@@ -1082,9 +1092,16 @@ public class MultiRecipeFactory extends GenericCrafter{
             // 处理液体输出
             if (efficiency > 0 && !current.outputLiquid.isEmpty()) {
                 float inc = getProgressIncrease(craftTime / current.craftTime);
+                if (!Float.isFinite(inc) || inc <= 0f) return;
+
                 current.outputLiquid.each(stack -> {
-                    handleLiquid(this, stack.liquid,
-                            Math.min(stack.amount * inc, liquidCapacity - liquids.get(stack.liquid)));
+                    float space = liquidCapacity - liquids.get(stack.liquid);
+                    if (!Float.isFinite(space) || space <= 0f) return;
+
+                    float amount = stack.amount * inc;
+                    if (!Float.isFinite(amount) || amount <= 0f) return;
+
+                    handleLiquid(this, stack.liquid, Math.min(amount, space));
                 });
             }
 
@@ -1108,7 +1125,19 @@ public class MultiRecipeFactory extends GenericCrafter{
                     dumpPayload(payload);
                 });
             }
-            liquidOutput.each(output -> dumpLiquid(output, 2f, -1));
+            Recipe current = getRecipe();
+            if (current != null) {
+                int index = 0;
+                for (LiquidStack output : current.outputLiquid) {
+                    int direction = liquidOutputDirections != null && index < liquidOutputDirections.length
+                            ? liquidOutputDirections[index]
+                            : -1;
+                    dumpLiquid(output.liquid, 2f, direction);
+                    index++;
+                }
+            } else {
+                liquidOutput.each(output -> dumpLiquid(output, 2f, -1));
+            }
         }
 
         /** 是否允许消耗输入：无配方、断电、低温跳闸或液体输出已满时停止。 */
@@ -1136,12 +1165,9 @@ public class MultiRecipeFactory extends GenericCrafter{
                 if (getRecipe().outputLiquid.isEmpty()) return true;
                 boolean allFull = true;
                 for (var output : getRecipe().outputLiquid) {
-                    if (liquids.get(output.liquid) >= liquidCapacity - 0.001f) {
-                        if (!dumpExtraLiquid) {
-                            return false;
-                        }
-                    } else {
+                    if (liquids.get(output.liquid) < liquidCapacity - 0.001f) {
                         allFull = false;
+                        break;
                     }
                 }
                 if (allFull) {
@@ -1156,7 +1182,14 @@ public class MultiRecipeFactory extends GenericCrafter{
         public float getProgressIncrease(float baseTime) {
             float scl = 1f;
             if (getRecipe() != null) scl = getRecipe().craftTime / craftTime;
-            return super.getProgressIncrease(baseTime) / scl;
+            if (!Float.isFinite(scl) || scl <= 0f) scl = 1f;
+            if (!Float.isFinite(baseTime) || baseTime <= 0f) return 0f;
+
+            // 不能调用 GenericCrafterBuild.getProgressIncrease：它会在任意一种
+            // outputLiquids 满时把进度直接压成 0，导致一种产物满后整厂停摆。
+            // 输出是否允许继续由 canOutputForRecipe（全满才停）与逐液体写入控制。
+            float result = edelta() / baseTime / scl;
+            return Float.isFinite(result) ? result : 0f;
         }
 
         /** 完成一个生产周期：消耗输入、输出物品，并在自动模式下重新匹配配方。 */

@@ -4,6 +4,7 @@ import arc.Core;
 import arc.graphics.Color;
 import mindustry.content.Items;
 import mindustry.content.Liquids;
+import mindustry.content.Fx;
 import mindustry.type.Category;
 import mindustry.type.ItemStack;
 import mindustry.type.LiquidStack;
@@ -11,9 +12,12 @@ import mindustry.world.blocks.heat.HeatProducer;
 import mindustry.world.blocks.production.GenericCrafter;
 import mindustry.world.blocks.production.HeatCrafter;
 import mindustry.world.draw.DrawDefault;
+import mindustry.world.draw.DrawBlock;
 import mindustry.world.draw.DrawFlame;
 import mindustry.world.draw.DrawGlowRegion;
+import mindustry.world.draw.DrawLiquidTile;
 import mindustry.world.draw.DrawMulti;
+import mindustry.world.draw.DrawRegion;
 import triangle.black.MRFactory.MultiRecipeFactory;
 import triangle.black.MRFactory.Recipe;
 import triangle.black.MRFactory.StackedMultiRecipeFactory;
@@ -26,6 +30,7 @@ import static mindustry.type.ItemStack.with;
  * <p>普通工厂只在此创建空实例，具体数值与配方由
  * {@code assets/content/blocks/factory/**} 下的同名 JSON 覆盖；
  * 多配方工厂（{@link MultiRecipeFactory}）的配方则在 {@link #load()} 内用 Java 声明。
+ * 石油化工线同样在 {@link #load()} 内以 {@link MultiRecipeFactory} 定义，不再使用 JSON。
  */
 public class TriFactory {
 
@@ -43,7 +48,8 @@ public class TriFactory {
     public static GenericCrafter NCollector,NCatalyticChamber,NOxidationPlantGroup,NAbsorptionTower,NClMixedPool,ExplosiveMixer;
 
     // ---- 石油化工线 ----
-    public static GenericCrafter oilElectricDesaltingTank,oilPrimaryAtmosphericDistillationTower,oilSecondaryAtmosphericDistillationTower,oilVacuumDistillationColumn,
+    public static GenericCrafter oilElectricDesaltingTank;
+    public static MultiRecipeFactory oilPrimaryAtmosphericDistillationTower,oilSecondaryAtmosphericDistillationTower,oilVacuumDistillationColumn,
             oilCatalyticCrackingTower,USYHydrothermalReactor,USYMixer,oilHydrocrackingTower,oilCatalyticReformingTower,oilAromaticHydrocarbonComplex,oilCokingHydrogenationTower,oilSteamCrackingTower,oilTubularReactor;
 
     // ---- 多配方工厂（配方在 Java 中声明） ----
@@ -78,21 +84,6 @@ public class TriFactory {
         NAbsorptionTower = new GenericCrafter("NAbsorptionTower"){{}};
         NClMixedPool = new GenericCrafter("NClMixedPool"){{}};
         ExplosiveMixer = new GenericCrafter("ExplosiveMixer"){{}};
-
-        // 石油化工线
-        oilElectricDesaltingTank = new GenericCrafter("oilElectricDesaltingTank"){{}};
-        oilPrimaryAtmosphericDistillationTower = new GenericCrafter("oilPrimaryAtmosphericDistillationTower"){{}};
-        oilSecondaryAtmosphericDistillationTower = new GenericCrafter("oilSecondaryAtmosphericDistillationTower"){{}};
-        oilVacuumDistillationColumn = new GenericCrafter("oilVacuumDistillationColumn"){{}};
-        oilCatalyticCrackingTower = new GenericCrafter("oilCatalyticCrackingTower"){{}};
-        USYHydrothermalReactor = new GenericCrafter("USYHydrothermalReactor"){{}};
-        USYMixer = new GenericCrafter("USYMixer"){{}};
-        oilHydrocrackingTower = new GenericCrafter("oilHydrocrackingTower"){{}};
-        oilCatalyticReformingTower = new GenericCrafter("oilCatalyticReformingTower"){{}};
-        oilAromaticHydrocarbonComplex = new GenericCrafter("oilAromaticHydrocarbonComplex"){{}};
-        oilCokingHydrogenationTower = new GenericCrafter("oilCokingHydrogenationTower"){{}};
-        oilSteamCrackingTower = new GenericCrafter("oilSteamCrackingTower"){{}};
-        oilTubularReactor = new GenericCrafter("oilTubularReactor"){{}};
 
         CuElectrolyticRefiningPool = new GenericCrafter("CuElectrolyticRefiningPool"){{}};
         SaltMixingPool = new GenericCrafter("SaltMixingPool"){{}};
@@ -398,5 +389,622 @@ public class TriFactory {
         StackedMultiRecipeFactory.registerVariants(BulletFactory);
         StackedMultiRecipeFactory.registerVariants(liquidFillingMachine);
         StackedMultiRecipeFactory.registerVariants(liquidPourer);
+
+        // 石油化工线（Java 定义的 MultiRecipeFactory）
+        oilElectricDesaltingTank = new GenericCrafter("oilElectricDesaltingTank"){{
+            size = 2;
+            health = 150;
+            itemCapacity = 40;
+            liquidCapacity = 120;
+            outputsLiquid = true;
+            rotate = false;
+            squareSprite = true;
+            researchCostMultiplier = 0.75f;
+            buildCostMultiplier = 0.8f;
+            hasLiquids = true;
+            drawer = new DrawMulti(
+                    new DrawRegion(){{ suffix = "-bottom"; }},
+                    new DrawLiquidTile(Liquids.oil){{ padding = 1f; }},
+                    new DrawDefault(),
+                    glow("FFFFFF20")
+            );
+            requirements(Category.crafting, with(
+                    TriItems.Al, 15,
+                    TriItems.MonocrystallineSi, 5,
+                    TriItems.FeSteel, 20,
+                    TriItems.TiAlloy, 15
+            ));
+            // 原 JSON 的 GenericCrafter 配方；效率提升为 4 倍（craftTime 30 → 7.5）。
+            craftTime = 7.5f;
+            outputItem = new ItemStack(Items.scrap, 1);
+            outputLiquid = new LiquidStack(TriLiquids.oilCrude, 0.5f);
+            consumePower(4f);
+            consumeLiquid(Liquids.oil, 0.7f);
+            consumeLiquid(Liquids.water, 0.4f);
+            updateEffect = Fx.none;
+            databaseTag = "Oil";
+        }};
+
+        oilPrimaryAtmosphericDistillationTower = new MultiRecipeFactory("oilPrimaryAtmosphericDistillationTower"){{
+            size = 5;
+            health = 50;
+            itemCapacity = 40;
+            liquidCapacity = 120;
+            outputsLiquid = true;
+            rotate = true;
+            liquidOutputDirections = new int[]{1, 2, 3};
+            squareSprite = true;
+            researchCostMultiplier = 0.75f;
+            buildCostMultiplier = 0.8f;
+            hasLiquids = true;
+            drawer = baseGlow("FFFFFF99");
+            updateEffect = Fx.none;
+            requirements(Category.crafting, with(
+                    TriItems.Al, 20,
+                    TriItems.MonocrystallineSi, 15,
+                    TriItems.FeSteel, 50,
+                    TriItems.TiAlloy, 15
+            ));
+            recipes.add(new Recipe(){{
+                inputLiquid.add(new LiquidStack(TriLiquids.oilCrude, 1f));
+                outputLiquid.add(new LiquidStack(TriLiquids.oilDiesel, 0.2f));
+                outputLiquid.add(new LiquidStack(TriLiquids.oilMixedGas, 0.3f));
+                outputLiquid.add(new LiquidStack(TriLiquids.oilHeavy, 0.5f));
+                craftTime = 30f;
+                powerUse = 15f;
+            }});
+
+        // 高热配方
+        recipes.add(new Recipe(){{
+                inputLiquid.add(new LiquidStack(TriLiquids.oilCrude, 1f));
+                outputLiquid.add(new LiquidStack(TriLiquids.oilDiesel, 0.2f));
+                outputLiquid.add(new LiquidStack(TriLiquids.oilMixedGas, 0.3f));
+                outputLiquid.add(new LiquidStack(TriLiquids.oilHeavy, 0.5f));
+                craftTime = 30f;
+                powerUse = 2f;
+                heatEnabled = true;
+                heatRequirement = 20f;
+                recipeMaxEfficiency = 4f;
+                stopLowTemperature = true;
+                stopUndervoltage = true;
+            }});
+        }};
+
+        oilSecondaryAtmosphericDistillationTower = new MultiRecipeFactory("oilSecondaryAtmosphericDistillationTower"){{
+            size = 3;
+            health = 50;
+            itemCapacity = 40;
+            liquidCapacity = 120;
+            outputsLiquid = true;
+            rotate = true;
+            liquidOutputDirections = new int[]{1, 2, 3};
+            squareSprite = true;
+            researchCostMultiplier = 0.75f;
+            buildCostMultiplier = 0.8f;
+            hasLiquids = true;
+            drawer = baseGlow("FFFFFF99");
+            updateEffect = Fx.none;
+            requirements(Category.crafting, with(
+                    TriItems.Al, 25,
+                    TriItems.MonocrystallineSi, 15,
+                    TriItems.FeSteel, 50,
+                    TriItems.TiAlloy, 15
+            ));
+            recipes.add(new Recipe(){{
+                inputLiquid.add(new LiquidStack(TriLiquids.oilMixedGas, 0.3f));
+                outputLiquid.add(new LiquidStack(TriLiquids.oilKerosene, 0.12f));
+                outputLiquid.add(new LiquidStack(TriLiquids.oilPetroleumGas, 0.03f));
+                outputLiquid.add(new LiquidStack(TriLiquids.oilGasoline, 0.15f));
+                craftTime = 30f;
+                powerUse = 12f;
+            }});
+
+        // 高热配方
+        recipes.add(new Recipe(){{
+                inputLiquid.add(new LiquidStack(TriLiquids.oilMixedGas, 0.3f));
+                outputLiquid.add(new LiquidStack(TriLiquids.oilKerosene, 0.12f));
+                outputLiquid.add(new LiquidStack(TriLiquids.oilPetroleumGas, 0.03f));
+                outputLiquid.add(new LiquidStack(TriLiquids.oilGasoline, 0.15f));
+                craftTime = 30f;
+                powerUse = 2f;
+                heatEnabled = true;
+                heatRequirement = 20f;
+                recipeMaxEfficiency = 4f;
+                stopLowTemperature = true;
+                stopUndervoltage = true;
+            }});
+        }};
+
+        oilVacuumDistillationColumn = new MultiRecipeFactory("oilVacuumDistillationColumn"){{
+            size = 5;
+            health = 50;
+            itemCapacity = 40;
+            liquidCapacity = 120;
+            outputsLiquid = true;
+            rotate = true;
+            liquidOutputDirections = new int[]{1, 3};
+            squareSprite = true;
+            researchCostMultiplier = 0.75f;
+            buildCostMultiplier = 0.8f;
+            hasLiquids = true;
+            drawer = baseGlow("FFFFFF99");
+            updateEffect = Fx.none;
+            requirements(Category.crafting, with(
+                    TriItems.Al, 35,
+                    TriItems.MonocrystallineSi, 35,
+                    TriItems.FeSteel, 50,
+                    TriItems.TiAlloy, 15
+            ));
+            recipes.add(new Recipe(){{
+                inputLiquid.add(new LiquidStack(TriLiquids.oilHeavy, 0.5f));
+                outputLiquid.add(new LiquidStack(TriLiquids.oilVGO, 0.2f));
+                outputLiquid.add(new LiquidStack(TriLiquids.oilVacuumResidue, 0.3f));
+                craftTime = 30f;
+                powerUse = 12f;
+            }});
+
+        // 高热配方
+        recipes.add(new Recipe(){{
+                inputLiquid.add(new LiquidStack(TriLiquids.oilHeavy, 0.5f));
+                outputLiquid.add(new LiquidStack(TriLiquids.oilVGO, 0.2f));
+                outputLiquid.add(new LiquidStack(TriLiquids.oilVacuumResidue, 0.3f));
+                craftTime = 30f;
+                powerUse = 2f;
+                heatEnabled = true;
+                heatRequirement = 20f;
+                recipeMaxEfficiency = 4f;
+                stopLowTemperature = true;
+                stopUndervoltage = true;
+            }});
+        }};
+
+        oilCatalyticCrackingTower = new MultiRecipeFactory("oilCatalyticCrackingTower"){{
+            size = 3;
+            health = 250;
+            itemCapacity = 40;
+            liquidCapacity = 120;
+            outputsLiquid = true;
+            rotate = true;
+            liquidOutputDirections = new int[]{1, 2, 3};
+            squareSprite = true;
+            researchCostMultiplier = 0.75f;
+            buildCostMultiplier = 0.8f;
+            hasLiquids = true;
+            drawer = baseGlow("FFFFFF99");
+            updateEffect = Fx.none;
+            requirements(Category.crafting, with(
+                    TriItems.Al, 10,
+                    TriItems.MonocrystallineSi, 5,
+                    TriItems.FeSteel, 10,
+                    TriItems.TiAlloy, 15,
+                    TriItems.USY, 5
+            ));
+            recipes.add(new Recipe(){{
+                inputLiquid.add(new LiquidStack(TriLiquids.oilVGO, 0.2f));
+                outputLiquid.add(new LiquidStack(TriLiquids.oilDiesel, 0.06f));
+                outputLiquid.add(new LiquidStack(TriLiquids.oilPetroleumGas, 0.03f));
+                outputLiquid.add(new LiquidStack(TriLiquids.oilGasoline, 0.1f));
+                craftTime = 30f;
+                powerUse = 7.2f;
+            }});
+
+        // 高热配方
+        recipes.add(new Recipe(){{
+                inputLiquid.add(new LiquidStack(TriLiquids.oilVGO, 0.2f));
+                outputLiquid.add(new LiquidStack(TriLiquids.oilDiesel, 0.06f));
+                outputLiquid.add(new LiquidStack(TriLiquids.oilPetroleumGas, 0.03f));
+                outputLiquid.add(new LiquidStack(TriLiquids.oilGasoline, 0.1f));
+                craftTime = 30f;
+                powerUse = 2f;
+                heatEnabled = true;
+                heatRequirement = 20f;
+                recipeMaxEfficiency = 4f;
+                stopLowTemperature = true;
+                stopUndervoltage = true;
+            }});
+        }};
+
+        oilHydrocrackingTower = new MultiRecipeFactory("oilHydrocrackingTower"){{
+            size = 3;
+            health = 50;
+            itemCapacity = 40;
+            liquidCapacity = 120;
+            outputsLiquid = true;
+            rotate = true;
+            liquidOutputDirections = new int[]{1, 2, 3};
+            squareSprite = true;
+            researchCostMultiplier = 0.75f;
+            buildCostMultiplier = 0.8f;
+            hasLiquids = true;
+            drawer = baseGlow("FFFFFF99");
+            updateEffect = Fx.none;
+            requirements(Category.crafting, with(
+                    TriItems.Al, 15,
+                    TriItems.MonocrystallineSi, 15,
+                    TriItems.FeSteel, 50,
+                    TriItems.TiAlloy, 25,
+                    TriItems.USY, 3
+            ));
+            recipes.add(new Recipe(){{
+                inputLiquid.add(new LiquidStack(TriLiquids.oilVGO, 0.2f));
+                inputLiquid.add(new LiquidStack(Liquids.hydrogen, 0.2f));
+                outputLiquid.add(new LiquidStack(TriLiquids.oilDiesel, 0.07f));
+                outputLiquid.add(new LiquidStack(TriLiquids.oilNaphtha, 0.16f));
+                outputLiquid.add(new LiquidStack(TriLiquids.oilKerosene, 0.07f));
+                craftTime = 30f;
+                powerUse = 9.8f;
+            }});
+
+        // 高热配方
+        recipes.add(new Recipe(){{
+                inputLiquid.add(new LiquidStack(TriLiquids.oilVGO, 0.2f));
+                inputLiquid.add(new LiquidStack(Liquids.hydrogen, 0.2f));
+                outputLiquid.add(new LiquidStack(TriLiquids.oilDiesel, 0.07f));
+                outputLiquid.add(new LiquidStack(TriLiquids.oilNaphtha, 0.16f));
+                outputLiquid.add(new LiquidStack(TriLiquids.oilKerosene, 0.07f));
+                craftTime = 30f;
+                powerUse = 2f;
+                heatEnabled = true;
+                heatRequirement = 20f;
+                recipeMaxEfficiency = 4f;
+                stopLowTemperature = true;
+                stopUndervoltage = true;
+            }});
+        }};
+
+        oilCatalyticReformingTower = new MultiRecipeFactory("oilCatalyticReformingTower"){{
+            size = 3;
+            health = 50;
+            itemCapacity = 40;
+            liquidCapacity = 120;
+            outputsLiquid = true;
+            rotate = true;
+            liquidOutputDirections = new int[]{1, 3};
+            squareSprite = true;
+            researchCostMultiplier = 0.75f;
+            buildCostMultiplier = 0.8f;
+            hasLiquids = true;
+            drawer = baseGlow("FFFFFF99");
+            updateEffect = Fx.none;
+            requirements(Category.crafting, with(
+                    TriItems.Al, 15,
+                    TriItems.MonocrystallineSi, 15,
+                    TriItems.FeSteel, 50,
+                    TriItems.TiAlloy, 15,
+                    TriItems.Pt, 5
+            ));
+            recipes.add(new Recipe(){{
+                inputLiquid.add(new LiquidStack(TriLiquids.oilNaphtha, 0.16f));
+                outputLiquid.add(new LiquidStack(TriLiquids.oilReformate, 0.15f));
+                outputLiquid.add(new LiquidStack(Liquids.hydrogen, 0.07f));
+                craftTime = 30f;
+                powerUse = 7.2f;
+            }});
+
+        // 高热配方
+        recipes.add(new Recipe(){{
+                inputLiquid.add(new LiquidStack(TriLiquids.oilNaphtha, 0.16f));
+                outputLiquid.add(new LiquidStack(TriLiquids.oilReformate, 0.15f));
+                outputLiquid.add(new LiquidStack(Liquids.hydrogen, 0.07f));
+                craftTime = 30f;
+                powerUse = 2f;
+                heatEnabled = true;
+                heatRequirement = 20f;
+                recipeMaxEfficiency = 4f;
+                stopLowTemperature = true;
+                stopUndervoltage = true;
+            }});
+        }};
+
+        oilAromaticHydrocarbonComplex = new MultiRecipeFactory("oilAromaticHydrocarbonComplex"){{
+            size = 5;
+            health = 30;
+            itemCapacity = 40;
+            liquidCapacity = 120;
+            outputsLiquid = true;
+            rotate = false;
+            squareSprite = true;
+            researchCostMultiplier = 0.75f;
+            buildCostMultiplier = 0.8f;
+            hasLiquids = true;
+            drawer = baseGlow("FFFFFF99");
+            updateEffect = Fx.none;
+            requirements(Category.crafting, with(
+                    TriItems.Al, 25,
+                    TriItems.MonocrystallineSi, 10,
+                    TriItems.FeSteel, 50,
+                    TriItems.TiAlloy, 20
+            ));
+            recipes.add(new Recipe(){{
+                inputLiquid.add(new LiquidStack(TriLiquids.oilReformate, 0.15f));
+                outputLiquid.add(new LiquidStack(TriLiquids.oilArene, 0.15f));
+                craftTime = 30f;
+                powerUse = 6f;
+            }});
+
+        // 高热配方
+        recipes.add(new Recipe(){{
+                inputLiquid.add(new LiquidStack(TriLiquids.oilReformate, 0.15f));
+                outputLiquid.add(new LiquidStack(TriLiquids.oilArene, 0.15f));
+                craftTime = 30f;
+                powerUse = 2f;
+                heatEnabled = true;
+                heatRequirement = 20f;
+                recipeMaxEfficiency = 4f;
+                stopLowTemperature = true;
+                stopUndervoltage = true;
+            }});
+        }};
+
+        oilCokingHydrogenationTower = new MultiRecipeFactory("oilCokingHydrogenationTower"){{
+            size = 5;
+            health = 20;
+            itemCapacity = 40;
+            liquidCapacity = 120;
+            outputsLiquid = true;
+            rotate = true;
+            liquidOutputDirections = new int[]{1, 2, 3};
+            squareSprite = true;
+            researchCostMultiplier = 0.75f;
+            buildCostMultiplier = 0.8f;
+            hasLiquids = true;
+            drawer = baseGlow("FFFFFF99");
+            updateEffect = Fx.none;
+            requirements(Category.crafting, with(
+                    TriItems.Al, 20,
+                    TriItems.MonocrystallineSi, 28,
+                    TriItems.FeSteel, 40,
+                    TriItems.TiAlloy, 15
+            ));
+            recipes.add(new Recipe(){{
+                inputLiquid.add(new LiquidStack(TriLiquids.oilVacuumResidue, 0.3f));
+                outputLiquid.add(new LiquidStack(TriLiquids.oilGasoline, 0.1f));
+                outputLiquid.add(new LiquidStack(TriLiquids.oilWax, 0.1f));
+                outputLiquid.add(new LiquidStack(TriLiquids.oilDiesel, 0.1f));
+                outputItem.add(new ItemStack(mindustry.content.Items.scrap, 1));
+                craftTime = 30f;
+                powerUse = 9f;
+            }});
+
+        // 高热配方
+        recipes.add(new Recipe(){{
+                inputLiquid.add(new LiquidStack(TriLiquids.oilVacuumResidue, 0.3f));
+                outputLiquid.add(new LiquidStack(TriLiquids.oilGasoline, 0.1f));
+                outputLiquid.add(new LiquidStack(TriLiquids.oilWax, 0.1f));
+                outputLiquid.add(new LiquidStack(TriLiquids.oilDiesel, 0.1f));
+                outputItem.add(new ItemStack(mindustry.content.Items.scrap, 1));
+                craftTime = 30f;
+                powerUse = 2f;
+                heatEnabled = true;
+                heatRequirement = 20f;
+                recipeMaxEfficiency = 4f;
+                stopLowTemperature = true;
+                stopUndervoltage = true;
+            }});
+        }};
+
+        oilSteamCrackingTower = new MultiRecipeFactory("oilSteamCrackingTower"){{
+            size = 3;
+            health = 20;
+            itemCapacity = 40;
+            liquidCapacity = 120;
+            outputsLiquid = true;
+            rotate = true;
+            liquidOutputDirections = new int[]{1, 3};
+            squareSprite = true;
+            researchCostMultiplier = 0.75f;
+            buildCostMultiplier = 0.8f;
+            hasLiquids = true;
+            drawer = baseGlow("FFFFFF99");
+            updateEffect = Fx.none;
+            requirements(Category.crafting, with(
+                    TriItems.Al, 10,
+                    TriItems.MonocrystallineSi, 18,
+                    TriItems.TiAlloy, 25,
+                    TriItems.FeSteel, 30
+            ));
+            recipes.add(new Recipe(){{
+                inputLiquid.add(new LiquidStack(Liquids.water, 0.1f));
+                inputLiquid.add(new LiquidStack(TriLiquids.oilWax, 0.1f));
+                outputLiquid.add(new LiquidStack(TriLiquids.oilEthylene, 0.14f));
+                outputLiquid.add(new LiquidStack(TriLiquids.oilGasoline, 0.06f));
+                craftTime = 30f;
+                powerUse = 8f;
+            }});
+
+        // 高热配方
+        recipes.add(new Recipe(){{
+                inputLiquid.add(new LiquidStack(Liquids.water, 0.1f));
+                inputLiquid.add(new LiquidStack(TriLiquids.oilWax, 0.1f));
+                outputLiquid.add(new LiquidStack(TriLiquids.oilEthylene, 0.14f));
+                outputLiquid.add(new LiquidStack(TriLiquids.oilGasoline, 0.06f));
+                craftTime = 30f;
+                powerUse = 2f;
+                heatEnabled = true;
+                heatRequirement = 20f;
+                recipeMaxEfficiency = 4f;
+                stopLowTemperature = true;
+                stopUndervoltage = true;
+            }});
+        }};
+
+        oilTubularReactor = new MultiRecipeFactory("oilTubularReactor"){{
+            size = 3;
+            health = 105;
+            itemCapacity = 40;
+            liquidCapacity = 80;
+            squareSprite = true;
+            rotate = false;
+            researchCostMultiplier = 0.75f;
+            buildCostMultiplier = 1.2f;
+            hasLiquids = true;
+            drawer = new DrawMulti(new DrawDefault(), glow("FF707090"));
+            updateEffect = Fx.pulverizeMedium;
+            requirements(Category.crafting, with(
+                    TriItems.TiAlloy, 45,
+                    TriItems.Cu, 10,
+                    TriItems.MonocrystallineSi, 5,
+                    TriItems.FeSteel, 20
+            ));
+            recipes.add(new Recipe(){{
+                inputLiquid.add(new LiquidStack(TriLiquids.oilEthylene, 0.14f));
+                outputItem.add(new ItemStack(TriItems.PE, 14));
+                craftTime = 60f;
+                powerUse = 7.5f;
+            }});
+
+        // 高热配方
+        recipes.add(new Recipe(){{
+                inputLiquid.add(new LiquidStack(TriLiquids.oilEthylene, 0.14f));
+                outputItem.add(new ItemStack(TriItems.PE, 14));
+                craftTime = 60f;
+                powerUse = 2f;
+                heatEnabled = true;
+                heatRequirement = 20f;
+                recipeMaxEfficiency = 4f;
+                stopLowTemperature = true;
+                stopUndervoltage = true;
+            }});
+        }};
+
+        USYHydrothermalReactor = new MultiRecipeFactory("USYHydrothermalReactor"){{
+            size = 5;
+            health = 50;
+            itemCapacity = 40;
+            liquidCapacity = 120;
+            outputsLiquid = true;
+            rotate = false;
+            squareSprite = true;
+            researchCostMultiplier = 0.75f;
+            buildCostMultiplier = 0.8f;
+            hasLiquids = true;
+            drawer = new DrawMulti(new DrawDefault(), glow("FFFFFF99"));
+            updateEffect = Fx.none;
+            requirements(Category.crafting, with(
+                    TriItems.Al, 20,
+                    TriItems.MonocrystallineSi, 15,
+                    TriItems.FeSteel, 45,
+                    TriItems.TiAlloy, 15
+            ));
+            recipes.add(new Recipe(){{
+                inputItem.add(new ItemStack(TriItems.bauxite, 1));
+                inputItem.add(new ItemStack(TriItems.SiSand, 4));
+                inputItem.add(new ItemStack(TriItems.NaOH, 1));
+                inputLiquid.add(new LiquidStack(TriLiquids.liquidAmmonia, 0.1f));
+                inputLiquid.add(new LiquidStack(Liquids.water, 0.4f));
+                outputItem.add(new ItemStack(TriItems.USYmolecularSieve, 5));
+                craftTime = 60f;
+                powerUse = 7.5f;
+            }});
+
+        // 高热配方
+        recipes.add(new Recipe(){{
+                inputItem.add(new ItemStack(TriItems.bauxite, 1));
+                inputItem.add(new ItemStack(TriItems.SiSand, 4));
+                inputItem.add(new ItemStack(TriItems.NaOH, 1));
+                inputLiquid.add(new LiquidStack(TriLiquids.liquidAmmonia, 0.1f));
+                inputLiquid.add(new LiquidStack(Liquids.water, 0.4f));
+                outputItem.add(new ItemStack(TriItems.USYmolecularSieve, 5));
+                craftTime = 60f;
+                powerUse = 2f;
+                heatEnabled = true;
+                heatRequirement = 20f;
+                recipeMaxEfficiency = 4f;
+                stopLowTemperature = true;
+                stopUndervoltage = true;
+            }});
+        }};
+
+        USYMixer = new MultiRecipeFactory("USYMixer"){{
+            size = 3;
+            health = 50;
+            itemCapacity = 40;
+            liquidCapacity = 120;
+            squareSprite = true;
+            rotate = false;
+            researchCostMultiplier = 0.75f;
+            buildCostMultiplier = 0.8f;
+            hasLiquids = true;
+            drawer = new DrawMulti(new DrawDefault(), glow("FFFFFF99"));
+            updateEffect = Fx.none;
+            requirements(Category.crafting, with(
+                    TriItems.Al, 20,
+                    TriItems.MonocrystallineSi, 5,
+                    TriItems.FeSteel, 35,
+                    TriItems.TiAlloy, 15
+            ));
+            recipes.add(new Recipe(){{
+                inputItem.add(new ItemStack(TriItems.USYmolecularSieve, 1));
+                inputItem.add(new ItemStack(TriItems.kaolin, 5));
+                outputItem.add(new ItemStack(TriItems.USY, 5));
+                craftTime = 60f;
+                powerUse = 3.2f;
+            }});
+
+        // 高热配方
+        recipes.add(new Recipe(){{
+                inputItem.add(new ItemStack(TriItems.USYmolecularSieve, 1));
+                inputItem.add(new ItemStack(TriItems.kaolin, 5));
+                outputItem.add(new ItemStack(TriItems.USY, 5));
+                craftTime = 60f;
+                powerUse = 2f;
+                heatEnabled = true;
+                heatRequirement = 20f;
+                recipeMaxEfficiency = 4f;
+                stopLowTemperature = true;
+                stopUndervoltage = true;
+            }});
+        }};
+
+        // 高热配方已在各工厂中直接通过 recipes.add 声明。
+        MultiRecipeFactory[] oilFactories = {
+            oilPrimaryAtmosphericDistillationTower,
+            oilSecondaryAtmosphericDistillationTower,
+            oilVacuumDistillationColumn,
+            oilCatalyticCrackingTower,
+            oilHydrocrackingTower,
+            oilCatalyticReformingTower,
+            oilAromaticHydrocarbonComplex,
+            oilCokingHydrogenationTower,
+            oilSteamCrackingTower,
+            oilTubularReactor,
+            USYHydrothermalReactor,
+            USYMixer
+        };
+
+        // 所有石油化工配方欠压即跳闸。
+        for(MultiRecipeFactory factory : oilFactories){
+            factory.recipes.each(recipe -> recipe.stopUndervoltage = true);
+        }
+
+        // 保留原 JSON 的数据库分类标签。
+        oilElectricDesaltingTank.databaseTag = "Oil";
+        oilPrimaryAtmosphericDistillationTower.databaseTag = "Oil";
+        oilSecondaryAtmosphericDistillationTower.databaseTag = "Oil";
+        oilVacuumDistillationColumn.databaseTag = "Oil";
+        oilCatalyticCrackingTower.databaseTag = "Oil";
+        oilHydrocrackingTower.databaseTag = "Oil";
+        oilCatalyticReformingTower.databaseTag = "Oil";
+        oilAromaticHydrocarbonComplex.databaseTag = "Oil";
+        oilCokingHydrogenationTower.databaseTag = "Oil";
+        oilSteamCrackingTower.databaseTag = "Oil";
+        oilTubularReactor.databaseTag = "Oil";
+        USYHydrothermalReactor.databaseTag = "Oil";
+        USYMixer.databaseTag = "Oil";
+    }
+    private static DrawBlock glow(String hex){
+        return new DrawGlowRegion(){{
+            color = Color.valueOf(hex);
+            layer = 110f;
+            suffix = "-glow";
+            glowIntensity = 0f;
+        }};
+    }
+
+    private static DrawBlock baseGlow(String color){
+        return new DrawMulti(
+            new DrawRegion(){{ suffix = "-base"; }},
+            glow(color)
+        );
     }
 }
