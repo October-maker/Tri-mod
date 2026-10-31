@@ -68,16 +68,17 @@ public class TriMailDialog{
 
     private static float logoHomeX, logoHomeY, logoCenterX, logoCenterY;
 
-    private static BaseDialog inbox;
+    static BaseDialog inbox;
     private static Filter filter = Filter.ALL;
 
-    private static boolean storyScope = true;
+    static boolean storyScope = true;
 
     private static TriBlurBackground blur;
 
-    private static Table lastContent;
+    static Table lastContent;
 
-    private static Table activeDetail, activeDetailCard;
+    static Table activeDetail;
+    private static Table activeDetailCard;
 
     private static Table activeDetailMorph;
 
@@ -118,25 +119,21 @@ public class TriMailDialog{
 
     private static Table listTable;
 
-    private static TextButton latestInfoButton;
+    static TextButton latestInfoButton;
 
-    /** 手动获取最新资讯时的加载提示与过渡状态。 */
-    private static Table loadingTable;
-    private static boolean refreshTransitionActive;
-    private static boolean refreshPendingUpdate;
-    private static boolean refreshPendingFailure;
+    /** 手动获取最新资讯时的加载提示与过渡状态由 TriMailRefreshController 管理。 */
 
     // Built card label references
     private static final ObjectMap<TriMail, Label> senderLabels = new ObjectMap<>();
 
     private static float contentHomeX, contentHomeY;
 
-    private static final float SLIDE_IN_DURATION = 0.4f;
+    static final float SLIDE_IN_DURATION = 0.4f;
 
-    private static final float CONTENT_SWEEP_DURATION = 0.2f;
+    static final float CONTENT_SWEEP_DURATION = 0.2f;
 
     private static final float TMAIL_EXIT_DURATION = 0.1f;
-    private static boolean exitAnimating;
+    static boolean exitAnimating;
 
     private static float animSpeed = 1f;
 
@@ -144,7 +141,7 @@ public class TriMailDialog{
     return seconds / animSpeed;
     }
 
-    private static Action moveTo(float x, float y, float seconds, Interp interp){
+    static Action moveTo(float x, float y, float seconds, Interp interp){
     return Actions.moveTo(x, y, anim(seconds), interp);
     }
 
@@ -391,7 +388,7 @@ public class TriMailDialog{
                     if(logoIntro != layer) return;
                     layer.touchable = Touchable.disabled;
                     // 兜底：正常情况下 content 已在下面提前构建；若因关闭等原因未构建，则这里补一
-                    if(inbox != null && inbox.isShown() && lastContent == null && loadingTable == null){
+                    if(inbox != null && inbox.isShown() && lastContent == null && !TriMailRefreshController.hasLoading()){
                         openInitialContent(inbox);
                     }
                 })
@@ -402,7 +399,7 @@ public class TriMailDialog{
             // 恰好 Logo 滑到停靠位（LOGO_COVER_MOVE_DURATION）同一时刻
             float contentStartDelay = Math.max(0f, LOGO_COVER_MOVE_DURATION - SLIDE_IN_DURATION - 1f / 60f);
             layer.actions(delay(contentStartDelay), Actions.run(() -> {
-                if(logoIntro == layer && inbox != null && inbox.isShown() && lastContent == null && loadingTable == null){
+                if(logoIntro == layer && inbox != null && inbox.isShown() && lastContent == null && !TriMailRefreshController.hasLoading()){
                     openInitialContent(inbox);
                 }
             }));
@@ -447,19 +444,19 @@ public class TriMailDialog{
             return;
         }
 
-        if(lastContent != null || loadingTable != null){
+        if(lastContent != null || TriMailRefreshController.hasLoading()){
             clearPage();
         }
 
-        showLoadingTable(true);
+        TriMailRefreshController.showLoadingTable(true);
         TriModInfo.refresh(true);
     }
 
     /** 重建收件箱内容（删除content 后，新建 content 并从屏幕右外侧滑入右 3/4 处） 删除content 的逻辑不内置在本方法——调用方须在调用前自行移除旧 content （不同调用方可按不同样式删除：直接清空、淡出、滑出等）。 */
-    private static void build(BaseDialog dlg){
+    static void build(BaseDialog dlg){
         // 清空 content 的单元格（Element.remove 不会移除 Table  cell），再放 Logo
-        boolean hadLoading = loadingTable != null;
-        removeLoadingTable();
+        boolean hadLoading = TriMailRefreshController.hasLoading();
+        TriMailRefreshController.removeLoading();
         if(lastContent != null || hadLoading){
             clearPage();
         }
@@ -469,9 +466,9 @@ public class TriMailDialog{
     }
 
     /** 清空 Tmail 页面内的 content 单元格，但保TmailLogo Table.clearChildren 会连cell 一起清除；因此先保 Logo 层，清空后再重新挂回。 */
-    private static void clearPage(){
+    static void clearPage(){
         Table logo = logoIntro;
-        loadingTable = null; // clearChildren 会一并移除加载提示
+        TriMailRefreshController.clearLoadingReference(); // clearChildren 会一并移除加载提示
         if(inbox != null){
             inbox.cont.clearChildren();
             if(logo != null){
@@ -636,127 +633,24 @@ public class TriMailDialog{
         }
     }
 
-    /** 远端资讯刷新开始：手动刷新时先播放卡片组下移、再显示加载提示。 */
+    /** 远端资讯刷新开始：手动刷新时由刷新控制器处理过渡与加载提示。 */
     public static void onModInfoRefreshStarted(boolean forced){
-        if(latestInfoButton != null) latestInfoButton.setDisabled(true);
-
-        if(!forced || storyScope || inbox == null || !inbox.isShown() || exitAnimating || refreshTransitionActive){
-            return;
-        }
-
-        refreshTransitionActive = true;
-        refreshPendingUpdate = false;
-        refreshPendingFailure = false;
-
-        if(lastContent == null){
-            refreshTransitionActive = false;
-            if(loadingTable == null){
-                showLoadingTable(false);
-            }
-            return;
-        }
-
-        Table content = lastContent;
-        content.clearActions();
-        content.actions(
-                moveTo(content.x, -content.getHeight(), CONTENT_SWEEP_DURATION, Interp.pow2In),
-                Actions.run(() -> {
-                    if(lastContent != content) return;
-
-                    // 卡片组已经移出屏幕，再删除旧内容并显示加载提示。
-                    clearPage();
-                    refreshTransitionActive = false;
-                    showLoadingTable(false);
-                    finishPendingRefresh();
-                })
-        );
-    }
-
-    /** 在屏幕右 3/4 处显示“正在获取模组最新资讯”。 */
-    private static void showLoadingTable(boolean slideIn){
-        removeLoadingTable();
-        if(inbox == null || !inbox.isShown()) return;
-
-        Table loading = new Table();
-        loading.add("[accent]" + bundle("tri.mail.refreshingLatest"))
-                .padLeft(Core.graphics.getWidth() * 0.5f)
-                .center();
-        inbox.cont.add(loading).grow();
-        loadingTable = loading;
-
-        if(!slideIn){
-            inbox.cont.invalidate();
-            return;
-        }
-
-        // 初次进入时让加载提示本身从屏幕右侧滑入。
-        loading.visible = false;
-        inbox.cont.validate();
-        loading.setLayoutEnabled(false);
-        float targetX = loading.x, targetY = loading.y;
-        float sw = Core.graphics.getWidth();
-
-        Time.runTask(1f, () -> {
-            if(loadingTable != loading || inbox == null || !inbox.isShown()) return;
-
-            loading.setPosition(sw + loading.getWidth(), targetY);
-            loading.visible = true;
-            loading.clearActions();
-            loading.actions(moveTo(targetX, targetY, SLIDE_IN_DURATION, Interp.pow2Out));
-        });
-    }
-
-    private static void removeLoadingTable(){
-        if(loadingTable != null){
-            loadingTable.remove();
-            loadingTable = null;
-        }
-    }
-
-    private static void finishPendingRefresh(){
-        if(!refreshPendingUpdate && !refreshPendingFailure) return;
-
-        refreshPendingUpdate = false;
-        refreshPendingFailure = false;
-
-        if(inbox != null && inbox.isShown() && !storyScope){
-            build(inbox);
-        }
+        TriMailRefreshController.onRefreshStarted(forced);
     }
 
     /** 远端资讯刷新结束（成功或失败）：恢复按钮。 */
     public static void onModInfoRefreshFinished(){
-        if(latestInfoButton != null) latestInfoButton.setDisabled(false);
+        TriMailRefreshController.onRefreshFinished();
     }
 
     /** 手动刷新失败时给出明确反馈；自动刷新失败只记录日志。 */
     public static void onModInfoRefreshFailed(){
-        if(!storyScope && inbox != null && inbox.isShown() && Vars.ui != null){
-            Vars.ui.showInfo(bundle("tri.mail.refreshFailed"));
-        }
-
-        if(refreshTransitionActive){
-            refreshPendingFailure = true;
-            return;
-        }
-
-        if(!storyScope && inbox != null && inbox.isShown() && activeDetail == null){
-            build(inbox);
-        }
+        TriMailRefreshController.onRefreshFailed();
     }
 
     /** 远端资讯已替换：只在模组资讯页且没有打开的详情时重建列表。 */
     public static void onModInfoUpdated(){
-        if(storyScope || inbox == null || !inbox.isShown() || exitAnimating) return;
-
-        if(refreshTransitionActive){
-            refreshPendingUpdate = true;
-            return;
-        }
-
-        if(activeDetail != null) return;
-
-        build(inbox);
+        TriMailRefreshController.onUpdated();
     }
 
     /** 单封邮件的固定大小卡片：圆角矩形包裹，上发件人、中分割线、下内容（省略）。整卡可点击阅读。 */
@@ -1640,7 +1534,7 @@ public class TriMailDialog{
         return n;
     }
 
-    private static String bundle(String key){
+    static String bundle(String key){
         return Core.bundle.get(key, key);
     }
 }

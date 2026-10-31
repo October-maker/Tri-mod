@@ -14,6 +14,7 @@ import triangle.black.PIBulletType;
 import triangle.black.TriCIWS;
 import triangle.black.TriDraw;
 import triangle.black.TMail.TriGameMailButton;
+import triangle.black.TMail.TriBlurBackground;
 import triangle.black.TMail.TriInbox;
 import triangle.black.TMail.TriModInfo;
 import triangle.black.TMail.TriMainMenuButton;
@@ -92,7 +93,10 @@ public class triangle extends Mod{
         TriSettingsDataButton.init();
         // 战役地图内“收到新邮件”提示（解锁时弹黑框 3 秒）
         TriInbox.hookNewMailToast();
-        Events.on(DisposeEvent.class, e -> TriDraw.dispose());
+        Events.on(DisposeEvent.class, e -> {
+            TriDraw.dispose();
+            TriBlurBackground.dispose();
+        });
         TriGameMailButton.init();
         // 惰性自愈安装：每帧检查并把内容详情对话框替换为 TriContentInfoDialog，不再依赖 ClientLoadEvent 时机
         // （Vars.ui 可能尚未初始化，故带空保护；替换成功后 instanceof 判空使其退化为空操作）

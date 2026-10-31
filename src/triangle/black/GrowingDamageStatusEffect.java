@@ -1,6 +1,7 @@
 package triangle.black;
 
 import arc.math.Mathf;
+import arc.struct.ObjectFloatMap;
 import arc.util.Time;
 import mindustry.content.Fx;
 import mindustry.entities.units.StatusEntry;
@@ -28,10 +29,10 @@ public class GrowingDamageStatusEffect extends StatusEffect {
     /**
      * 每个单位当前的伤害值。
      *
-     * <p>使用 {@link java.util.WeakHashMap}：单位死亡/被移除后条目可随 GC 清理，避免静态强引用泄漏；
-     * 引擎不会复用单位对象（{@code remove()} 仅置空槽位），因此不会出现新单位读到旧值的问题。
+     * <p>使用 {@link ObjectFloatMap} 避免每帧对伤害值做 {@link Float} 装箱；单位被移除时
+     * {@link #onRemoved(Unit)} 会清理条目。引擎不会复用单位对象，因此不会出现新单位读到旧值的问题。
      */
-    private static final java.util.WeakHashMap<Unit, Float> currentDamages = new java.util.WeakHashMap<>();
+    private static final ObjectFloatMap<Unit> currentDamages = new ObjectFloatMap<>();
 
     public GrowingDamageStatusEffect(String name) {
         super(name);
@@ -72,21 +73,22 @@ public class GrowingDamageStatusEffect extends StatusEffect {
 
         // 随机位置播放状态特效
         if (effect != Fx.none && Mathf.chanceDelta(effectChance)) {
-            float range = (float)(Math.random() - 0.5) * unit.type.hitSize;
-            float rangeY = (float)(Math.random() - 0.5) * unit.type.hitSize;
+            float half = unit.type.hitSize * 0.5f;
+            float range = Mathf.range(half);
+            float rangeY = Mathf.range(half);
             effect.at(unit.x + range, unit.y + rangeY, 0, color, unit);
         }
     }
 
     /** 读取单位当前的伤害值；未记录时返回初始伤害。 */
     private float getCurrentDamage(Unit unit) {
-        return currentDamages.getOrDefault(unit, baseDamage);
+        return currentDamages.get(unit, baseDamage);
     }
 
     @Override
     public void onRemoved(Unit unit) {
         // 状态移除时主动清理；即使未触发，弱引用表也会随单位回收自动清理
-        currentDamages.remove(unit);
+        currentDamages.remove(unit, currentDamages.get(unit, baseDamage));
         super.onRemoved(unit);
     }
 

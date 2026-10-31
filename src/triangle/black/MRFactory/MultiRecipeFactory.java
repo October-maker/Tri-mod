@@ -276,35 +276,54 @@ public class MultiRecipeFactory extends GenericCrafter{
     public void init() {
         super.init();
 
-        // 设置输入过滤器和输出列表
-        recipes.each(recipe -> {
-            recipe.inputItem.each(stack -> itemFilter[stack.item.id] = true);
-            recipe.inputLiquid.each(stack -> liquidFilter[stack.liquid.id] = true);
-
-            recipe.outputItem.each(stack -> itemOutput.add(stack.item));
-            recipe.outputLiquid.each(stack -> liquidOutput.add(stack.liquid));
-            recipe.outputPayload.each(stack -> payloadOutput.add(stack.item));
-        });
-
-        // 初始化输出
-        if (recipes.isEmpty()) {
-            outputItems = new ItemStack[]{new ItemStack(Items.copper, 0)};
-            outputLiquids = new LiquidStack[]{new LiquidStack(Liquids.water, 0f)};
-        } else {
-            Recipe firstRecipe = recipes.first();
-
-            outputItems = new ItemStack[Math.max(firstRecipe.outputItem.size, 1)];
-            for (int i = 0; i < outputItems.length; i++) {
-                outputItems[i] = i < firstRecipe.outputItem.size
-                        ? firstRecipe.outputItem.get(i)
-                        : new ItemStack(Items.copper, 0);
+        // 设置输入过滤器和输出列表（去重；同一产物可能被多个配方共享）。
+        Seq<ItemStack> allOutputItems = new Seq<>();
+        Seq<LiquidStack> allOutputLiquids = new Seq<>();
+        for(int r = 0; r < recipes.size; r++){
+            Recipe recipe = recipes.get(r);
+            for(int i = 0; i < recipe.inputItem.size; i++){
+                itemFilter[recipe.inputItem.get(i).item.id] = true;
+            }
+            for(int i = 0; i < recipe.inputLiquid.size; i++){
+                liquidFilter[recipe.inputLiquid.get(i).liquid.id] = true;
             }
 
-            outputLiquids = new LiquidStack[Math.max(firstRecipe.outputLiquid.size, 1)];
-            for (int i = 0; i < outputLiquids.length; i++) {
-                outputLiquids[i] = i < firstRecipe.outputLiquid.size
-                        ? new LiquidStack(firstRecipe.outputLiquid.get(i).liquid, 0f)
-                        : new LiquidStack(Liquids.water, 0f);
+            for(int i = 0; i < recipe.outputItem.size; i++){
+                ItemStack stack = recipe.outputItem.get(i);
+                if(!allOutputItems.contains(s -> s.item == stack.item)){
+                    allOutputItems.add(stack);
+                    itemOutput.add(stack.item);
+                }
+            }
+            for(int i = 0; i < recipe.outputLiquid.size; i++){
+                LiquidStack stack = recipe.outputLiquid.get(i);
+                if(!allOutputLiquids.contains(s -> s.liquid == stack.liquid)){
+                    allOutputLiquids.add(stack);
+                    liquidOutput.add(stack.liquid);
+                }
+            }
+            for(int i = 0; i < recipe.outputPayload.size; i++){
+                UnlockableContent payload = recipe.outputPayload.get(i).item;
+                if(!payloadOutput.contains(payload)){
+                    payloadOutput.add(payload);
+                }
+            }
+        }
+
+        // 初始化父类兼容输出字段：使用全部配方的并集，而不是只看第一个配方。
+        if(allOutputItems.isEmpty()){
+            outputItems = new ItemStack[]{new ItemStack(Items.copper, 0)};
+        }else{
+            outputItems = allOutputItems.toArray(ItemStack.class);
+        }
+
+        if(allOutputLiquids.isEmpty()){
+            outputLiquids = new LiquidStack[]{new LiquidStack(Liquids.water, 0f)};
+        }else{
+            outputLiquids = new LiquidStack[allOutputLiquids.size];
+            for(int i = 0; i < allOutputLiquids.size; i++){
+                Liquid liquid = allOutputLiquids.get(i).liquid;
+                outputLiquids[i] = new LiquidStack(liquid, 0f);
             }
         }
 
@@ -976,35 +995,7 @@ public class MultiRecipeFactory extends GenericCrafter{
 
         /** 检查该配方的物品/液体输出是否还有足够容量。 */
         public boolean canOutputForRecipe(Recipe recipe) {
-            // 检查物品输出容量：只有所有物品输出都满时才停止。
-            if (checkItemOutputFullness && !recipe.outputItem.isEmpty()) {
-                boolean allFull = true;
-                for (ItemStack output : recipe.outputItem) {
-                    if (items.get(output.item) < itemCapacity) {
-                        allFull = false;
-                        break;
-                    }
-                }
-                if (allFull) {
-                    return false;
-                }
-            }
-
-            // 检查液体输出容量：与原版一致，只有所有液体输出都满时才停止。
-            if (checkLiquidOutputFullness && !recipe.outputLiquid.isEmpty()) {
-                boolean allFull = true;
-                for (LiquidStack output : recipe.outputLiquid) {
-                    if (liquids.get(output.liquid) < liquidCapacity - 0.001f) {
-                        allFull = false;
-                        break;
-                    }
-                }
-                if (allFull) {
-                    return false;
-                }
-            }
-
-            return true;
+            return MultiRecipeOutput.canOutput(this, recipe, checkItemOutputFullness, checkLiquidOutputFullness);
         }
 
         /** 当前配方是否仍可用：输入充足、未锁定，且未触发低温/欠压跳闸。 */
@@ -1093,24 +1084,11 @@ public class MultiRecipeFactory extends GenericCrafter{
             if (efficiency > 0 && !current.outputLiquid.isEmpty()) {
                 float inc = getProgressIncrease(craftTime / current.craftTime);
                 if (!Float.isFinite(inc) || inc <= 0f) return;
-
-                current.outputLiquid.each(stack -> {
-                    float space = liquidCapacity - liquids.get(stack.liquid);
-                    if (!Float.isFinite(space) || space <= 0f) return;
-
-                    float amount = stack.amount * inc;
-                    if (!Float.isFinite(amount) || amount <= 0f) return;
-
-                    handleLiquid(this, stack.liquid, Math.min(amount, space));
-                });
+                MultiRecipeOutput.outputLiquids(this, current, inc);
             }
 
             // 处理物品输出
-            current.outputItem.each(stack -> {
-                if (items.get(stack.item) >= itemCapacity) {
-                    items.set(stack.item, itemCapacity);
-                }
-            });
+            MultiRecipeOutput.clampItems(this, current);
         }
 
         /** 输出物品、载荷与液体；物品/载荷按统一计时器投放。 */

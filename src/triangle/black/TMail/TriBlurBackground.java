@@ -74,7 +74,6 @@ public class TriBlurBackground extends Element{
             fbo.begin();
             Core.scene.draw();
             fbo.end();
-            Log.info("TMail blur created, fbo ok, size=" + fw + "x" + fh);
         }catch(Throwable t){
             Log.err("TMail blur capture failed: " + t);
         }
@@ -113,7 +112,7 @@ public class TriBlurBackground extends Element{
         }
         if(!logged){
             logged = true;
-            Log.info("TMail blur draw: fbo ok, shader ok, alpha=" + alpha);
+            Log.debug("TMail blur draw ready");
         }
         // 必须先 bind shader 再设 uniform：arc 的 setUniformf 直接调 glUniform*，
         // 未绑定时（当前 program 为场景 batch 的 shader）会触发 GL_INVALID_OPERATION。
@@ -134,5 +133,14 @@ public class TriBlurBackground extends Element{
             }
         }
         return blurShader;
+    }
+
+    /** 模组卸载时释放静态 shader；FBO 由各实例 remove() 释放。 */
+    public static void dispose(){
+        if(blurShader != null){
+            blurShader.dispose();
+            blurShader = null;
+        }
+        shaderFailed = false;
     }
 }

@@ -16,6 +16,7 @@ import arc.scene.style.Drawable;
 import arc.scene.ui.Label;
 import arc.struct.FloatSeq;
 import arc.struct.ObjectMap;
+import arc.struct.ObjectSet;
 import arc.util.Align;
 import mindustry.Vars;
 import mindustry.mod.Mods.LoadedMod;
@@ -38,6 +39,8 @@ public class TriDraw{
 
     /** 独立纹理缓存（不进入 atlas）。 */
     private static final ObjectMap<String, TextureRegion> fileCache = new ObjectMap<>();
+    /** 已确认不存在的纹理，避免反复递归扫描 jar/目录。 */
+    private static final ObjectSet<String> missingCache = new ObjectSet<>();
     /** 模组名前缀（含末尾 "-"），惰性取模组 meta.name；仅用于旧资源的 atlas 回退。 */
     private static String modPrefix;
 
@@ -47,6 +50,7 @@ public class TriDraw{
     public static TextureRegion tex(String name){
         TextureRegion cached = fileCache.get(name);
         if(cached != null) return cached;
+        if(missingCache.contains(name)) return Core.atlas.find("white");
 
         // 优先从 assets/TriUI 直接读取独立纹理，避免大图进入 UI 图集/字体图集
         try{
@@ -64,6 +68,7 @@ public class TriDraw{
         if(Core.atlas.has("ui/" + name)) return Core.atlas.find("ui/" + name);
         String prefixed = prefix() + name;
         if(Core.atlas.has(prefixed)) return Core.atlas.find(prefixed);
+        missingCache.add(name);
         return Core.atlas.find("white");
     }
 

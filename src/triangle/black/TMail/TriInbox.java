@@ -5,6 +5,7 @@ import arc.Events;
 import arc.func.Boolp;
 import arc.struct.ObjectSet;
 import arc.struct.Seq;
+import arc.util.Time;
 import mindustry.Vars;
 import mindustry.content.Blocks;
 import mindustry.content.Planets;
@@ -37,6 +38,8 @@ public class TriInbox{
     /** 会话内已提示过的邮件键（避免每帧读 settings；跨会话由 NOTIFIED_PREFIX 持久化）。 */
     private static final ObjectSet<String> notifiedSession = new ObjectSet<>();
     private static boolean newMailHooked = false;
+    /** 新邮件解锁检查间隔（秒），避免每帧遍历全部邮件。 */
+    private static float mailCheckTimer = 0f;
 
     private TriInbox(){}
 
@@ -175,6 +178,11 @@ public class TriInbox{
         newMailHooked = true;
         Events.run(EventType.Trigger.update, () -> {
             if(!Vars.state.isGame()) return;
+
+            mailCheckTimer -= Time.delta;
+            if(mailCheckTimer > 0f) return;
+            mailCheckTimer = 1f;
+
             for(TriMail m : mails){
                 // 只提示战役剧情邮件；会话内已提示过的直接跳过（快路径）
                 if(!m.story || notifiedSession.contains(m.key)) continue;

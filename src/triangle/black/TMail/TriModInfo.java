@@ -34,6 +34,8 @@ public final class TriModInfo{
     private static long lastRefresh;
     private static boolean cacheLoaded;
     private static String loadedLocale;
+    private static String localeCacheKey;
+    private static String[] localeCache;
 
     private TriModInfo(){}
 
@@ -185,13 +187,23 @@ public final class TriModInfo{
 
     private static String[] localeCandidates(){
         String locale = Core.bundle.getLocale().toString();
+        if(locale.equals(localeCacheKey) && localeCache != null){
+            return localeCache;
+        }
+
         String language = locale;
         int underscore = locale.indexOf('_');
         if(underscore != -1) language = locale.substring(0, underscore);
 
-        if(locale.isEmpty() || locale.equals("en")) return new String[]{"en"};
-        if(language.equals(locale)) return new String[]{locale, "en"};
-        return new String[]{locale, language, "en"};
+        if(locale.isEmpty() || locale.equals("en")){
+            localeCache = new String[]{"en"};
+        }else if(language.equals(locale)){
+            localeCache = new String[]{locale, "en"};
+        }else{
+            localeCache = new String[]{locale, language, "en"};
+        }
+        localeCacheKey = locale;
+        return localeCache;
     }
 
     private static String safeId(String id){

@@ -1,9 +1,7 @@
 package triangle.black.ArmorBullet;
 
-import java.util.HashSet;
-import java.util.Set;
-
 import arc.scene.Element;
+import arc.struct.ObjectSet;
 import arc.scene.Group;
 import arc.scene.ui.Label;
 import arc.scene.ui.ScrollPane;
@@ -70,7 +68,7 @@ public class TriContentInfoDialog extends ContentInfoDialog {
         if(turret instanceof TriArmorTurret) return;
 
         // 收集护甲反应弹药的物品显示名（供识别原版 grayPanel 以移除重复行）；同时确认存在护甲反应弹药
-        Set<String> armorNames = new HashSet<>();
+        ObjectSet<String> armorNames = new ObjectSet<>();
         boolean hasArmor = false;
         for(var e : turret.ammoTypes){
             if(e.value instanceof ArmorReactiveBulletType){
@@ -103,7 +101,7 @@ public class TriContentInfoDialog extends ContentInfoDialog {
      * 从弹药统计行中移除原版 StatValues.ammo 渲染的、属于护甲反应弹药的 grayPanel（表），
      * 避免与新注入的完整自定义面板重复。识别依据：面板内存在其物品显示名（localizedName）的 Label。
      */
-    private static void removeVanillaArmorPanels(Table ammoInset, Set<String> armorNames){
+    private static void removeVanillaArmorPanels(Table ammoInset, ObjectSet<String> armorNames){
         var children = ammoInset.getChildren();
         // 倒序遍历移除：被移除项后的索引不受影响
         for(int i = children.size - 1; i >= 0; i--){
@@ -119,12 +117,12 @@ public class TriContentInfoDialog extends ContentInfoDialog {
      * 任一 Label 文本（去掉颜色标记后）命中护甲弹药物品显示名即视为匹配。
      * 原版 StatValues.ammo 的物品名称 Label 嵌在标题子表内，故必须递归，不能只看直接子节点。
      */
-    private static boolean isArmorPanel(Table panel, Set<String> armorNames){
+    private static boolean isArmorPanel(Table panel, ObjectSet<String> armorNames){
         return matchesName(panel, armorNames);
     }
 
     /** 递归：节点自身若是 Label 且文本命中护甲名则 true；否则下钻其子节点（Group/Table）。 */
-    private static boolean matchesName(Element root, Set<String> armorNames){
+    private static boolean matchesName(Element root, ObjectSet<String> armorNames){
         if(root instanceof Label label){
             String text = label.getText().toString();
             if(text.startsWith("[") && text.indexOf(']') != -1){

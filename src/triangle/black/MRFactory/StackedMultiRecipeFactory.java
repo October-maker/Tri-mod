@@ -373,7 +373,6 @@ public class StackedMultiRecipeFactory extends MultiRecipeFactory{
                 layer.auto = auto;
                 layer.progress = progress;
             }
-            clampStorage();
         }
 
         @Override
@@ -392,20 +391,36 @@ public class StackedMultiRecipeFactory extends MultiRecipeFactory{
         }
 
         private float liquidTotal(){
-            return liquids == null ? 0f : liquids.sum((liquid, amount) -> amount);
+            if(liquids == null) return 0f;
+            float total = 0f;
+            for(Liquid liquid : Vars.content.liquids()){
+                total += liquids.get(liquid);
+            }
+            return total;
         }
 
         @Override
         public boolean canOutputForRecipe(Recipe recipe){
-            if(checkItemOutputFullness){
+            // 与原版及 MultiRecipeFactory 一致：所有同类输出都满才停止。
+            if(checkItemOutputFullness && !recipe.outputItem.isEmpty()){
+                boolean allFull = true;
                 for(ItemStack output : recipe.outputItem){
-                    if(items.get(output.item) + output.amount > itemCapacity) return false;
+                    if(items.get(output.item) < itemCapacity){
+                        allFull = false;
+                        break;
+                    }
                 }
+                if(allFull) return false;
             }
-            if(checkLiquidOutputFullness){
+            if(checkLiquidOutputFullness && !recipe.outputLiquid.isEmpty()){
+                boolean allFull = true;
                 for(LiquidStack output : recipe.outputLiquid){
-                    if(liquids.get(output.liquid) + output.amount > liquidCapacity) return false;
+                    if(liquids.get(output.liquid) < liquidCapacity - 0.001f){
+                        allFull = false;
+                        break;
+                    }
                 }
+                if(allFull) return false;
             }
             return true;
         }
@@ -422,10 +437,9 @@ public class StackedMultiRecipeFactory extends MultiRecipeFactory{
                 if(currentRecipe.outputLiquid.isEmpty()) return true;
                 boolean allFull = true;
                 for(LiquidStack output : currentRecipe.outputLiquid){
-                    if(liquids.get(output.liquid) >= liquidCapacity - 0.001f){
-                        if(!dumpExtraLiquid) return false;
-                    }else{
+                    if(liquids.get(output.liquid) < liquidCapacity - 0.001f){
                         allFull = false;
+                        break;
                     }
                 }
                 if(allFull) return false;
@@ -435,23 +449,29 @@ public class StackedMultiRecipeFactory extends MultiRecipeFactory{
 
         /** 缩容/替换时销毁超出容量的部分；物品按每种独立计算。 */
         public void clampStorage(){
-            if(items != null){
-                Seq<ItemStack> stacks = new Seq<>();
-                items.each((item, amount) -> stacks.add(new ItemStack(item, amount)));
-                for(ItemStack stack : stacks){
-                    if(stack.amount > itemCapacity){
-                        items.remove(stack.item, stack.amount - itemCapacity);
+            // 快速路径：没有超容量时不做任何集合分配。
+            if(items != null && items.total() > itemCapacity){
+                for(Item item : Vars.content.items()){
+                    int amount = items.get(item);
+                    if(amount > itemCapacity){
+                        items.remove(item, amount - itemCapacity);
                     }
                 }
             }
 
             if(liquids == null) return;
-            while(liquidTotal() > liquidCapacity + 0.0001f){
-                Seq<LiquidStack> stacks = new Seq<>();
-                liquids.each((liquid, amount) -> stacks.add(new LiquidStack(liquid, amount)));
-                if(stacks.isEmpty()) break;
-                LiquidStack first = stacks.first();
-                liquids.remove(first.liquid, Math.min(first.amount, liquidTotal() - liquidCapacity));
+            float total = liquidTotal();
+            if(total <= liquidCapacity + 0.0001f) return;
+
+            float excess = total - liquidCapacity;
+            for(Liquid liquid : Vars.content.liquids()){
+                if(excess <= 0.0001f) break;
+                float amount = liquids.get(liquid);
+                if(amount <= 0f) continue;
+
+                float remove = Math.min(amount, excess);
+                liquids.remove(liquid, remove);
+                excess -= remove;
             }
         }
 

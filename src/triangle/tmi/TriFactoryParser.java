@@ -23,15 +23,19 @@ import triangle.black.MRFactory.MultiRecipeFactory;
  */
 public class TriFactoryParser extends RecipeParser<MultiRecipeFactory> {
 
+    private static final Seq<Class<? extends RecipeParser<?>>> EXCLUDES = new Seq<>();
+
+    static{
+        EXCLUDES.add(GenericCrafterParser.class);
+    }
+
     /**
      * 排除 TMI 默认的 {@link GenericCrafterParser}，使 {@link MultiRecipeFactory} 只由本解析器处理，
      * 避免被当作原版单配方工厂重复解析。
      */
     @Override
     public @NotNull Seq<Class<? extends RecipeParser<?>>> getExcludes() {
-        Seq<Class<? extends RecipeParser<?>>> excludes = new Seq<>();
-        excludes.add(GenericCrafterParser.class);
-        return excludes;
+        return EXCLUDES;
     }
 
     /** 仅解析多配方工厂。 */
