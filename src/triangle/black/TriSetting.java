@@ -6,6 +6,7 @@ import arc.scene.ui.layout.Table;
 import arc.util.Align;
 import arc.util.Log;
 import mindustry.*;
+import mindustry.core.GameState;
 import mindustry.game.EventType.*;
 import mindustry.gen.Icon;
 import mindustry.ui.Styles;
@@ -22,6 +23,8 @@ public class TriSetting{
 
     /** Tmail 动画速度挡位（1~5，默认3）。 */
     public static final String TMAIL_SPEED_KEY = "tri.tmail.animSpeed";
+    /** 游戏中打开 Tmail 时是否暂停游戏（默认开启）。 */
+    public static final String TMAIL_PAUSE_KEY = "tri.tmail.pauseGame";
     /** 以兼容模式运行 Tmail（使用旧版 UI 动效）。 */
     public static final String TMAIL_COMPAT_KEY = "tri.tmail.compatMode";
     /** 堆叠工厂配置面板布局：0=跟随各工厂设置，1=全部竖直，2=全部横向。 */
@@ -36,8 +39,33 @@ public class TriSetting{
     private static boolean settingsAdded = false;
     /** 启动时快照的兼容模式值；运行中修改设置不会改变它，必须重启游戏。 */
     private static boolean tmailCompatApplied = false;
+    /** 本次 Tmail 是否由模组主动暂停了游戏（关闭时只恢复自己暂停的状态）。 */
+    private static boolean tmailPausedByUs = false;
 
     private TriSetting(){}
+
+    /** 游戏中打开 Tmail 是否暂停游戏（默认开启）。 */
+    public static boolean tmailPauseGame(){
+        return Core.settings.getBool(TMAIL_PAUSE_KEY, true);
+    }
+
+    /** 打开 Tmail 前调用：仅在游戏内、设置开启且当前未暂停时暂停。 */
+    public static void pauseGameForTmail(){
+        if(!Vars.state.isPlaying() || !tmailPauseGame()) return;
+
+        Vars.state.set(GameState.State.paused);
+        tmailPausedByUs = true;
+    }
+
+    /** 关闭 Tmail 后调用：只恢复由 Tmail 触发的暂停。 */
+    public static void resumeGameAfterTmail(){
+        if(!tmailPausedByUs) return;
+
+        tmailPausedByUs = false;
+        if(Vars.state.isPaused()){
+            Vars.state.set(GameState.State.playing);
+        }
+    }
 
     /** 1~5 挡位对应的动画倍率。 */
     public static float tmailAnimMultiplierForStep(int step){
@@ -104,6 +132,7 @@ public class TriSetting{
                     value -> String.format(java.util.Locale.ROOT, "%.2f×",
                         tmailAnimMultiplierForStep(value)));
                 t.checkPref(TMAIL_COMPAT_KEY, false, value -> showTmailRestartDialog());
+                t.checkPref(TMAIL_PAUSE_KEY, true);
 
                 // 堆叠工厂配置面板布局：默认 / 全部竖直 / 全部横向
                 t.pref(new Setting(STACK_LAYOUT_KEY){

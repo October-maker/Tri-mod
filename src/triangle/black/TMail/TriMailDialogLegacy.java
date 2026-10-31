@@ -20,6 +20,7 @@ import mindustry.gen.Tex;
 import mindustry.ui.Styles;
 import mindustry.ui.dialogs.BaseDialog;
 import triangle.black.TriDraw;
+import triangle.black.TriSetting;
 
 /**
  * 旧版 Tmail 的冻结快照，仅供“以兼容模式运行 Tmail”使用。
@@ -52,9 +53,11 @@ public class TriMailDialogLegacy{
     /** 打开收件箱（持久实例，可原地重建避免弹窗堆叠）。story=true 剧情 / story=false 资讯。 */
     public static void show(boolean story){
         storyScope = story;
+        TriSetting.pauseGameForTmail();
         if(inbox == null){
             inbox = new BaseDialog("");
             inbox.addCloseButton();
+            inbox.hidden(TriSetting::resumeGameAfterTmail);
         }
         inbox.title.setText(story ? bundle("tri.mail.title") : bundle("tri.modinfo.title"));
         inbox.show();

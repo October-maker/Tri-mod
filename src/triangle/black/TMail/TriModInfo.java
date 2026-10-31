@@ -61,7 +61,7 @@ public final class TriModInfo{
 
         refreshing = true;
         forcedRefresh = force;
-        TriMailDialog.onModInfoRefreshStarted();
+        TriMailDialog.onModInfoRefreshStarted(force);
 
         Http.get(RAW_BASE + "manifest.json", response -> {
             try{
