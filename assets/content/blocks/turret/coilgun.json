@@ -184,7 +184,7 @@
 			}//爆炸产生的子弹
 		},//破甲弹
 		"LHESH":{
-			"type": "ArmorReactiveBulletType",
+			"type": "HeshBulletType",
 			"speed": 20,
 			"baseDamage": 200,
 			"baseArmor": 10,

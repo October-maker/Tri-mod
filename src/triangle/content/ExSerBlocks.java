@@ -14,6 +14,7 @@ import mindustry.game.EventType.ContentInitEvent;
 import mindustry.graphics.Pal;
 import mindustry.world.blocks.defense.turrets.ItemTurret;
 import triangle.black.ArmorBullet.ArmorReactiveBulletType;
+import triangle.black.ArmorBullet.HeshBulletType;
 
 /**
  * 对原版（Serpulo）方块做运行时修改。
@@ -72,7 +73,7 @@ public class ExSerBlocks {
         //    · 用带参构造(200)使 baseDamage=200 且 damage=200：spectre 是原版炮塔，详情页走原版 StatValues.ammo，
         //      会把 damage 显示为“200 damage”；若用无参构造只设 baseDamage，damage 仍为构造默认 5，显示会不对。
         //    · key 使用模组物品 TriItems.LHESH（与 coilgun 一致，spectre 会消耗该物品作为弹药）
-        BulletType lhesh = new ArmorReactiveBulletType(200f){{
+        BulletType lhesh = new HeshBulletType(200f, HeshBulletType.DEFAULT_SMALL_SIZE){{
             baseArmor = 10f;           // 基准装甲：目标装甲低于此→伤害提升，高于此→降低
             ammoMultiplier = 1f;
             damageChangeRate = 75f;    // 伤害随装甲变化的倍率
@@ -169,7 +170,7 @@ public class ExSerBlocks {
         }};
         foreshadow.ammoTypes.put(TriItems.BHEAT, bheat);
 
-        BulletType bhesh = new ArmorReactiveBulletType(1000f){{ // 碎甲弹（护甲反应型）
+        BulletType bhesh = new HeshBulletType(1000f, HeshBulletType.DEFAULT_LARGE_SIZE){{ // 碎甲弹（护甲反应型）
             ammoMultiplier = 1f;
             speed = 40f;
             lifetime = (foreshadow.range + 10f) / 40f;

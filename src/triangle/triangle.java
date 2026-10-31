@@ -7,6 +7,7 @@ import mindustry.game.EventType.DisposeEvent;
 import mindustry.game.EventType.Trigger;
 import mindustry.mod.*;
 import triangle.black.ArmorBullet.ArmorReactiveBulletType;
+import triangle.black.ArmorBullet.HeshBulletType;
 import triangle.black.ArmorBullet.TriArmorTurret;
 import triangle.black.ArmorBullet.TriContentInfoDialog;
 import triangle.black.PIBulletType;
@@ -43,6 +44,7 @@ public class triangle extends Mod{
     public void loadContent(){
         // 注册自定义子弹类型到 ClassMap，使其可在 JSON 内容（如炮塔）中使用：JSON 里写 "type": "ArmorReactiveBulletType"，引擎经 ClassMap 按类名解析并无参实例化。
         ClassMap.classes.put("ArmorReactiveBulletType", ArmorReactiveBulletType.class);
+        ClassMap.classes.put("HeshBulletType", HeshBulletType.class);
         // 注册自定义炮塔类，用于在炮台详情页隐藏护甲反应弹药的默认伤害/穿甲并追加自定义横向伤害表。
         ClassMap.classes.put("TriArmorTurret", TriArmorTurret.class);
         // CIWS 近防炮：以敌方子弹为目标的 ItemTurret；近炸拦截弹作为其可搭配弹药。

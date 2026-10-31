@@ -8,7 +8,6 @@ import arc.graphics.Color;
 import arc.graphics.g2d.Draw;
 import arc.graphics.g2d.Lines;
 import arc.graphics.g2d.TextureRegion;
-import arc.graphics.g2d.TextureAtlas.AtlasRegion;
 import arc.math.Mathf;
 import arc.scene.style.Drawable;
 import arc.scene.ui.Button;
@@ -535,7 +534,7 @@ public class MultiRecipeFactory extends GenericCrafter{
                 Recipe r = recipes.get(i);
                 if (r.requiresResearch && r.research instanceof RecipeResearch research) {
                     // 物品/方块贴图在 ContentInit 时才全部就绪；此时重新解析，避免 ohno。
-                    research.uiIcon = researchIcon(this, r, i + 1, this.name + "-" + (i + 1));
+                    research.uiIcon = researchIcon(this, i + 1);
                     research.description = researchDescription(this, r, i + 1, this.name + "-" + (i + 1));
                     SerTriTechTree.addNodeLater(this, research);
                 }
@@ -635,16 +634,18 @@ public class MultiRecipeFactory extends GenericCrafter{
     /**
      * 为单个配方创建研究条目。
      * 研究消耗默认取 {@code inputItem}，可由 {@link Recipe#researchCost} 覆盖；
-     * 图标可用 atlas 中的“工厂名-配方编号.png”覆盖，否则回退到首个产出物图标。
+     * 图标固定读取 atlas 中的 {@code <完整工厂名>-<配方编号>}，不再使用产物/工厂贴图兜底。
      */
     public static UnlockableContent createResearch(UnlockableContent factory, Recipe r, int index) {
-        String rname = plainName(factory) + "-" + index;
+        // 配方研究节点在 init() 阶段创建，此时 ContentLoader.currentMod 已清空，
+        // 不会自动补 triangle- 前缀；必须使用已带前缀的 factory.name。
+        String rname = factory.name + "-" + index;
         RecipeResearch c = new RecipeResearch(rname);
         c.cost = r.researchCost != null ? r.researchCost : r.inputItem.toArray(ItemStack.class);
         c.unlockCondition = r.unlockCondition;
         c.unlockConditionText = r.unlockConditionText;
         c.localizedName = researchName(factory, r, index);
-        c.uiIcon = researchIcon(factory, r, index, rname);
+        c.uiIcon = researchIcon(factory, index);
         c.description = researchDescription(factory, r, index, rname);
         // 研究条目不注册进 Vars.content；hideDatabase=true 使数据库的 select 过滤将其排除（官方隐藏方式），databaseTabs 清空确保不归属任何 tab。
         // 仅通过科技树（TechNode）显示。挂载由 SerTriTechTree 在 ContentInitEvent 后处理。
@@ -673,64 +674,22 @@ public class MultiRecipeFactory extends GenericCrafter{
         return desc == null ? "" : desc;
     }
 
-    private static TextureRegion researchIcon(UnlockableContent factory, Recipe r, int index, String rname) {
-        String plain = plainName(factory);
-        // 覆盖贴图命名：<工厂名>-<配方编号>，同时兼容带 mod 前缀和 -recipe- 写法。
-        String[] overrides = {
-            plain + "-" + index,
-            factory.name + "-" + index,
-            plain + "-recipe-" + index,
-            factory.name + "-recipe-" + index
-        };
-        for(String override : overrides){
-            if(Core.atlas.has(override)) return Core.atlas.find(override);
-        }
-        // 默认使用第一项产物贴图；skip 掉 ohno/error 区域。
-        for(ItemStack stack : r.outputItem){
-            if(validIcon(stack.item.uiIcon)) return stack.item.uiIcon;
-        }
-        for(LiquidStack stack : r.outputLiquid){
-            if(validIcon(stack.liquid.uiIcon)) return stack.liquid.uiIcon;
-        }
-        for(PayloadStack stack : r.outputPayload){
-            if(validIcon(stack.item.uiIcon)) return stack.item.uiIcon;
-        }
-        if(validIcon(factory.uiIcon)) return factory.uiIcon;
-        return fallbackIcon();
+    /** 配方研究节点图标名：与节点内部名一致，为 <完整内容名>-<配方编号>。 */
+    public static String recipeResearchIconName(UnlockableContent factory, int index){
+        return factory.name + "-" + index;
     }
 
-    /** 判断贴图是否真的存在，而不是 atlas 的 error/ohno 回退区域。 */
-    private static boolean validIcon(TextureRegion region){
-        if(region == null || !region.found()) return false;
-        if(region instanceof AtlasRegion atlas && "error".equals(atlas.name)) return false;
-        return true;
+    private static TextureRegion researchIcon(UnlockableContent factory, int index) {
+        return Core.atlas.find(recipeResearchIconName(factory, index));
     }
 
-    /** 最后一层可控回退，避免把 error 区域交给科技树。 */
-    private static TextureRegion fallbackIcon(){
-        TextureRegion white = Core.atlas.find("white");
-        return validIcon(white) ? white : Core.atlas.find("error");
+    /** 堆叠节点图标名：<完整内容名>-stack-<层数>。 */
+    public static String stackResearchIconName(MultiRecipeFactory factory, int layers){
+        return factory.name + "-stack-" + layers;
     }
 
-    /** 堆叠节点贴图：默认工厂贴图，可用 <工厂名>-stack-<层数>.png 等覆盖。 */
     private TextureRegion stackResearchIcon(int layers){
-        String plain = plainName();
-        String[] overrides = {
-            plain + "-stack-" + layers,
-            name + "-stack-" + layers,
-            plain + "-stack",
-            name + "-stack"
-        };
-        for(String override : overrides){
-            if(Core.atlas.has(override)) return Core.atlas.find(override);
-        }
-        if(validIcon(uiIcon)) return uiIcon;
-        if(validIcon(fullIcon)) return fullIcon;
-        if(validIcon(region)) return region;
-        TextureRegion fallback = Core.atlas.find(plain);
-        if(validIcon(fallback)) return fallback;
-        fallback = Core.atlas.find(name);
-        return validIcon(fallback) ? fallback : fallbackIcon();
+        return Core.atlas.find(stackResearchIconName(this, layers));
     }
 
     /** 配方是否因额外条件或“需要研究且尚未解锁”而处于锁定状态。 */
