@@ -71,7 +71,7 @@ In any case, the author would never say "these are all my original ideas"; that 
 
 ### Code
 
-Some source code in this project was generated, refactored, or debugged with the assistance of an AI coding assistant (DeepSeek). AI output was used only as development assistance; the final code was reviewed, selected, and integrated by the project maintainer, and is released under this project's MIT License.
+Some source code in this project was generated, refactored, or debugged with the assistance of an AI coding assistant (DeepSeek). All AI-assisted code was reviewed line by line, modified, verified, and integrated by the project maintainer. The human selection, arrangement, and modification of that code constitute the project's authorship contribution, and the project maintainer takes responsibility for the final code. The code is released under this project's MIT License.
 
 ### Textures
 

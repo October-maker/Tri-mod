@@ -1,10 +1,13 @@
 # Triangle-mod Assets License
 
-Copyright (c) 2024 October and contributors
+Copyright (c) 2024 October and contributors for original project assets.
+Third-party assets retain their respective copyright and are listed in
+[THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md) and
+[THIRD_PARTY_NOTICES.zh-CN.md](THIRD_PARTY_NOTICES.zh-CN.md).
 
-Except where otherwise noted, the visual and audio assets in this repository
-are licensed under the **Creative Commons Attribution 4.0 International
-License (CC BY 4.0)**.
+Except where otherwise noted, the visual, audio, map, and other non-software
+assets in this repository are licensed under the **Creative Commons
+Attribution 4.0 International License (CC BY 4.0)**.
 
 You are free to:
 
@@ -26,6 +29,10 @@ License text:
 
 <https://creativecommons.org/licenses/by/4.0/legalcode>
 
+The complete legal text is also embedded in this repository in
+[LICENSE-CC-BY-4.0](LICENSE-CC-BY-4.0) and is incorporated into this asset
+license by reference.
+
 Human-readable summary:
 
 <https://creativecommons.org/licenses/by/4.0/>
@@ -33,7 +40,8 @@ Human-readable summary:
 ## Attribution and third-party assets
 
 Some assets were drawn by **ZL洋葱**. Their attribution is listed
-individually in [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).
+individually in [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md) and
+[THIRD_PARTY_NOTICES.zh-CN.md](THIRD_PARTY_NOTICES.zh-CN.md).
 
 If an asset is not listed there and not created by the project authors, its
 original license and attribution take precedence. Do not assume that a
@@ -42,8 +50,20 @@ third-party asset is covered by this project's CC BY 4.0 grant.
 ## Scope
 
 This asset license does **not** apply to the Java source code, Gradle build
-scripts, or other software files, which are licensed under the MIT License in
-[LICENSE](LICENSE).
+scripts, JSON content definitions, or other software files, which are
+licensed under the MIT License in [LICENSE](LICENSE).
+
+The following are licensed as project assets under CC BY 4.0:
+
+- PNG textures and other image assets;
+- audio assets;
+- map files (`.msav`);
+- UI artwork under `assets/TriUI/`;
+- other visual or media assets not explicitly marked otherwise.
+
+JSON content definitions under `assets/content/`, bundle/properties files,
+and JavaScript files under `assets/scripts/` are treated as software and are
+covered by the MIT License, unless a file states otherwise.
 
 This project does not include TMI textures, icons, or other assets. TMI
 assets are not covered by this project's CC BY 4.0 grant; see

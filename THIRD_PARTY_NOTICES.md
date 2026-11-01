@@ -1,6 +1,6 @@
 # Third-Party Notices
 
-[显示中文版](THIRD_PARTY_NOTICES.zh-CN.md)
+[中文版](THIRD_PARTY_NOTICES.zh-CN.md) | [English](THIRD_PARTY_NOTICES.md)
 
 This file records third-party artwork and other externally sourced material used by Triangle-mod. The project's own code is licensed under the MIT License in [LICENSE](LICENSE); original project assets are licensed under CC BY 4.0 in [LICENSE-ASSETS](LICENSE-ASSETS).
 
@@ -13,9 +13,31 @@ The following textures were drawn by **ZL洋葱** and are used in this project u
 - **License:** CC BY 4.0
 - **License text:** <https://creativecommons.org/licenses/by/4.0/legalcode>
 - **License summary:** <https://creativecommons.org/licenses/by/4.0/>
-- **Source:** Assets supplied by ZL洋葱 for this project; repository:
-  <https://github.com/October-maker/Tri-mod>
-- **Changes:** The textures are integrated into the mod under the asset paths listed below. File organization and naming within the repository may differ from the original delivery; no intentional artistic changes are claimed. Any later edits are traceable through the repository history.
+- **Source:** Artwork supplied directly by ZL洋葱; artist page:
+  <https://space.bilibili.com/1644613164>
+- **Authorization:** ZL洋葱 has expressly authorized these textures under
+  CC BY 4.0.
+- **Changes:** Only file organization and filenames differ from the original
+  delivery; no artistic changes were made by this project. Any later edits are
+  traceable through the repository history.
+
+### ZL洋葱 refinement of `error.png`
+
+`assets/sprites-override/error.png` is based on an original drawing by
+**October**, with refinement by **ZL洋葱**. Both the original work and the
+refined version are used under CC BY 4.0; attribution is given to both
+creators for this file.
+
+## Project asset authorship
+
+Unless listed above or in another third-party notice, the remaining project
+textures in `assets/` were drawn by **October**, including files under
+`assets/sprites-override/`. A small number of textures originally created by
+other contributors are still being confirmed for attribution; those files
+will be added here once the contributor and permission details are confirmed.
+
+All project-owned textures are licensed under CC BY 4.0 as described in
+[LICENSE-ASSETS](LICENSE-ASSETS).
 
 ### Asset-to-file correspondence
 
@@ -60,13 +82,26 @@ The left column preserves the supplied asset-list names one-for-one. The right c
 - **Source:** <https://github.com/EB-wilson/TooManyItems>
 - **Usage:** Optional compile-only recipe-display adapter via the project's
   own `TriFactoryParser`; TMI is not required to run the mod.
+- **No copied material:** The adapter is original project code. No TMI source
+  code, binaries, or assets are copied into this project.
+- **Not hard-bound:** The mod remains loadable without TMI; TMI support is
+  optional and can be omitted at runtime.
 - **Bundling:** TMI is not bundled in normal releases. TMI code, assets and
   documentation remain under TMI's own GPL-3.0 terms.
+
+## Optional engine and client compatibility
+
+- **Mindustry** — GPL-3.0; not bundled in this project.
+  <https://github.com/Anuken/Mindustry>
+- **MindustryX** — GPL-3.0; optional third-party client, not bundled and not
+  required. <https://github.com/TinyLake/MindustryX>
+
+The project does not copy or redistribute Mindustry or MindustryX source code,
+binaries, or assets. Compatibility statements do not change their licenses.
 
 ## Build and runtime dependencies
 
 These dependencies are used to build or run the mod but are not claimed as project-owned material. Normal releases should not bundle them unless the release process explicitly does so.
 
 - **Mindustry** — GPL-3.0. <https://github.com/Anuken/Mindustry>
-- **Arc** — dependency of Mindustry; see the Arc repository for its license.
-  <https://github.com/Anuken/Arc>
+- **Arc** — Apache-2.0. <https://github.com/Anuken/Arc>

@@ -1,6 +1,6 @@
 # 第三方声明
 
-[Display the English version](THIRD_PARTY_NOTICES.md)
+[中文版](THIRD_PARTY_NOTICES.zh-CN.md) | [English](THIRD_PARTY_NOTICES.md)
 
 本文件记录 Triangle-mod 使用的第三方美术素材及其他外部来源内容。项目自有代码采用 [LICENSE](LICENSE) 中的 MIT 许可证；项目自有素材采用 [LICENSE-ASSETS](LICENSE-ASSETS) 中的 CC BY 4.0 许可证。
 
@@ -13,9 +13,20 @@
 - **许可证：** CC BY 4.0
 - **许可证法律文本：** <https://creativecommons.org/licenses/by/4.0/legalcode>
 - **许可证摘要：** <https://creativecommons.org/licenses/by/4.0/>
-- **来源：** 由 ZL洋葱 为本项目提供的素材；项目仓库：
-  <https://github.com/October-maker/Tri-mod>
-- **修改说明：** 贴图已按下方列出的资源路径整合进模组。仓库中的文件组织与命名可能与原始交付版本不同；本项目不主张对原画作进行了有意的艺术修改。后续修改可通过仓库历史追溯。
+- **来源：** 由 ZL洋葱 直接提供给本项目；画师主页：
+  <https://space.bilibili.com/1644613164>
+- **授权说明：** ZL洋葱 已明确授权这些贴图按 CC BY 4.0 使用。
+- **修改说明：** 仅文件名和项目内目录组织与原始交付版本不同，本项目未对原画作进行艺术修改。后续修改可通过仓库历史追溯。
+
+### ZL洋葱对 `error.png` 的细化
+
+`assets/sprites-override/error.png` 的原稿由 **October** 绘制，**ZL洋葱** 进行了细化。该文件的原稿与细化版本均按 CC BY 4.0 使用，署名同时保留两位创作者。
+
+## 项目素材作者
+
+除上方及第三方声明中列出的素材外，`assets/` 中其余项目贴图均由 **October** 绘制，包括 `assets/sprites-override/` 下的文件。少数由其他贡献者原创的贴图仍在确认署名与授权信息，确认后将补充到本文件。
+
+项目自有贴图均按 [LICENSE-ASSETS](LICENSE-ASSETS) 中的 CC BY 4.0 授权。
 
 ### 素材与文件对应关系
 
@@ -59,12 +70,22 @@
 - **许可证：** GNU General Public License v3.0
 - **来源：** <https://github.com/EB-wilson/TooManyItems>
 - **用途：** 通过项目自己的 `TriFactoryParser` 提供可选的编译期配方展示适配；TMI 不是运行本模组的必需依赖。
+- **未复制内容：** 适配器为项目自有代码；本项目未复制 TMI 的源代码、二进制或素材。
+- **非硬绑定：** 未安装 TMI 时模组仍可加载和运行；TMI 支持是可选的，可在运行时不启用。
 - **打包：** 正常发布版本不包含 TMI。TMI 的代码、素材与文档仍适用其自身的 GPL-3.0 条款。
+
+## 可选引擎与客户端兼容性
+
+- **Mindustry** — GPL-3.0；不随本项目打包。
+  <https://github.com/Anuken/Mindustry>
+- **MindustryX** — GPL-3.0；可选的第三方客户端，不随本项目打包，也不是必需依赖。
+  <https://github.com/TinyLake/MindustryX>
+
+本项目不复制、也不再分发 Mindustry 或 MindustryX 的源代码、二进制或素材；兼容性声明不改变它们各自的许可证。
 
 ## 构建与运行依赖
 
 以下依赖用于构建或运行本模组，但不主张为项目自有内容。正常发布版本不应打包这些依赖，除非发布流程明确包含它们。
 
 - **Mindustry** — GPL-3.0。<https://github.com/Anuken/Mindustry>
-- **Arc** — Mindustry 的依赖；许可证见 Arc 仓库。
-  <https://github.com/Anuken/Arc>
+- **Arc** — Apache-2.0。<https://github.com/Anuken/Arc>
