@@ -2,6 +2,9 @@
 
 [Click here for English version](./README_EN.md)
 
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+[![License: CC BY 4.0](https://img.shields.io/badge/License-CC_BY_4.0-lightgrey.svg)](LICENSE-ASSETS)
+
 ## 总览
 本模组源于json并辅以Java实例构建而成；整体基于原版Serpulo主线创作；为Serpulo的战役进行拓展
 \
@@ -21,7 +24,7 @@
 
 ---
 ### 关于Erekir
-目前规划中无Erekir相关更新内容
+目前规划中暂无Erekir相关更新内容
 
 ---
 ### 关于新星球
@@ -33,8 +36,12 @@
 记得附上报错文本，如找得到崩溃日志也请一并上传（其存储在游戏文件夹下的crashes文件夹中），否则作者和群友们除了给你算一卦以外什么都做不了(#｀-_ゝ-)
 
 ---
-### 关于模组适配性
-本模组目前仅适配了 [TooManyItems](https://github.com/EB-wilson/TooManyItems).\
+### 关于适配性
+#### TooManyItems (TMI) 兼容性
+本模组提供可选的 [TooManyItems](https://github.com/EB-wilson/TooManyItems) 配方展示适配。TMI 由 EB-wilson 独立开发，采用 GPL-3.0 许可证。
+
+本项目不包含 TMI 的代码或素材，也不要求安装 TMI；未安装 TMI 时，模组仍可正常运行，仅缺少 TMI 的配方页面集成。
+
 如需加载其它模组，请慎重，如出现异常，请查看条目“[关于多模组混搭造成的异常](https://github.com/October-maker/Tri-mod#%E5%85%B3%E4%BA%8E%E5%A4%9A%E6%A8%A1%E7%BB%84%E6%B7%B7%E6%90%AD%E9%80%A0%E6%88%90%E7%9A%84%E5%BC%82%E5%B8%B8)”
 #### 关于多模组混搭造成的异常
 如加载辅助模组（诸如时间加速类模组）后游戏崩溃或出现异常，请考虑卸载或替换冲突的辅助模组
@@ -45,10 +52,37 @@
 从数值平衡层面上，一个模组的平衡体系通常不适用于其他模组，这会严重破坏游玩体验
 
 综上所述，将本模组与其他大型内容拓展模组混搭时请慎重
-#### 关于MindustryX等原版改端
-目前模组支持在MindustryX上运行，但是其他改端可能出现未知的bug
+#### 关于 MindustryX 等第三方修改版客户端
+
+本模组可以在 Mindustry 的第三方修改版客户端（例如 MindustryX）上运行，但这不是官方支持承诺，也不代表本项目与这些客户端存在隶属、合作或背书关系。
+
+MindustryX 等改端由其各自维护者独立开发，适用其自身的许可证与服务条款。本项目的 MIT / CC BY 4.0 许可证不覆盖这些第三方客户端，且这些客户端不会被包含在本模组的发布版本中。
+
+本模组没有测试全部 MindustryX 版本，也未测试所有第三方改端；不同客户端与上游 Mindustry API 的差异可能导致部分功能异常。遇到改端自身的问题时，请向对应客户端的维护者反馈。
 
 ---
 ### 关于灵感来源
 其实有很多内容不完全出自于作者本人，例如工业线的设计在很多地方都参考了现实中的实现方法；以及多配方工厂的一些功能，也是在看到了优秀作品后念叨着“这功能好啊，我也要做”然后打开IDEA······所幸有一个喜爱的游戏，有诸多优秀的同僚们，能容下这个小小模组的广阔社区.\
 无论如何，作者是绝对不会说“这些都是我的原创想法”，这很邪恶
+
+---
+
+## AI 使用与素材声明
+
+### 代码
+
+本项目部分源代码由 AI 编程助手（DeepSeek）辅助生成、重构或调试。AI 输出仅作为开发辅助，最终代码由项目维护者审核、选择并纳入项目；相关代码仍按本项目的 MIT 许可证发布。
+
+### 贴图素材
+
+本项目全部贴图素材均由人类创作者绘制。素材生产链中不包含 AI 生成、AI 辅助绘制或 AI 图像处理。
+
+---
+
+## 许可证
+
+- **代码：** [MIT License](LICENSE)
+- **素材：** [CC BY 4.0](LICENSE-ASSETS)
+- **第三方声明：** [English](THIRD_PARTY_NOTICES.md) | [中文](THIRD_PARTY_NOTICES.zh-CN.md)
+
+第三方素材（包括 ZL洋葱绘制的贴图）的署名与授权信息见第三方声明。
