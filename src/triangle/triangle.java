@@ -68,11 +68,6 @@ public class triangle extends Mod{
         TriModInfo.init();
         Vars.renderer.minZoom =0.3f;
         Vars.renderer.maxZoom = 20.0f;
-        float MiZ = Vars.renderer.minZoom;
-        float MaZ = Vars.renderer.maxZoom;
-        Log.info("Min Zoon = " + MiZ);
-        Log.info("Max Zoon = " + MaZ);
-        Log.info("Load some triangle content.");
     }
 
     /**

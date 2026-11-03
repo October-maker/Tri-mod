@@ -3,8 +3,10 @@ package triangle.black.TMail;
 import arc.Core;
 import arc.Events;
 import arc.func.Boolp;
+import arc.struct.ObjectMap;
 import arc.struct.ObjectSet;
 import arc.struct.Seq;
+import arc.util.Log;
 import arc.util.Time;
 import mindustry.Vars;
 import mindustry.content.Blocks;
@@ -20,6 +22,10 @@ import triangle.content.TriFactory;
 
 /**
  * 三角通讯收件箱逻辑：邮件注册、战役进度解锁、已读状态持久化。
+ *
+ * <p>叙事邮件推荐通过 {@link #registerIncoming}、{@link #registerReply}、
+ * {@link #registerAttachment} 三个方法按内部名 {@code key} 分块注册，
+ * 最后调用 {@link #flushRegisteredMails()} 提交；三个方法的调用顺序不限。
  */
 public class TriInbox{
 
@@ -35,6 +41,9 @@ public class TriInbox{
     public static final String NOTIFIED_PREFIX = "tri-mail-notified-";
 
     private static final Seq<TriMail> mails = new Seq<>();
+    /** 三方法注册期间的草稿，按内部名关联来信、回信、附件。 */
+    private static final ObjectMap<String, TriMailDraft> mailDrafts = new ObjectMap<>();
+    private static final Seq<String> mailDraftOrder = new Seq<>();
     /** 会话内已提示过的邮件键（避免每帧读 settings；跨会话由 NOTIFIED_PREFIX 持久化）。 */
     private static final ObjectSet<String> notifiedSession = new ObjectSet<>();
     private static boolean newMailHooked = false;
@@ -46,6 +55,75 @@ public class TriInbox{
     /** 注册一封邮件。 */
     public static void add(TriMail mail){
         mails.add(mail);
+    }
+
+    /**
+     * 注册来信内容。三方法注册均以内部名 {@code key} 关联，调用顺序不限。
+     *
+     * @param story true=战役剧情邮件；false=模组资讯邮件
+     */
+    public static void registerIncoming(String key, String sender, String subject, String body, Boolp unlocked, boolean story){
+        TriMailDraft draft = draft(key);
+        draft.sender = sender;
+        draft.subject = subject;
+        draft.body = body;
+        draft.unlocked = unlocked;
+        draft.story = story;
+        draft.incoming = true;
+    }
+
+    /** 注册来信内容，默认作为战役剧情邮件。 */
+    public static void registerIncoming(String key, String sender, String subject, String body, Boolp unlocked){
+        registerIncoming(key, sender, subject, body, unlocked, true);
+    }
+
+    /**
+     * 注册回信内容。回信正文为 null 时使用 bundle 键
+     * {@code tri.mail.reply.<key>}。
+     */
+    public static void registerReply(String key, String replyText, Runnable onReply){
+        registerReply(key, replyText, onReply, -1f);
+    }
+
+    /** 注册回信内容及打字机速度。 */
+    public static void registerReply(String key, String replyText, Runnable onReply, float replySpeed){
+        TriMailDraft draft = draft(key);
+        draft.replyText = replyText;
+        draft.onReply = onReply;
+        draft.replySpeed = replySpeed;
+    }
+
+    /** 注册附件内容及收取附件时执行的动作。 */
+    public static void registerAttachment(String key, String attachment, Runnable onCollect){
+        TriMailDraft draft = draft(key);
+        draft.attachment = attachment;
+        draft.onCollect = onCollect;
+    }
+
+    /** 将所有三方法注册的草稿提交为正式邮件。 */
+    public static void flushRegisteredMails(){
+        for(int i = 0; i < mailDraftOrder.size; i++){
+            String key = mailDraftOrder.get(i);
+            TriMailDraft draft = mailDrafts.get(key);
+            if(draft == null) continue;
+            if(!draft.incoming){
+                Log.warn("[TMail] Mail '@' has reply/attachment but no incoming content; skipped.", key);
+                continue;
+            }
+            mails.add(draft.toMail());
+        }
+        mailDraftOrder.clear();
+        mailDrafts.clear();
+    }
+
+    private static TriMailDraft draft(String key){
+        TriMailDraft draft = mailDrafts.get(key);
+        if(draft == null){
+            draft = new TriMailDraft(key);
+            mailDrafts.put(key, draft);
+            mailDraftOrder.add(key);
+        }
+        return draft;
     }
 
     /** 用远端资讯邮件替换现有资讯信件；战役剧情邮件及其他来源邮件保持不变。 */
@@ -61,6 +139,7 @@ public class TriInbox{
 
     /** 全部邮件（含未解锁）。 */
     public static Seq<TriMail> all(){
+        flushRegisteredMails();
         return mails;
     }
 
@@ -71,6 +150,7 @@ public class TriInbox{
 
     /** 当前战役进度已解锁的指定类型邮件（story=true 剧情 / story=false 资讯）。 */
     public static Seq<TriMail> unlocked(boolean story){
+        flushRegisteredMails();
         Seq<TriMail> out = new Seq<>();
         for(TriMail m : mails) if(m.story == story && m.unlocked.get()) out.add(m);
         return out;
@@ -206,6 +286,7 @@ public class TriInbox{
 
     /** 未读（已解锁且未读）数量：按类型统计（story=true 剧情 / story=false 资讯）。 */
     public static int unreadCount(boolean story){
+        flushRegisteredMails();
         int n = 0;
         for(TriMail m : mails) if(m.story == story && m.unlocked.get() && !isRead(m)) n++;
         return n;
@@ -259,21 +340,23 @@ public class TriInbox{
      * Core.bundle，可直接读取；缺失时回退键名便于排查。
      */
     public static void registerDefaults(){
-        add(new TriMail("intro",
+        registerIncoming("intro",
                 b("tri.mail.intro.sender"),
                 b("tri.mail.intro.subject"),
                 b("tri.mail.intro.body"),
-                always()));
+                always());
 
-        // 带附件的剧情邮件：收取附件可强制解锁一项科技
-        add(new TriMail("electrolyticCell",
+        // 带附件的剧情邮件：收取附件可强制解锁一项科技。
+        registerIncoming("electrolyticCell",
                 b("tri.mail.electrolyticCell.sender"),
                 b("tri.mail.electrolyticCell.subject"),
                 b("tri.mail.electrolyticCell.body"),
-                sectorCaptured(SectorPresets.biomassFacility),
-                true,
-                b("tri.mail.electrolyticCell.attachment"),
-                forceUnlock(TriFactory.electrolyticCell)));
+                always(), // sectorCaptured(SectorPresets.biomassFacility)
+                true);
+        registerReply("electrolyticCell", "好的",
+                null, -1f);
+        registerAttachment("electrolyticCell",
+                b("tri.mail.electrolyticCell.attachment"), forceUnlock(TriFactory.electrolyticCell));
 
 //        add(new TriMail("silicon", "科技部", "硅基纪元",
 //            "微晶硅制备工艺已上线。\n更复杂的自动化和逻辑网络将由此展开。", tech(Items.silicon)));
@@ -303,6 +386,32 @@ public class TriInbox{
 //                "收到！这是一封由PL发出的中文回信示例。\n回信内容可以直接硬编码在信件中，无需通过bundle进行本地化，适合用于事件触发的演示。\n——PL",
 //                -1f));
 
+        flushRegisteredMails();
+    }
+
+    /** 三方法注册期间的可变草稿。 */
+    private static final class TriMailDraft{
+        final String key;
+        String sender;
+        String subject;
+        String body;
+        Boolp unlocked;
+        boolean story = true;
+        String attachment;
+        Runnable onCollect;
+        Runnable onReply;
+        String replyText;
+        float replySpeed = -1f;
+        boolean incoming;
+
+        TriMailDraft(String key){
+            this.key = key;
+        }
+
+        TriMail toMail(){
+            return new TriMail(key, sender, subject, body, unlocked, story,
+                    attachment, onCollect, onReply, replyText, replySpeed);
+        }
     }
 
     /** bundle 键取值，缺失时回退到键名本身（便于排查未定义的键）。 */

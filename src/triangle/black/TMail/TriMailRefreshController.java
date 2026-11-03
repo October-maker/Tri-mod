@@ -2,7 +2,9 @@ package triangle.black.TMail;
 
 import arc.Core;
 import arc.math.Interp;
+import arc.math.Mathf;
 import arc.scene.actions.Actions;
+import arc.scene.ui.Label;
 import arc.scene.ui.layout.Table;
 import arc.util.Time;
 import mindustry.Vars;
@@ -90,7 +92,10 @@ final class TriMailRefreshController{
         if(inbox == null || !inbox.isShown()) return;
 
         Table loading = new Table();
-        loading.add("[accent]" + TriMailDialog.bundle("tri.mail.refreshingLatest"))
+        Label loadingText = new Label("[accent]" + TriMailDialog.bundle("tri.mail.refreshingLatest"));
+        // 使用原版默认字体，并按正弦上下轻微浮动。
+        loadingText.update(() -> loadingText.setTranslation(0f, Mathf.sin(Time.time, 6f, 5f)));
+        loading.add(loadingText)
                 .padLeft(Core.graphics.getWidth() * 0.5f)
                 .center();
         inbox.cont.add(loading).grow();
