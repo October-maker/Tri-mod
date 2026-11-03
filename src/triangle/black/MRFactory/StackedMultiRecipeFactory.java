@@ -12,6 +12,7 @@ import arc.struct.IntMap;
 import arc.struct.ObjectMap;
 import arc.struct.Seq;
 import arc.util.Strings;
+import arc.util.Time;
 import arc.util.io.Reads;
 import arc.util.io.Writes;
 import mindustry.Vars;
@@ -332,11 +333,12 @@ public class StackedMultiRecipeFactory extends MultiRecipeFactory{
             power.graph.update();
         }
 
-        /** 所有层当前配方的电力需求总和。 */
-        public float totalPowerUse(){
-            float total = 0f;
+        /** 所有层当前实际运行配方的电力需求总和。 */
+        public float totalPowerUse(){            float total = 0f;
             for(LayerState layer : layers){
-                int index = layer.recipeIndex >= 0 ? layer.recipeIndex : layer.selectedIndex;
+                // 自动模式只统计已实际选中的配方；手动模式的目标配方本身就是
+                // 即将执行的配方，可在首次 updateTile 前提供正确需求。
+                int index = layer.auto ? layer.recipeIndex : layer.selectedIndex;
                 if(index >= 0 && index < recipes.size){
                     total += recipes.get(index).powerUse;
                 }
@@ -348,13 +350,22 @@ public class StackedMultiRecipeFactory extends MultiRecipeFactory{
         public boolean hasUndervoltageLayer(){
             if(power == null || power.status >= 1f) return false;
             for(LayerState layer : layers){
-                int index = layer.recipeIndex >= 0 ? layer.recipeIndex : layer.selectedIndex;
+                int index = layer.auto ? layer.recipeIndex : layer.selectedIndex;
                 if(index >= 0 && index < recipes.size){
                     Recipe recipe = recipes.get(index);
                     if(recipe.powerUse > 0 && recipe.stopUndervoltage) return true;
                 }
             }
             return false;
+        }
+
+        @Override
+        protected void updateUndervoltageLock(){
+            if(hasUndervoltageLayer()){
+                undervoltageLock = UNDERVOLTAGE_LOCK_TIME;
+            }else if(undervoltageLock > 0f){
+                undervoltageLock = Math.max(0f, undervoltageLock - Time.delta);
+            }
         }
 
         @Override
@@ -387,7 +398,10 @@ public class StackedMultiRecipeFactory extends MultiRecipeFactory{
 
         @Override
         public boolean acceptLiquid(Building source, Liquid liquid){
-            return liquids != null && liquidTotal() < liquidCapacity && super.acceptLiquid(source, liquid);
+            // 多液体输入时按目标液体自身容量判断；原版 LiquidModule 的
+            // liquidCapacity 也是“每种液体”的上限。若这里用 liquidTotal()
+            // 先卡总容量，一种液体占满后另一种即使自身为空也无法输入。
+            return liquids != null && super.acceptLiquid(source, liquid);
         }
 
         private float liquidTotal(){
@@ -428,6 +442,7 @@ public class StackedMultiRecipeFactory extends MultiRecipeFactory{
         @Override
         public boolean shouldConsume(){
             if(getRecipe() == null) return false;
+            if(undervoltageLock > 0f) return false;
             Recipe currentRecipe = getRecipe();
             if(power.status <= 0 || powerConsumer.isUndervoltage(this)) return false;
             if(currentRecipe.heatEnabled && currentRecipe.heatRequirement > 0
@@ -555,6 +570,10 @@ public class StackedMultiRecipeFactory extends MultiRecipeFactory{
                 layers.add(layer);
             }
             ensureLayers();
+            // 读档发生在 created() 之后；created() 里的 clampStorage 看不到
+            // 存档中恢复的液体。若旧容量下的存档液体总量超过当前容量，
+            // 不在这里收缩会让 acceptLiquid 的 liquidTotal() < capacity 永远为 false。
+            clampStorage();
         }
 
         @Override

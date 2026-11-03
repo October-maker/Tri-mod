@@ -21,6 +21,7 @@ import arc.struct.Seq;
 import arc.util.Log;
 import arc.util.Scaling;
 import arc.util.Strings;
+import arc.util.Time;
 import arc.util.io.Reads;
 import arc.util.io.Writes;
 import mindustry.content.Items;
@@ -91,6 +92,9 @@ public class MultiRecipeFactory extends GenericCrafter{
     public boolean checkItemOutputFullness = true;
     /** 输出液体达到容量上限时是否停止生产。 */
     public boolean checkLiquidOutputFullness = true;
+
+    /** 欠压跳闸后的恢复锁定时间（秒）。 */
+    protected static final float UNDERVOLTAGE_LOCK_TIME = 1f;
 
     /** 动态电力消耗器（保留引用，供欠压跳闸判定与效率控制使用）。 */
     public ConsumePowerRecipe powerConsumer;
@@ -744,11 +748,32 @@ public class MultiRecipeFactory extends GenericCrafter{
         public boolean auto = true;
         /** 手动模式选定的配方索引；-1 表示未选定。 */
         public int selectedIndex = -1;
+        /** 欠压跳闸后的恢复锁定（秒）；避免一断电就重启、重启又断电的逐帧振荡。 */
+        public float undervoltageLock = 0f;
 
         /** 当前生效配方；索引越界时返回 null。 */
         public Recipe getRecipe() {
             if (recipeIndex < 0 || recipeIndex >= recipes.size) return null;
             return recipes.get(recipeIndex);
+        }
+
+        /**
+         * 维护欠压恢复锁：欠压时锁定 1 秒，电力恢复后也要等锁结束才重启。
+         * 这样工厂停止后需求消失、电网状态瞬间恢复时，不会立刻重新启动造成振荡。
+         */
+        protected void updateUndervoltageLock(){
+            Recipe current = getRecipe();
+            boolean tripped = current != null
+                    && current.powerUse > 0
+                    && current.stopUndervoltage
+                    && power != null
+                    && power.status < 1f;
+
+            if(tripped){
+                undervoltageLock = UNDERVOLTAGE_LOCK_TIME;
+            }else if(undervoltageLock > 0f){
+                undervoltageLock = Math.max(0f, undervoltageLock - Time.delta);
+            }
         }
 
         /** 用于界面展示的配方：尚未选中时回退到第一条配方。 */
@@ -912,9 +937,12 @@ public class MultiRecipeFactory extends GenericCrafter{
                     }
                 }
 
-                // 检查电力输入（配方需要电力且当前没有电力供应时，视为不可用）
-                if (valid && recipes.get(i).powerUse > 0 && power.status <= 0) {
-                    valid = false;
+                // 检查电力输入：完全没电时排除；设置“欠压即停”的配方还必须在
+                // power.status >= 1 时才允许被严格检索选中。
+                if(valid && recipes.get(i).powerUse > 0){
+                    if(power.status <= 0 || powerConsumer.isUndervoltage(this, recipes.get(i))){
+                        valid = false;
+                    }
                 }
 
                 // 检查输出容量
@@ -975,8 +1003,8 @@ public class MultiRecipeFactory extends GenericCrafter{
                     valid = false;
                 }
 
-                // 电力不足：仅当配方设定“欠压即停”时才排除（供电不足 power.status<1 即视为不满足）
-                if (valid && powerConsumer.isUndervoltage(this)) {
+                // 电力不足：仅当候选配方设定“欠压即停”时才排除。
+                if (valid && powerConsumer.isUndervoltage(this, recipe)) {
                     valid = false;
                 }
 
@@ -1001,6 +1029,7 @@ public class MultiRecipeFactory extends GenericCrafter{
         /** 当前配方是否仍可用：输入充足、未锁定，且未触发低温/欠压跳闸。 */
         public boolean validRecipe() {
             if (recipeIndex < 0) return false;
+            if (undervoltageLock > 0f) return false;
             if (isLocked(recipes.get(recipeIndex))) return false; // 未解锁配方视为无效
 
             for (ItemStack input : recipes.get(recipeIndex).inputItem) {
@@ -1039,10 +1068,11 @@ public class MultiRecipeFactory extends GenericCrafter{
          */
         @Override
         public void updateTile() {
+            updateUndervoltageLock();
             if (auto) {
                 // === 自动匹配模式 ===
-                // 如果当前配方无效，尝试更新配方（严格检索，保持原逻辑）
-                if (!validRecipe()) updateRecipe();
+                // 欠压恢复锁期间保持当前配方，避免停-启循环中反复切换配方。
+                if (undervoltageLock <= 0f && !validRecipe()) updateRecipe();
 
                 // 严格检索无结果时，按配方布尔值放宽热量/电力要求再检索一次
                 if (getRecipe() == null) trySelectRelaxed();
@@ -1122,6 +1152,7 @@ public class MultiRecipeFactory extends GenericCrafter{
         @Override
         public boolean shouldConsume() {
             if (getRecipe() == null) return false;
+            if (undervoltageLock > 0f) return false;
 
             // 检查电力供应：彻底没电停止；或配方设“欠压即停”且供电不足(status<1)时停止
             Recipe currentRecipe = getRecipe();

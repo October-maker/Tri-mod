@@ -7,8 +7,12 @@ import mindustry.world.consumers.ConsumePower;
 /**
  * 自定义电力消耗器，根据当前配方动态调整电力消耗。
  * 实际消耗由 requestedPower() 按配方 powerUse（每 tick）驱动；
- * 父类 usage 字段仅用于 powerUse 统计显示，而 MultiRecipeFactory.setStats()
- * 已移除该显示（改用 displayRecipes 自定义展示），故无需每帧同步 usage。
+ * 父类 usage 字段只用于原版 powerUse 统计显示，而 MultiRecipeFactory.setStats()
+ * 已移除该显示（改用 displayRecipes 自定义展示）。
+ *
+ * <p>因此这里有意保持 usage = 0：它是方块级静态字段，无法表达每座建筑当前配方的
+ * 动态功耗；任何需要真实功耗的逻辑应调用 {@link #requestedPower(Building)}，
+ * 不要把 usage 当作即时功耗快照。
  */
 public class ConsumePowerRecipe extends ConsumePower {
     private final Func<Building, Recipe> recipeProvider;
@@ -37,7 +41,14 @@ public class ConsumePowerRecipe extends ConsumePower {
      * 电力恢复供应并达到需求后自动返回 false，从而恢复生产（行为与热量的低温跳闸 stopLowTemperature 对称）。
      */
     public boolean isUndervoltage(Building build) {
-        Recipe recipe = recipeProvider.get(build);
+        return isUndervoltage(build, recipeProvider.get(build));
+    }
+
+    /**
+     * 候选配方版本的欠压判断：配方检索时当前 recipeIndex 仍指向旧配方，
+     * 不能拿旧配方的 stopUndervoltage 状态判断候选配方。
+     */
+    public boolean isUndervoltage(Building build, Recipe recipe) {
         return recipe != null && recipe.powerUse > 0 && recipe.stopUndervoltage
                 && build.power != null && build.power.status < 1f;
     }
