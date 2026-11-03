@@ -28,6 +28,31 @@ The following textures were drawn by **ZL洋葱** and are used in this project u
 refined version are used under CC BY 4.0; attribution is given to both
 creators for this file.
 
+## CH不太懒 — all rights reserved
+
+The following texture sets were drawn by **CH不太懒**. The author could not be
+contacted and no public author page was found at the time of this notice.
+Accordingly, **all rights remain with CH不太懒**. These textures are **not**
+licensed under this project's CC BY 4.0 grant, and this notice does not grant
+any permission to copy, modify, or redistribute them beyond their inclusion in
+this project.
+
+- **Creator:** CH不太懒
+- **Copyright:** CH不太懒
+- **License:** All rights reserved (no license granted)
+- **Source:** Assets supplied to this project; no public author page available
+  at the time of this notice
+- **Excluded assets:**
+  - `assets/sprites/factory/SAbsorptionTower/SAbsorptionTower.png`
+  - `assets/sprites/factory/SAbsorptionTower/SAbsorptionTower-bottom.png`
+  - `assets/sprites/factory/SAbsorptionTower/SAbsorptionTower-glow.png`
+  - `assets/sprites/factory/SAbsorptionTower/SAbsorptionTower-heat.png`
+  - `assets/sprites/factory/SAbsorptionTower/SAbsorptionTower-rotator.png`
+  - `assets/sprites/factory/SAbsorptionTower/SAbsorptionTower-top1.png`
+  - `assets/sprites/factory/SAbsorptionTower/SAbsorptionTower-top2.png`
+  - `assets/sprites/factory/TiRollingMill/TiRollingMill.png`
+  - `assets/sprites/factory/TiRollingMill/TiRollingMill-top.png`
+
 ## Project asset authorship
 
 Unless listed above or in another third-party notice, the remaining project

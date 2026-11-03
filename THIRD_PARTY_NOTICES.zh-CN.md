@@ -22,6 +22,25 @@
 
 `assets/sprites-override/error.png` 的原稿由 **October** 绘制，**ZL洋葱** 进行了细化。该文件的原稿与细化版本均按 CC BY 4.0 使用，署名同时保留两位创作者。
 
+## CH不太懒 — 保留所有权利
+
+以下贴图由 **CH不太懒** 绘制。发布此声明时无法联系到作者，也未找到其公开主页，因此**全部权利仍归 CH不太懒 所有**。这些贴图**不适用**本项目的 CC BY 4.0 授权；本声明也不授予任何人在本项目范围之外复制、修改或再分发这些文件的权利。
+
+- **作者：** CH不太懒
+- **版权：** CH不太懒
+- **许可证：** 保留所有权利（未授予许可证）
+- **来源：** 提供给本项目的素材；发布此声明时未找到公开作者主页
+- **例外文件：**
+  - `assets/sprites/factory/SAbsorptionTower/SAbsorptionTower.png`
+  - `assets/sprites/factory/SAbsorptionTower/SAbsorptionTower-bottom.png`
+  - `assets/sprites/factory/SAbsorptionTower/SAbsorptionTower-glow.png`
+  - `assets/sprites/factory/SAbsorptionTower/SAbsorptionTower-heat.png`
+  - `assets/sprites/factory/SAbsorptionTower/SAbsorptionTower-rotator.png`
+  - `assets/sprites/factory/SAbsorptionTower/SAbsorptionTower-top1.png`
+  - `assets/sprites/factory/SAbsorptionTower/SAbsorptionTower-top2.png`
+  - `assets/sprites/factory/TiRollingMill/TiRollingMill.png`
+  - `assets/sprites/factory/TiRollingMill/TiRollingMill-top.png`
+
 ## 项目素材作者
 
 除上方及第三方声明中列出的素材外，`assets/` 中其余项目贴图均由 **October** 绘制，包括 `assets/sprites-override/` 下的文件。少数由其他贡献者原创的贴图仍在确认署名与授权信息，确认后将补充到本文件。

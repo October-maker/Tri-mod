@@ -47,6 +47,15 @@ If an asset is not listed there and not created by the project authors, its
 original license and attribution take precedence. Do not assume that a
 third-party asset is covered by this project's CC BY 4.0 grant.
 
+### All-rights-reserved assets
+
+The `SAbsorptionTower` and `TiRollingMill` texture sets were drawn by
+**CH不太懒**. They are excluded from this CC BY 4.0 grant: all rights remain
+with the author, and no license or permission is granted by this project. See
+[THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md) and
+[THIRD_PARTY_NOTICES.zh-CN.md](THIRD_PARTY_NOTICES.zh-CN.md) for the complete
+file list.
+
 ## Scope
 
 This asset license does **not** apply to the Java source code, Gradle build
