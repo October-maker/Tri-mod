@@ -120,6 +120,7 @@ public class MultiRecipeFactory extends GenericCrafter{
         rotate = true;
         rotateDraw = false;
         configurable = true; // 允许打开配置面板（手动选定配方 / 自动匹配开关）
+        saveConfig = true;
     }
 
     /** 放置计划实际建造的方块；堆叠工厂在这里切换为固定层数变体。 */

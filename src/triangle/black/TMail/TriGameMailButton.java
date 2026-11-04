@@ -6,10 +6,9 @@ import arc.input.KeyCode;
 import arc.scene.event.InputEvent;
 import arc.scene.event.InputListener;
 import arc.scene.event.Touchable;
-import arc.scene.ui.Image;
+import arc.scene.ui.ImageButton;
 import arc.scene.ui.Label;
 import arc.scene.ui.Label.LabelStyle;
-import arc.scene.ui.TextButton;
 import arc.scene.ui.layout.Table;
 import arc.util.Align;
 import arc.util.Time;
@@ -21,7 +20,7 @@ import triangle.black.TriDraw;
 /**
  * 战役地图内的悬浮 TMail 入口：
  * 外层为更大的透明 Table（可点击/拖动区域），内部按钮仅含 Tmail 图标（居中），
- * 背景为原版默认灰色按钮（Styles.defaultt）；
+ * 背景为原版默认图片按钮背景（Styles.defaulti）；
  * 未读角标为独立 Label 置于外层容器右上角。
  *
  * 短按抬起后打开收件箱（{@link TriMailDialog#showWithIntro(boolean)}）：
@@ -40,7 +39,7 @@ public class TriGameMailButton{
     private static final float PAD = 14f;
 
     private static Table container;
-    private static TextButton button;
+    private static ImageButton button;
     private static Label badge;
     /** 上次展示的未读数，用于仅在数值变化时更新角标文本。 */
     private static int lastUnread = -1;
@@ -84,10 +83,9 @@ public class TriGameMailButton{
         container = new Table();
         container.touchable = Touchable.enabled;
 
-        // 按钮：仅 Tmail 图标（居中），背景为原版默认灰色按钮
-        button = new TextButton("", Styles.defaultt);
-        button.clearChildren();
-        button.add(new Image(TriDraw.tex("Tmail"))).size(36f).expand().center();
+        // 按钮：仅 Tmail 图标（居中），使用 ImageButton + 原版默认图片按钮背景
+        button = new ImageButton(TriDraw.tex("Tmail"), Styles.defaulti);
+        button.resizeImage(32f);
         button.pack();
         // 进一步扩大：内容尺寸基础上四周再扩展，使按钮更醒目
         button.setSize(button.getPrefWidth() + 16f, button.getPrefHeight() + 24f);

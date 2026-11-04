@@ -18,11 +18,14 @@
 	//拖尾长度
 	"trailColor":"FF9C00",
 	//拖尾颜色
+	"autoTarget": false,
+	"alwaysShooting": false,
 	"weapons":[
 	    {
 	    //武器
 		"shootCone": 360,
 		//开火圆锥
+		"reload": 1,
 		"mirror": false,
 		//镜像
 		"shake": 6,

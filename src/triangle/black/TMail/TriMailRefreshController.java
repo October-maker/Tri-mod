@@ -2,7 +2,6 @@ package triangle.black.TMail;
 
 import arc.Core;
 import arc.math.Interp;
-import arc.math.Mathf;
 import arc.scene.actions.Actions;
 import arc.scene.ui.Label;
 import arc.scene.ui.layout.Table;
@@ -27,6 +26,17 @@ final class TriMailRefreshController{
     private static boolean transitionActive;
     private static boolean pendingUpdate;
     private static boolean pendingFailure;
+
+    /** 单个字符完整跳落动画时长（秒）。 */
+    private static final float WAVE_DURATION = 2.0f;
+    /** 单字从原位弹到最高点的时间占比。 */
+    private static final float WAVE_RISE = 0.25f;
+    /** 相邻字符的起始延迟（秒）。 */
+    private static final float WAVE_STAGGER = 0.08f;
+    /** 整轮波浪结束后额外静止时间（秒），随后重新触发。 */
+    private static final float WAVE_REST = 1.0f;
+    /** 弹起高度（像素）。 */
+    private static final float WAVE_HEIGHT = 25f;
 
     private TriMailRefreshController(){}
 
@@ -92,10 +102,43 @@ final class TriMailRefreshController{
         if(inbox == null || !inbox.isShown()) return;
 
         Table loading = new Table();
-        Label loadingText = new Label("[accent]" + TriMailDialog.bundle("tri.mail.refreshingLatest"));
-        // 使用原版默认字体，并按正弦上下轻微浮动。
-        loadingText.update(() -> loadingText.setTranslation(0f, Mathf.sin(Time.time, 6f, 5f)));
-        loading.add(loadingText)
+        // 逐字拆分：每个字符独立一个 Label，由各自 update 计算竖直位移；
+        // 相邻字符的相位依次延后，形成从左到右弹起再落回原位的波浪。
+        String text = TriMailDialog.bundle("tri.mail.refreshingLatest").replace("[accent]", "");
+        Table word = new Table();
+        // 使用真实时间的毫秒时钟，而不是 Time.time：
+        // Mindustry 的 Time.delta 以 tick 为单位，Time.time 会随帧率/60Hz 逻辑加速。
+        long waveStart = Time.millis();
+        int charIndex = 0;
+        int charCount = text.codePointCount(0, text.length());
+        // 最后一字开始时间 + 单字动画 + 静止段，构成整轮循环。
+        float cycleDuration = WAVE_DURATION + Math.max(0, charCount - 1) * WAVE_STAGGER + WAVE_REST;
+        for(int i = 0; i < text.length(); ){
+            int codePoint = text.codePointAt(i);
+            i += Character.charCount(codePoint);
+            String glyph = new String(Character.toChars(codePoint));
+            BouncingLabel charLabel = new BouncingLabel("[accent]" + glyph);
+            final int index = charIndex++;
+            charLabel.update(() -> {
+                float cycleTime = ((Time.millis() - waveStart) / 1000f) % cycleDuration;
+                float elapsed = cycleTime - index * WAVE_STAGGER;
+                float y = 0f;
+
+                if(elapsed >= 0f && elapsed <= WAVE_DURATION){
+                    float t = elapsed / WAVE_DURATION;
+                    // 先短促弹起，再用原版 Interp.bounceOut 做自由落体后的阻尼弹跳。
+                    if(t < WAVE_RISE){
+                        y = WAVE_HEIGHT * Interp.pow2Out.apply(t / WAVE_RISE);
+                    }else{
+                        y = WAVE_HEIGHT * (1f - Interp.bounceOut.apply(
+                                (t - WAVE_RISE) / (1f - WAVE_RISE)));
+                    }
+                }
+                charLabel.waveOffset = y;
+            });
+            word.add(charLabel);
+        }
+        loading.add(word)
                 .padLeft(Core.graphics.getWidth() * 0.5f)
                 .center();
         inbox.cont.add(loading).grow();
@@ -171,6 +214,29 @@ final class TriMailRefreshController{
 
         if(TriMailDialog.inbox != null && TriMailDialog.inbox.isShown() && !TriMailDialog.storyScope){
             TriMailDialog.build(TriMailDialog.inbox);
+        }
+    }
+
+    /**
+     * 逐字弹跳专用 Label。
+     *
+     * <p>不使用 Element.translation，而是在 draw 时临时偏移 y。
+     * 这样可以避开 Table/Cell 在布局阶段对子元素位置的覆盖，
+     * 同时不影响 Label 的布局尺寸。
+     */
+    private static class BouncingLabel extends Label{
+        float waveOffset;
+
+        BouncingLabel(CharSequence text){
+            super(text);
+        }
+
+        @Override
+        public void draw(){
+            float oldY = y;
+            y += waveOffset;
+            super.draw();
+            y = oldY;
         }
     }
 }

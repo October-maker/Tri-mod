@@ -16,6 +16,6 @@ public class TriCore {
 
     /** 创建核心方块（由 {@code triangle.loadContent()} 调用）。 */
     public static void load(){
-        watchtowerCore = new TriMoreCore("watchtowerCore"){{}};
+        watchtowerCore = new TriMoreCore("watchtowerCore");
     }
 }

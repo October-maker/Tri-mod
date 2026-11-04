@@ -103,11 +103,13 @@ public class TriWelcome{
             intro.setLayoutEnabled(false);
 
             // 灰黑色背景：最先添加 → 绘制在最底层，置于所有 table 之下（含分帧组合体、TriLogo、文本、按钮）。
-            // 淡黑半透明遮罩，隐约可见主菜单；touchable 关闭避免干扰按钮点击
+            // 淡黑半透明遮罩，隐约可见主菜单；启用 Touchable 并挂空点击监听，
+            // 让全屏背景消费空白区域的点击，避免穿透到主菜单；内容控件在其上层仍优先命中。
             Image bg = new Image(Core.atlas.find("white"));
             bg.setSize(sw, sh);
             bg.setColor(0f, 0f, 0f, 0.8f);
-            bg.touchable = Touchable.disabled;
+            bg.touchable = Touchable.enabled;
+            bg.clicked(() -> {});
             intro.add(bg);
 
             // 分帧起点（中心坐标）：TriLogo-1 从右上外沿相对水平 60° 斜线滑向中央（滑入路径角 SLIDE_ANGLE）；

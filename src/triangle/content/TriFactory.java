@@ -65,10 +65,10 @@ public class TriFactory {
 
     /** 创建全部工厂方块并声明多配方工厂的配方（由 {@code triangle.loadContent()} 调用）。 */
     public static void load(){
-        oxygenReductionFurnace = new GenericCrafter("oxygenReductionFurnace"){{}};
-        electrolyticCell = new GenericCrafter("electrolyticCell"){{}};
-        IExtractor = new GenericCrafter("IExtractor"){{}};
-        IodinationPurificationFurnace = new GenericCrafter("IodinationPurificationFurnace"){{}};
+        oxygenReductionFurnace = new GenericCrafter("oxygenReductionFurnace");
+        electrolyticCell = new GenericCrafter("electrolyticCell");
+        IExtractor = new GenericCrafter("IExtractor");
+        IodinationPurificationFurnace = new GenericCrafter("IodinationPurificationFurnace");
         bauxiteElectrolyticCell = new GenericCrafter("bauxiteElectrolyticCell"){{}};
         VBlastFurnace = new GenericCrafter("VBlastFurnace"){{}};
         VBlastFurnaceBlowing = new GenericCrafter("VBlastFurnaceBlowing"){{}};
