@@ -426,7 +426,10 @@ public class MultiRecipeFactory extends GenericCrafter{
                                 })).width(128f).height(18f).padLeft(8f).padRight(12f).row();
                                 // 添加热量消耗显示（配方启用热量且需要输入热量时）
                                 if (recipe.heatEnabled && recipe.heatRequirement > 0) {
-                                    rec.add("[#FF6666]" + Strings.autoFixed(recipe.heatRequirement, 2) + " [lightgray]" + StatUnit.heatUnits.localized()).row();
+                                    rec.table(heat ->{
+                                        heat.image(Icon.waves).pad(5f).color(Color.valueOf("FF6666"));
+                                        heat.add(Strings.autoFixed(recipe.heatRequirement, 2) + " [lightgray]" + StatUnit.heatUnits.localized()).row();
+                                    }).row();
                                     if (recipe.stopLowTemperature) {
                                         rec.add("[#FF3333]" + Core.bundle.get("notLowTemperature")).row();
                                     }else {
@@ -1293,7 +1296,13 @@ public class MultiRecipeFactory extends GenericCrafter{
                                 r.table(pow -> {
                                     pow.image(Icon.power);
                                     pow.add("[stat]" + Strings.autoFixed(recipe.powerUse * 60f, 2));
-                                }).row();
+                                });
+                            }
+                            if (recipe.heatEnabled && recipe.heatRequirement > 0) {
+                                r.table(heat ->{
+                                    heat.image(Icon.waves).padLeft(15f).padRight(5f).color(Color.valueOf("FF6666"));
+                                    heat.add(Strings.autoFixed(recipe.heatRequirement, 2) + " [lightgray]" + StatUnit.heatUnits.localized());
+                                });
                             }
                         }).growX();
                         inner.table(r -> {

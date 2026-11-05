@@ -46,20 +46,20 @@ public class SerTriTechTree {
 
         // ---- 石油化工 ----
         // 注意依赖顺序：addNode 要求父节点已在科技树中
-        Events.on(EventType.ContentInitEvent.class, e -> addNode(TriFactory.IodinationPurificationFurnace, TriFactory.oilElectricDesaltingTank));
-        Events.on(EventType.ContentInitEvent.class, e -> addNode(TriFactory.oilElectricDesaltingTank, TriFactory.USYHydrothermalReactor));
-        Events.on(EventType.ContentInitEvent.class, e -> addNode(TriFactory.USYHydrothermalReactor, TriFactory.USYMixer));
-        Events.on(EventType.ContentInitEvent.class, e -> addNode(TriFactory.oilElectricDesaltingTank, TriFactory.oilPrimaryAtmosphericDistillationTower));
-        Events.on(EventType.ContentInitEvent.class, e -> addNode(TriFactory.oilPrimaryAtmosphericDistillationTower, TriFactory.oilSecondaryAtmosphericDistillationTower));
-        Events.on(EventType.ContentInitEvent.class, e -> addNode(TriFactory.oilPrimaryAtmosphericDistillationTower, TriFactory.oilVacuumDistillationColumn));
-        Events.on(EventType.ContentInitEvent.class, e -> addNode(TriFactory.oilVacuumDistillationColumn, TriFactory.oilCatalyticCrackingTower));
-        Events.on(EventType.ContentInitEvent.class, e -> addNode(TriFactory.oilVacuumDistillationColumn, TriFactory.oilCokingHydrogenationTower));
-        Events.on(EventType.ContentInitEvent.class, e -> addNode(TriFactory.oilCokingHydrogenationTower, TriFactory.oilSteamCrackingTower));
-        Events.on(EventType.ContentInitEvent.class, e -> addNode(TriFactory.oilSteamCrackingTower, TriFactory.oilTubularReactor));
-        Events.on(EventType.ContentInitEvent.class, e -> addNode(TriFactory.oilVacuumDistillationColumn, TriFactory.oilHydrocrackingTower));
-        Events.on(EventType.ContentInitEvent.class, e -> addNode(TriFactory.oilHydrocrackingTower, TriFactory.oilCatalyticReformingTower));
-        Events.on(EventType.ContentInitEvent.class, e -> addNode(TriFactory.oilCatalyticReformingTower, TriFactory.oilAromaticHydrocarbonComplex));
-        Events.on(EventType.ContentInitEvent.class, e -> addNode(TriFactory.oilAromaticHydrocarbonComplex, TriFactory.ExplosiveMixer));
+        Events.on(EventType.ContentInitEvent.class, e -> addNode(TriFactory.IodinationPurificationFurnace, TriOilFactory.oilElectricDesaltingTank));
+        Events.on(EventType.ContentInitEvent.class, e -> addNode(TriOilFactory.oilElectricDesaltingTank, TriOilFactory.USYHydrothermalReactor));
+        Events.on(EventType.ContentInitEvent.class, e -> addNode(TriOilFactory.USYHydrothermalReactor, TriOilFactory.USYMixer));
+        Events.on(EventType.ContentInitEvent.class, e -> addNode(TriOilFactory.oilElectricDesaltingTank, TriOilFactory.oilPrimaryAtmosphericDistillationTower));
+        Events.on(EventType.ContentInitEvent.class, e -> addNode(TriOilFactory.oilPrimaryAtmosphericDistillationTower, TriOilFactory.oilSecondaryAtmosphericDistillationTower));
+        Events.on(EventType.ContentInitEvent.class, e -> addNode(TriOilFactory.oilPrimaryAtmosphericDistillationTower, TriOilFactory.oilVacuumDistillationColumn));
+        Events.on(EventType.ContentInitEvent.class, e -> addNode(TriOilFactory.oilVacuumDistillationColumn, TriOilFactory.oilCatalyticCrackingTower));
+        Events.on(EventType.ContentInitEvent.class, e -> addNode(TriOilFactory.oilVacuumDistillationColumn, TriOilFactory.oilCokingHydrogenationTower));
+        Events.on(EventType.ContentInitEvent.class, e -> addNode(TriOilFactory.oilCokingHydrogenationTower, TriOilFactory.oilSteamCrackingTower));
+        Events.on(EventType.ContentInitEvent.class, e -> addNode(TriOilFactory.oilSteamCrackingTower, TriOilFactory.oilTubularReactor));
+        Events.on(EventType.ContentInitEvent.class, e -> addNode(TriOilFactory.oilVacuumDistillationColumn, TriOilFactory.oilHydrocrackingTower));
+        Events.on(EventType.ContentInitEvent.class, e -> addNode(TriOilFactory.oilHydrocrackingTower, TriOilFactory.oilCatalyticReformingTower));
+        Events.on(EventType.ContentInitEvent.class, e -> addNode(TriOilFactory.oilCatalyticReformingTower, TriOilFactory.oilAromaticHydrocarbonComplex));
+        Events.on(EventType.ContentInitEvent.class, e -> addNode(TriOilFactory.oilAromaticHydrocarbonComplex, TriFactory.ExplosiveMixer));
 
         // 多配方工厂的堆叠研究节点：必须在工厂自身节点已由上面的 addNode 挂载后再挂载。
         Events.on(EventType.ContentInitEvent.class, e -> {

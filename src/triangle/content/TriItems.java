@@ -32,8 +32,8 @@ public class TriItems {
     // ---- 桶装液体（装桶/倒桶配方的中间物品） ----
     public static Item barrel,saltwaterBucket;
 
-    /** 预留的物品节点，当前未使用（保留给后续科技树/数据库内容）。 */
-    public static Item SerTri;
+    /* 预留的物品节点，当前未使用（保留给后续科技树/数据库内容）。 */
+    //public static Item SerTri;
 
     /** 创建全部物品（由 {@code triangle.loadContent()} 调用）。 */
     public static void load(){
@@ -85,5 +85,5 @@ public class TriItems {
         // 桶装液体
         barrel = new Item("barrel",Color.valueOf("FFFFFF"));
         saltwaterBucket = new Item("saltwaterBucket",Color.valueOf("FFFFFF"));
-    };
+    }
 }
