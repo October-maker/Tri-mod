@@ -121,6 +121,7 @@ public class MultiRecipeFactory extends GenericCrafter{
         rotateDraw = false;
         configurable = true; // 允许打开配置面板（手动选定配方 / 自动匹配开关）
         saveConfig = true;
+        drawArrow = false;//是否显示箭头
     }
 
     /** 放置计划实际建造的方块；堆叠工厂在这里切换为固定层数变体。 */
@@ -280,6 +281,11 @@ public class MultiRecipeFactory extends GenericCrafter{
     @Override
     public void init() {
         super.init();
+
+        // MRF 必须有方向：rotate=false 会让侧热、蓝图输入和部分鼠标交互失去方向基准。
+        // 即使贴图不旋转，也保留逻辑 rotation，故 rotateDraw 仍为 false。
+        rotate = true;
+        rotateDraw = false;
 
         // 设置输入过滤器和输出列表（去重；同一产物可能被多个配方共享）。
         Seq<ItemStack> allOutputItems = new Seq<>();
@@ -528,7 +534,7 @@ public class MultiRecipeFactory extends GenericCrafter{
             Recipe recipe = entity.getRecipe();
             if (recipe != null && recipe.heatEnabled && recipe.heatRequirement > 0) {
                 return new Bar(() ->
-                    Core.bundle.format("bar.heatpercent", (int)(entity.rawHeat + 0.01f), (int)(entity.efficiencyScale() * 100 + 0.01f)),
+                    Core.bundle.format("bar.heatpercent", (int)(entity.rawHeat + 0.01f), (int)(entity.heatEfficiencyScale() * 100 + 0.01f)),
                     () -> Pal.lightOrange,
                     () -> entity.rawHeat / recipe.heatRequirement);
             }
@@ -761,6 +767,30 @@ public class MultiRecipeFactory extends GenericCrafter{
             return recipes.get(recipeIndex);
         }
 
+        /** 手动模式在 recipeIndex 尚未同步时，用 selectedIndex 提供热量需求。 */
+        private Recipe heatRecipe() {
+            Recipe current = getRecipe();
+            if (current != null) return current;
+            if (!auto && selectedIndex >= 0 && selectedIndex < recipes.size) {
+                return recipes.get(selectedIndex);
+            }
+            return null;
+        }
+
+        /** 自动模式首次选择前，用第一条热配方向热网报出需求，避免启动时完全无需求。 */
+        private Recipe heatRequirementRecipe() {
+            Recipe current = heatRecipe();
+            if (current != null) return current;
+            if (auto) {
+                for (Recipe candidate : recipes) {
+                    if (candidate.heatEnabled && candidate.heatRequirement > 0) {
+                        return candidate;
+                    }
+                }
+            }
+            return null;
+        }
+
         /**
          * 维护欠压恢复锁：欠压时锁定 1 秒，电力恢复后也要等锁结束才重启。
          * 这样工厂停止后需求消失、电网状态瞬间恢复时，不会立刻重新启动造成振荡。
@@ -849,10 +879,35 @@ public class MultiRecipeFactory extends GenericCrafter{
             return sideHeat;
         }
 
+        /**
+         * 热量读取兜底：原版 calculateHeat() 会对“可旋转的热量传输器”做方向过滤，
+         * 某些朝向的面会被直接跳过。这里只对原版没有接收到的相邻 HeatBlock 补一次，
+         * 已接收的面不重复计数，避免修方向时把热量算两遍。
+         */
+        @Override
+        public float calculateHeat(float[] sideHeat) {
+            float result = super.calculateHeat(sideHeat);
+            for(var neighbor : proximity){
+                if(neighbor == null || neighbor.team != team || !(neighbor instanceof HeatBlock heatBlock)){
+                    continue;
+                }
+
+                int side = Mathf.mod(relativeTo(neighbor), 4);
+                if(sideHeat[side] > 0f) continue;
+
+                float amount = heatBlock.heat() / Math.max(1, neighbor.block.size);
+                if(amount <= 0f) continue;
+
+                sideHeat[side] += amount;
+                result += amount;
+            }
+            return result;
+        }
+
         /** 当前配方的热量需求；未启用热量时返回 0。 */
         @Override
         public float heatRequirement() {
-            Recipe recipe = getRecipe();
+            Recipe recipe = heatRequirementRecipe();
             if (recipe != null && recipe.heatEnabled && recipe.heatRequirement > 0) {
                 return recipe.heatRequirement;
             }
@@ -879,15 +934,38 @@ public class MultiRecipeFactory extends GenericCrafter{
             return 0f;
         }
 
-        /** 热量效率：以实际接收热量 rawHeat 计算，低热时按比例降速，超热按 recipeMaxEfficiency 封顶。 */
-        @Override
-        public float efficiencyScale() {
-            Recipe recipe = getRecipe();
+        /**
+         * 热量效率曲线：base + over，最终按 recipeMaxEfficiency 截断。
+         * 该结果只在 updateEfficiencyMultiplier() 中应用一次，并供热量条显示。
+         */
+        public float heatEfficiencyScale() {
+            Recipe recipe = heatRecipe();
             if (recipe == null || !recipe.heatEnabled || recipe.heatRequirement <= 0) {
                 return 1f;
             }
-            float over = Math.max(rawHeat - recipe.heatRequirement, 0f);
-            return Math.min(Mathf.clamp(rawHeat / recipe.heatRequirement) + over / recipe.heatRequirement, recipe.recipeMaxEfficiency);
+
+            float x = rawHeat / recipe.heatRequirement;
+            if(!Float.isFinite(x)) return 0f;
+
+            float power = Float.isFinite(recipe.efficiencyCurvePower)
+                    ? Math.max(recipe.efficiencyCurvePower, 0.05f)
+                    : 1f;
+
+            float base = Mathf.pow(Mathf.clamp(x), power);
+            float over = Math.max(x - 1f, 0f);
+            float result = base + over;
+
+            if(!Float.isFinite(result)) return 0f;
+            return Math.min(result, recipe.recipeMaxEfficiency);
+        }
+
+        /** 绕开原版 efficiencyScale()，在最终效率出口统一应用一次热量曲线。 */
+        @Override
+        public void updateEfficiencyMultiplier() {
+            float scale = heatEfficiencyScale();
+            if(!Float.isFinite(scale)) scale = 1f;
+            efficiency *= scale;
+            optionalEfficiency *= scale;
         }
 
         /** 返回绘制器使用的预热目标值。 */
@@ -906,6 +984,8 @@ public class MultiRecipeFactory extends GenericCrafter{
          * 热量/电力只要低于需求即排除；找不到时 recipeIndex 置 -1。
          */
         public void updateRecipe() {
+            // 首次选择还没有当前配方，不能先用热量过滤，否则热网需求为 0，永远选不中热配方。
+            boolean hasCurrentRecipe = recipeIndex >= 0;
             for (int i = recipes.size - 1; i >= 0; i--) {
                 if (isLocked(recipes.get(i))) continue; // 跳过未解锁（需研究未研究）配方
                 boolean valid = true;
@@ -934,8 +1014,8 @@ public class MultiRecipeFactory extends GenericCrafter{
                     }
                 }
 
-                // 检查热量输入（配方启用热量且需要热量输入时，热量不足则视为不可用）
-                if (valid && recipes.get(i).heatEnabled && recipes.get(i).heatRequirement > 0) {
+                // 检查热量输入（仅已有当前配方时过滤候选；首次选择允许先选中并报出热需求）
+                if (valid && hasCurrentRecipe && recipes.get(i).heatEnabled && recipes.get(i).heatRequirement > 0) {
                     if (heat < recipes.get(i).heatRequirement) {
                         valid = false;
                     }
@@ -969,6 +1049,7 @@ public class MultiRecipeFactory extends GenericCrafter{
          * 热量/电力不足的配方，仅在其“即停”开关为 true 时排除；为 false 时仍可选（以低效率继续工作）。
          */
         public void trySelectRelaxed() {
+            boolean hasCurrentRecipe = recipeIndex >= 0;
             for (int i = recipes.size - 1; i >= 0; i--) {
                 Recipe recipe = recipes.get(i);
                 if (isLocked(recipe)) continue; // 跳过未解锁（需研究未研究）配方
@@ -1002,8 +1083,8 @@ public class MultiRecipeFactory extends GenericCrafter{
                     }
                 }
 
-                // 热量不足：仅当配方设定“低温即停”时才排除
-                if (valid && recipe.heatEnabled && recipe.heatRequirement > 0 && recipe.stopLowTemperature && rawHeat < recipe.heatRequirement) {
+                // 热量不足：已有当前配方且配方“低温即停”时才排除；首次选择跳过。
+                if (valid && hasCurrentRecipe && recipe.heatEnabled && recipe.heatRequirement > 0 && recipe.stopLowTemperature && rawHeat < recipe.heatRequirement) {
                     valid = false;
                 }
 

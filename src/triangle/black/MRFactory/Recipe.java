@@ -60,12 +60,23 @@ public class Recipe {
     // ---- 热量相关 ----
     /** 是否启用热量功能（参与供热/耗热）。 */
     public boolean heatEnabled = false;
-    /** 热量需求（每 tick 消耗）。 */
+    /**
+     * 达到 100% 效率的参考热量，也是 stopLowTemperature 的最低运行门槛；
+     * 不是热量上限。
+     */
     public float heatRequirement = 0f;
     /** 热量产出。 */
     public float heatOutput = 0f;
-    /** 热量充足时的最大效率倍率（超过需求的热量可继续提升效率）。 */
+    /** 热量充足时的最大效率倍率，最终效率在此截断。 */
     public float recipeMaxEfficiency = 4f;
+    /**
+     * 整条热量效率曲线的指数。
+     *
+     * <p>1 = 原版线性；&gt;1 时低热更慢、接近需求后增长更快。
+     * 公式：base = pow(clamp(x), efficiencyCurvePower)，再叠加
+     * over = max(x - 1, 0)，最后按 recipeMaxEfficiency 截断。
+     */
+    public float efficiencyCurvePower = 1f;
 
     /**
      * 以成对参数构造配方。
@@ -77,7 +88,8 @@ public class Recipe {
      *   <li>{@code UnlockableContent + Integer} → 载荷输入；</li>
      *   <li>{@code String + 数值/布尔} → 设置字段，支持 {@code "power"}、{@code "time"}、
      *       {@code "heatReq"}、{@code "heatOut"}、{@code "heatEnabled"}、{@code "stopLowTemperature"}、
-     *       {@code "stopUndervoltage"}、{@code "requiresResearch"}、{@code "recipeMaxEfficiency"}；
+     *       {@code "stopUndervoltage"}、{@code "requiresResearch"}、{@code "recipeMaxEfficiency"}、
+     *       {@code "efficiencyCurvePower"}；
      *       {@code "unlockCondition"} 接受 {@link Boolp}；{@code "unlockConditionText"} 接受字符串；
      *       {@code "researchDescriptionKey"} 接受字符串。</li>
      * </ul>
@@ -125,6 +137,8 @@ public class Recipe {
                     researchDescriptionKey = text;
                 } else if (key.equals("recipeMaxEfficiency")) {
                     recipeMaxEfficiency = value;
+                } else if (key.equals("efficiencyCurvePower")) {
+                    efficiencyCurvePower = value;
                 }
             }
         }

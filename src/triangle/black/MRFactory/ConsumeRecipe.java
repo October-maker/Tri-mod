@@ -81,7 +81,9 @@ class ConsumeRecipe extends Consume {
      */
     @Override
     public float efficiency(Building build) {
-        float ed = build.edelta() * build.efficiencyScale();
+        // Building.updateEfficiencyMultiplier() 会统一应用一次热量曲线；
+        // 这里再乘 efficiencyScale() 会造成双重缩放。
+        float ed = build.edelta();
         if (ed <= 0.00000001f) return 0f;
         Recipe r = recipe.get(build);
         if (r == null) return 0f;

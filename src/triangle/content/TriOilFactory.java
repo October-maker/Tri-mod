@@ -40,7 +40,6 @@ public class TriOilFactory{
             itemCapacity = 40;
             liquidCapacity = 120;
             outputsLiquid = true;
-            rotate = false;
             squareSprite = true;
             researchCostMultiplier = 0.75f;
             buildCostMultiplier = 0.8f;
@@ -345,7 +344,6 @@ public class TriOilFactory{
             itemCapacity = 40;
             liquidCapacity = 120;
             outputsLiquid = true;
-            rotate = false;
             squareSprite = true;
             researchCostMultiplier = 0.75f;
             buildCostMultiplier = 0.8f;
@@ -477,7 +475,6 @@ public class TriOilFactory{
             itemCapacity = 40;
             liquidCapacity = 80;
             squareSprite = true;
-            rotate = false;
             researchCostMultiplier = 0.75f;
             buildCostMultiplier = 1.2f;
             hasLiquids = true;
@@ -507,6 +504,7 @@ public class TriOilFactory{
                 recipeMaxEfficiency = 4f;
                 stopLowTemperature = true;
                 stopUndervoltage = true;
+                efficiencyCurvePower = 1.5f;
             }});
         }};
 
@@ -516,7 +514,6 @@ public class TriOilFactory{
             itemCapacity = 40;
             liquidCapacity = 120;
             outputsLiquid = true;
-            rotate = false;
             squareSprite = true;
             researchCostMultiplier = 0.75f;
             buildCostMultiplier = 0.8f;
@@ -547,7 +544,6 @@ public class TriOilFactory{
             health = 50;
             itemCapacity = 40;
             liquidCapacity = 120;
-            rotate = false;
             squareSprite = true;
             researchCostMultiplier = 0.75f;
             buildCostMultiplier = 0.8f;
