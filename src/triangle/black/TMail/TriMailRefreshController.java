@@ -1,12 +1,14 @@
 package triangle.black.TMail;
 
 import arc.Core;
+import arc.graphics.Color;
 import arc.math.Interp;
 import arc.scene.actions.Actions;
+import arc.scene.event.Touchable;
 import arc.scene.ui.Label;
 import arc.scene.ui.layout.Table;
 import arc.util.Time;
-import mindustry.Vars;
+import mindustry.ui.Styles;
 import mindustry.ui.dialogs.BaseDialog;
 
 /**
@@ -23,18 +25,19 @@ import mindustry.ui.dialogs.BaseDialog;
 final class TriMailRefreshController{
 
     private static Table loadingTable;
+    private static Table statusTable;
     private static boolean transitionActive;
     private static boolean pendingUpdate;
     private static boolean pendingFailure;
 
     /** 单个字符完整跳落动画时长（秒）。 */
-    private static final float WAVE_DURATION = 2.0f;
+    private static final float WAVE_DURATION = 0.7f;
     /** 单字从原位弹到最高点的时间占比。 */
     private static final float WAVE_RISE = 0.25f;
     /** 相邻字符的起始延迟（秒）。 */
-    private static final float WAVE_STAGGER = 0.08f;
+    private static final float WAVE_STAGGER = 0.06f;
     /** 整轮波浪结束后额外静止时间（秒），随后重新触发。 */
-    private static final float WAVE_REST = 1.0f;
+    private static final float WAVE_REST = 0.3f;
     /** 弹起高度（像素）。 */
     private static final float WAVE_HEIGHT = 25f;
 
@@ -56,8 +59,57 @@ final class TriMailRefreshController{
         }
     }
 
+    /** 清除成功/失败提示。 */
+    private static void removeStatus(){
+        if(statusTable != null){
+            statusTable.remove();
+            statusTable = null;
+        }
+    }
+
+    /**
+     * 刷新结束后用结果文字替换加载提示：结果停留 1 秒，然后一边渐隐，
+     * 一边让重建后的 content 卡片组滑入。
+     */
+    private static void showRefreshResult(boolean success, boolean rebuildContent){
+        removeLoading();
+        removeStatus();
+
+        BaseDialog inbox = TriMailDialog.inbox;
+        if(inbox == null || !inbox.isShown()) return;
+
+        Label result = new Label(
+                TriMailDialog.bundle(success ? "tri.mail.refreshSuccess" : "tri.mail.refreshFailedShort"),
+                new Label.LabelStyle(Styles.defaultt.font,
+                        success ? Color.valueOf("FFD37F") : Color.valueOf("FF5A5A")));
+
+        Table status = new Table();
+        status.touchable = Touchable.disabled;
+        status.add(result)
+                .padLeft(Core.graphics.getWidth() * 0.5f)
+                .center();
+        inbox.addChild(status);
+        status.setFillParent(true);
+        statusTable = status;
+
+        Time.runTask(30f, () -> {
+            if(statusTable != status) return;
+
+            // 文字与 content 同时开始：结果渐隐，卡片组从右侧滑入。
+            if(rebuildContent){
+                TriMailDialog.build(inbox);
+            }
+            status.actions(
+                    Actions.alpha(0f, 0.3f, Interp.pow2In),
+                    Actions.remove()
+            );
+            statusTable = null;
+        });
+    }
+
     /** 开启一次手动刷新过渡；自动刷新不触发该动画。 */
     static void onRefreshStarted(boolean forced){
+        removeStatus();
         if(TriMailDialog.latestInfoButton != null){
             TriMailDialog.latestInfoButton.setDisabled(true);
         }
@@ -98,6 +150,7 @@ final class TriMailRefreshController{
     /** 在屏幕右 3/4 处显示加载提示；初次进入时可从右侧滑入。 */
     static void showLoadingTable(boolean slideIn){
         removeLoading();
+        removeStatus();
         BaseDialog inbox = TriMailDialog.inbox;
         if(inbox == null || !inbox.isShown()) return;
 
@@ -174,19 +227,14 @@ final class TriMailRefreshController{
     }
 
     static void onRefreshFailed(){
-        if(!TriMailDialog.storyScope && TriMailDialog.inbox != null
-                && TriMailDialog.inbox.isShown() && Vars.ui != null){
-            Vars.ui.showInfo(TriMailDialog.bundle("tri.mail.refreshFailed"));
-        }
-
         if(transitionActive){
             pendingFailure = true;
             return;
         }
 
         if(!TriMailDialog.storyScope && TriMailDialog.inbox != null
-                && TriMailDialog.inbox.isShown() && TriMailDialog.activeDetail == null){
-            TriMailDialog.build(TriMailDialog.inbox);
+                && TriMailDialog.inbox.isShown()){
+            showRefreshResult(false, TriMailDialog.activeDetail == null);
         }
     }
 
@@ -201,19 +249,18 @@ final class TriMailRefreshController{
             return;
         }
 
-        if(TriMailDialog.activeDetail != null) return;
-
-        TriMailDialog.build(TriMailDialog.inbox);
+        showRefreshResult(true, TriMailDialog.activeDetail == null);
     }
 
     private static void finishPending(){
         if(!pendingUpdate && !pendingFailure) return;
 
+        boolean success = pendingUpdate;
         pendingUpdate = false;
         pendingFailure = false;
 
         if(TriMailDialog.inbox != null && TriMailDialog.inbox.isShown() && !TriMailDialog.storyScope){
-            TriMailDialog.build(TriMailDialog.inbox);
+            showRefreshResult(success, true);
         }
     }
 
