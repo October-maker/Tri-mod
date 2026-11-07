@@ -1,7 +1,6 @@
 package triangle;
 
 import arc.Events;
-import arc.util.*;
 import mindustry.*;
 import mindustry.game.EventType.DisposeEvent;
 import mindustry.game.EventType.Trigger;
@@ -13,6 +12,8 @@ import triangle.black.ArmorBullet.TriContentInfoDialog;
 import triangle.black.PIBulletType;
 import triangle.black.TriCIWS;
 import triangle.black.TriDraw;
+import triangle.black.TriMiniGame.TriPresetMenu;
+import triangle.black.TriMiniGame.TriPresetMode;
 import triangle.black.TMail.TriGameMailButton;
 import triangle.black.TMail.TriBlurBackground;
 import triangle.black.TMail.TriInbox;
@@ -84,6 +85,9 @@ public class triangle extends Mod{
         TriPlanetMailButton.init();
         // 主菜单 TMail 入口（固定模组资讯）
         TriMainMenuButton.init();
+        // 主菜单“开始游戏”子菜单里的预设模式入口与 Rules 轮换
+        TriPresetMenu.init();
+        TriPresetMode.init();
         // 设置→数据页“重置战役信件”按钮
         TriSettingsDataButton.init();
         // 战役地图内“收到新邮件”提示（解锁时弹黑框 3 秒）

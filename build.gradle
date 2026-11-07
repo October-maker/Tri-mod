@@ -88,6 +88,7 @@ jar{
         include "LICENSE"
         include "LICENSE-ASSETS"
         include "LICENSE-CC-BY-4.0"
+        include "LICENSE-GPL-3.0"
         include "THIRD_PARTY_NOTICES.md"
         include "THIRD_PARTY_NOTICES.zh-CN.md"
     }

@@ -66,9 +66,13 @@ The following are licensed as project assets under CC BY 4.0:
 
 - PNG textures and other image assets;
 - audio assets;
-- map files (`.msav`);
 - UI artwork under `assets/TriUI/`;
 - other visual or media assets not explicitly marked otherwise.
+
+**Exception:** the bundled `assets/maps/battleplan-planetaryTerminal.msav` is a
+third-party map from the Mindustry project and is licensed under **GPL-3.0**,
+not CC BY 4.0. See [LICENSE-GPL-3.0](LICENSE-GPL-3.0) and
+[THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).
 
 JSON content definitions under `assets/content/`, bundle/properties files,
 and JavaScript files under `assets/scripts/` are treated as software and are

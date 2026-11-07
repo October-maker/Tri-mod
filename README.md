@@ -4,6 +4,7 @@
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 [![License: CC BY 4.0](https://img.shields.io/badge/License-CC_BY_4.0-lightgrey.svg)](LICENSE-ASSETS)
+[![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg)](LICENSE-GPL-3.0)
 
 ## 总览
 本模组源于json并辅以Java实例构建而成；整体基于原版Serpulo主线创作；为Serpulo的战役进行拓展

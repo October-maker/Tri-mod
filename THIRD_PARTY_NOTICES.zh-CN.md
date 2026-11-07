@@ -41,6 +41,18 @@
   - `assets/sprites/factory/TiRollingMill/TiRollingMill.png`
   - `assets/sprites/factory/TiRollingMill/TiRollingMill-top.png`
 
+## battleplan-planetaryTerminal 地图 — GPL-3.0
+
+`assets/maps/battleplan-planetaryTerminal.msav` 是 Mindustry 项目中的 **行星发射终端（Planetary Launch Terminal）** 地图。
+
+- **作者标签：** Skeledragon
+- **来源：** <https://github.com/Anuken/Mindustry/blob/master/core/assets/maps/serpulo/planetaryTerminal.msav>
+- **许可证：** GNU General Public License v3.0（GPL-3.0）
+- **许可证文本：** [LICENSE-GPL-3.0](LICENSE-GPL-3.0)
+- **当前版本：** Mindustry master，123372 字节
+- **SHA-256：** `C1FDB6CCB043FF413F17DB17847DE70A0E6DD720660CDC7B5019DF50016FE158`
+- **修改情况：** 未修改，按原样打包。
+
 ## 项目素材作者
 
 除上方及第三方声明中列出的素材外，`assets/` 中其余项目贴图均由 **October** 绘制，包括 `assets/sprites-override/` 下的文件。少数由其他贡献者原创的贴图仍在确认署名与授权信息，确认后将补充到本文件。

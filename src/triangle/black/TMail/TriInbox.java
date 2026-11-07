@@ -351,7 +351,7 @@ public class TriInbox{
                 b("tri.mail.electrolyticCell.sender"),
                 b("tri.mail.electrolyticCell.subject"),
                 b("tri.mail.electrolyticCell.body"),
-                always(), // sectorCaptured(SectorPresets.biomassFacility)
+                sectorCaptured(SectorPresets.biomassFacility), // sectorCaptured(SectorPresets.biomassFacility)
                 true);
         registerReply("electrolyticCell", "好的",
                 null, -1f);

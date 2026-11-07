@@ -53,6 +53,19 @@ this project.
   - `assets/sprites/factory/TiRollingMill/TiRollingMill.png`
   - `assets/sprites/factory/TiRollingMill/TiRollingMill-top.png`
 
+## battleplan-planetaryTerminal map — GPL-3.0
+
+`assets/maps/battleplan-planetaryTerminal.msav` is the **Planetary Launch Terminal** map
+from the Mindustry project.
+
+- **Author tag:** Skeledragon
+- **Source:** <https://github.com/Anuken/Mindustry/blob/master/core/assets/maps/serpulo/planetaryTerminal.msav>
+- **License:** GNU General Public License v3.0 (GPL-3.0)
+- **License text:** [LICENSE-GPL-3.0](LICENSE-GPL-3.0)
+- **Current snapshot:** Mindustry master, 123372 bytes
+- **SHA-256:** `C1FDB6CCB043FF413F17DB17847DE70A0E6DD720660CDC7B5019DF50016FE158`
+- **Modifications:** None. The map file is bundled as-is.
+
 ## Project asset authorship
 
 Unless listed above or in another third-party notice, the remaining project
