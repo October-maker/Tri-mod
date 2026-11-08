@@ -32,6 +32,7 @@ import mindustry.ctype.ContentType;
 import mindustry.ctype.UnlockableContent;
 import mindustry.entities.units.BuildPlan;
 import mindustry.game.EventType.ContentInitEvent;
+import mindustry.logic.LAccess;
 import mindustry.game.Objectives;
 import mindustry.gen.Icon;
 import mindustry.gen.Tex;
@@ -985,7 +986,6 @@ public class MultiRecipeFactory extends GenericCrafter{
          */
         public void updateRecipe() {
             // 首次选择还没有当前配方，不能先用热量过滤，否则热网需求为 0，永远选不中热配方。
-            boolean hasCurrentRecipe = recipeIndex >= 0;
             for (int i = recipes.size - 1; i >= 0; i--) {
                 if (isLocked(recipes.get(i))) continue; // 跳过未解锁（需研究未研究）配方
                 boolean valid = true;
@@ -1014,11 +1014,12 @@ public class MultiRecipeFactory extends GenericCrafter{
                     }
                 }
 
-                // 检查热量输入（仅已有当前配方时过滤候选；首次选择允许先选中并报出热需求）
-                if (valid && hasCurrentRecipe && recipes.get(i).heatEnabled && recipes.get(i).heatRequirement > 0) {
-                    if (heat < recipes.get(i).heatRequirement) {
-                        valid = false;
-                    }
+                // 检查热量输入：统一用真实热量 rawHeat 与配方布尔值判定，避免“有/无当前配方”
+                // 两套标准导致热配方在边界反复“选中—排除”。stopLowTemperature=false 时允许低热选中（低速工作），
+                // 与 validRecipe()/shouldConsume() 的 heat(已抬升)/stopLowTemperature 判定保持一致。
+                if (valid && recipes.get(i).heatEnabled && recipes.get(i).heatRequirement > 0
+                        && recipes.get(i).stopLowTemperature && rawHeat < recipes.get(i).heatRequirement) {
+                    valid = false;
                 }
 
                 // 检查电力输入：完全没电时排除；设置“欠压即停”的配方还必须在
@@ -1049,7 +1050,6 @@ public class MultiRecipeFactory extends GenericCrafter{
          * 热量/电力不足的配方，仅在其“即停”开关为 true 时排除；为 false 时仍可选（以低效率继续工作）。
          */
         public void trySelectRelaxed() {
-            boolean hasCurrentRecipe = recipeIndex >= 0;
             for (int i = recipes.size - 1; i >= 0; i--) {
                 Recipe recipe = recipes.get(i);
                 if (isLocked(recipe)) continue; // 跳过未解锁（需研究未研究）配方
@@ -1083,8 +1083,9 @@ public class MultiRecipeFactory extends GenericCrafter{
                     }
                 }
 
-                // 热量不足：已有当前配方且配方“低温即停”时才排除；首次选择跳过。
-                if (valid && hasCurrentRecipe && recipe.heatEnabled && recipe.heatRequirement > 0 && recipe.stopLowTemperature && rawHeat < recipe.heatRequirement) {
+                // 热量不足：配方“低温即停”(stopLowTemperature=true) 且真实热量不足时排除；
+                // =false 时允许低速工作，统一用 rawHeat 判定，与严格检索/validRecipe 保持一致。
+                if (valid && recipe.heatEnabled && recipe.heatRequirement > 0 && recipe.stopLowTemperature && rawHeat < recipe.heatRequirement) {
                     valid = false;
                 }
 
@@ -1144,6 +1145,11 @@ public class MultiRecipeFactory extends GenericCrafter{
                 return false;
             }
 
+            // 输出仓满：当前配方无法继续产出
+            if (!canOutputForRecipe(recipes.get(recipeIndex))) {
+                return false;
+            }
+
             return true;
         }
 
@@ -1156,15 +1162,20 @@ public class MultiRecipeFactory extends GenericCrafter{
             updateUndervoltageLock();
             if (auto) {
                 // === 自动匹配模式 ===
-                // 欠压恢复锁期间保持当前配方，避免停-启循环中反复切换配方。
-                if (undervoltageLock <= 0f && !validRecipe()) updateRecipe();
-
-                // 严格检索无结果时，按配方布尔值放宽热量/电力要求再检索一次
-                if (getRecipe() == null) trySelectRelaxed();
+                // 仅在“周期边界(progress<=0)”或“当前无配方”时检索配方：
+                // 生产中途(progress>0)不重选，避免不同 craftTime 的配方共用 progress 造成
+                // “生产一帧、搜索一帧”的进度断档；输入/热量/电力边界抖动时由 efficiency 归零自然暂停，恢复即续。
+                boolean boundary = progress <= 0f || getRecipe() == null;
+                if (undervoltageLock <= 0f && boundary && !validRecipe()) updateRecipe();
+                if (boundary && getRecipe() == null) trySelectRelaxed();
             } else {
                 // === 手动选定模式：锁定 selectedIndex 配方制作 ===
                 // 输入不足时由 ConsumeRecipe.efficiency() 使效率归零，super.updateTile() 不会推进生产
                 if (selectedIndex >= 0 && selectedIndex < recipes.size && !isLocked(recipes.get(selectedIndex))) {
+                    // 玩家切换了选定配方：重置生产进度，避免沿用上一配方的半截进度
+                    if (recipeIndex != selectedIndex) {
+                        progress = 0f;
+                    }
                     recipeIndex = selectedIndex;
                 } else {
                     recipeIndex = -1;
@@ -1238,6 +1249,9 @@ public class MultiRecipeFactory extends GenericCrafter{
         public boolean shouldConsume() {
             if (getRecipe() == null) return false;
             if (undervoltageLock > 0f) return false;
+
+            // 输出仓满（物品/液体/载荷任一达到容量上限）时停止生产，避免无视建筑库存上限继续产出
+            if (!canOutputForRecipe(getRecipe())) return false;
 
             // 检查电力供应：彻底没电停止；或配方设“欠压即停”且供电不足(status<1)时停止
             Recipe currentRecipe = getRecipe();
@@ -1382,7 +1396,7 @@ public class MultiRecipeFactory extends GenericCrafter{
                             if (recipe.heatEnabled && recipe.heatRequirement > 0) {
                                 r.table(heat ->{
                                     heat.image(Icon.waves).padLeft(15f).padRight(5f).color(Color.valueOf("FF6666"));
-                                    heat.add(Strings.autoFixed(recipe.heatRequirement, 2) + " [lightgray]" + StatUnit.heatUnits.localized());
+                                    heat.add(Strings.autoFixed(recipe.heatRequirement, 2));
                                 });
                             }
                         }).growX();
@@ -1438,6 +1452,40 @@ public class MultiRecipeFactory extends GenericCrafter{
             if (enabled && getRecipe() == null) {return BlockStatus.noInput;}
             else if (getRecipe() != null && power.status <= 0) {return BlockStatus.noInput;}
             else return super.status();
+        }
+
+        /**
+         * 逻辑 control config 的数值版：逻辑里 p1 是普通数字常量时走此重载。
+         * 原版 LExecutor$ControlI 中只有 `type.isObj && p1.isobj` 才走对象版，普通数字 p1.isobj=false，
+         * 因此 `control config <building> 3 0 0 0` 实际调用的是本方法（此前未重写，默认空实现导致配方不动）。
+         * 编号按面板 1-based：1..n 选第 n 个配方，<=0 切回自动模式。
+         */
+        @Override
+        public void control(LAccess access, double p1, double p2, double p3, double p4) {
+            if (access == LAccess.config) {
+                applyLogicRecipe((int) p1);
+                return;
+            }
+            super.control(access, p1, p2, p3, p4);
+        }
+
+        /** 应用逻辑指令的配方选择：编号 1-based（对应面板 [n]），<=0 切自动；切换时重置生产进度。 */
+        private void applyLogicRecipe(int n) {
+            if (n <= 0) {
+                auto = true;
+                selectedIndex = -1;
+                progress = 0f;
+                return;
+            }
+            int idx = n - 1;
+            if (idx < recipes.size && !isLocked(recipes.get(idx))) {
+                auto = false;
+                selectedIndex = idx;
+                if (recipeIndex != idx) {
+                    progress = 0f;
+                }
+                recipeIndex = idx;
+            }
         }
     }
 }
