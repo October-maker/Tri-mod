@@ -4,7 +4,7 @@ import arc.Core;
 import arc.Events;
 import arc.scene.Element;
 import arc.scene.Group;
-import arc.scene.ui.Image;
+import arc.scene.style.TextureRegionDrawable;
 import arc.scene.ui.TextButton;
 import arc.scene.ui.layout.Table;
 import mindustry.Vars;
@@ -51,18 +51,21 @@ public class TriMainMenuButton{
             if(buttons == null) return;
         }
 
-        // 用 cleart：透明背景（融入其他半透明菜单按钮，不显突兀）+ 瞬时按下（非 toggle）
+        // 与原版 MenuFragment.buttons() 同一套布局：button(text, icon, style, runnable).marginLeft(11f)。
+        // 尺寸不显式指定——"buttons" 表自身的 defaults 已是“菜单宽 × 70”，与其它主菜单按钮完全一致。
         buttons.row(); // 独占新一行
 
-        TextButton b = new TextButton(bundle("tri.mail.button"), Styles.cleart);
-        b.clearChildren();
-        // 图标与文字之间留出恰当间距（arc 的 button(text,icon,...) 重载内部无右间距）
-        b.add(new Image(TriDraw.tex("Tmail"))).size(32f).padRight(8);
-        b.add(b.getLabel());
-        b.clicked(TriMainMenuButton::showInfo);
+        injected = (TextButton)buttons
+                .button(bundle("tri.mail.button"),
+                        new TextureRegionDrawable(TriDraw.tex("Tmail")),
+                        Styles.flatToggleMenut, TriMainMenuButton::showInfo)
+                .marginLeft(11f)
+                .get();
 
-        buttons.add(b);
-        injected = b;
+        // flatToggleMenut 是 toggle 样式：点击后 Button 会把 checked 记住，松开仍显示“按下”贴图。
+        // 每帧把 checked 对齐到“是否正被按下”，松开即恢复；等价于原版对 currentMenu 按钮做的
+        // setChecked(currentMenu == b)，我们这列按钮没有子菜单，故常态恒为未选中。
+        injected.update(() -> injected.setChecked(injected.isPressed()));
     }
 
     /** 沿 parent 链检查元素是否仍可达于主菜单场景树（menuGroup 锚点）。 */

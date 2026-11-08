@@ -28,6 +28,8 @@ ext{
 allprojects{
     tasks.withType(JavaCompile){
         options.compilerArgs.addAll(['--release', '17'])
+        // 源码统一为 UTF-8（含中文注释）。不显式指定时 javac 在中文 Windows 上会退回 GBK 并报无法映射
+        options.encoding = "UTF-8"
     }
 }
 
