@@ -34,6 +34,7 @@ import mindustry.entities.units.BuildPlan;
 import mindustry.game.EventType.ContentInitEvent;
 import mindustry.logic.LAccess;
 import mindustry.game.Objectives;
+import mindustry.gen.Building;
 import mindustry.gen.Icon;
 import mindustry.gen.Tex;
 import mindustry.gen.Unit;
@@ -749,6 +750,8 @@ public class MultiRecipeFactory extends GenericCrafter{
         public int recipeIndex = -1;
         /** 四面热量输入。 */
         public float[] sideHeat = new float[4];
+        /** 热量兜底去重用：同一多格热源在 proximity 中占多槽，只计一次。 */
+        public Building[] heatSeen = new Building[8];
         /** 当前有效热量（供可用性/消耗检查使用）。 */
         public float heat = 0f;
         /** 实际接收的热量（供效率计算与显示使用）。 */
@@ -884,12 +887,34 @@ public class MultiRecipeFactory extends GenericCrafter{
          * 热量读取兜底：原版 calculateHeat() 会对“可旋转的热量传输器”做方向过滤，
          * 某些朝向的面会被直接跳过。这里只对原版没有接收到的相邻 HeatBlock 补一次，
          * 已接收的面不重复计数，避免修方向时把热量算两遍。
+         * 只处理正交四邻（用 tile 坐标判定单轴相邻），排除斜对角（proximity 是 3×3，
+         * relativeTo 会把斜对角折叠到某个正交面，导致“没有面对本工厂”的热源也被计入）；
+         * 同一多格热源在 proximity 中占多个槽，按引用去重只计一次。
          */
         @Override
         public float calculateHeat(float[] sideHeat) {
             float result = super.calculateHeat(sideHeat);
+            int seen = 0;
             for(var neighbor : proximity){
                 if(neighbor == null || neighbor.team != team || !(neighbor instanceof HeatBlock heatBlock)){
+                    continue;
+                }
+
+                // 去重：同一多格热源在 proximity 中会重复出现
+                boolean duplicate = false;
+                for(int i = 0; i < seen; i++){
+                    if(heatSeen[i] == neighbor){
+                        duplicate = true;
+                        break;
+                    }
+                }
+                if(duplicate) continue;
+                if(seen < heatSeen.length) heatSeen[seen++] = neighbor;
+
+                // 仅正交相邻：|dx|+|dy| 为单轴；斜对角不接收
+                int dx = neighbor.tile.x - tile.x;
+                int dy = neighbor.tile.y - tile.y;
+                if(dx != 0 && dy != 0){
                     continue;
                 }
 
@@ -1455,9 +1480,7 @@ public class MultiRecipeFactory extends GenericCrafter{
         }
 
         /**
-         * 逻辑 control config 的数值版：逻辑里 p1 是普通数字常量时走此重载。
-         * 原版 LExecutor$ControlI 中只有 `type.isObj && p1.isobj` 才走对象版，普通数字 p1.isobj=false，
-         * 因此 `control config <building> 3 0 0 0` 实际调用的是本方法（此前未重写，默认空实现导致配方不动）。
+         *  `control config <building> 3 0 0 0` 调用的是本方法
          * 编号按面板 1-based：1..n 选第 n 个配方，<=0 切回自动模式。
          */
         @Override
