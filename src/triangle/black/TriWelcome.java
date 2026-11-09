@@ -79,7 +79,11 @@ public class TriWelcome{
             TextureRegion triLogo = TriDraw.tex("TriLogo/TriLogo");
 
             // ============ 1) 欢迎界面布局：TriLogo 停靠位（动画“对应位置”）+ 下方文本 table + 按钮 table ============
-            float w = triLogo.width, h = triLogo.height; // 各帧与 TriLogo 同尺寸 1000x500（arc TextureRegion 用公开字段）
+            // 欢迎页 Logo 整体等比缩放为原来的 10/33：宽、高乘以同一比例（等比，不改变宽高比）。
+            // 统一改用缩放后的 w/h 作为分帧(5 张 TriLogo-1..5)、覆盖 TriLogo 与停靠 TriLogo 的尺寸，
+            // 使分帧组合体 → 覆盖 TriLogo 替换时尺寸连续不跳变；下方文本/按钮栈按缩放后高度自动重新垂直居中。
+            float LOGO_SCALE = 10f / 33f; // 缩放因子：10/33 ≈ 0.3030
+            float w = triLogo.width * LOGO_SCALE, h = triLogo.height * LOGO_SCALE; // 各帧与 TriLogo 同尺寸（arc TextureRegion 用公开字段）
             float sw = Core.graphics.getWidth(), sh = Core.graphics.getHeight();
             float cx = sw / 2f, cy = sh / 2f; // 屏幕中央（拼合终点）
 

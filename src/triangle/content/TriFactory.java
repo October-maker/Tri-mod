@@ -106,6 +106,7 @@ public class TriFactory {
             health = 120;
             itemCapacity = 40;
             squareSprite = true;
+            drawArrow = false;
             researchCostMultiplier = 0.75f;
             buildCostMultiplier = 0.8f;
             drawer = new DrawMulti(
@@ -141,6 +142,7 @@ public class TriFactory {
             health = 120;
             itemCapacity = 40;
             squareSprite = true;
+            drawArrow = false;
             researchCostMultiplier = 0.75f;
             buildCostMultiplier = 0.8f;
             drawer = new DrawMulti(
@@ -263,6 +265,7 @@ public class TriFactory {
             liquidCapacity = 120;
             stackLimit = 5;
             rotate = false;
+            drawArrow = false;
             verticalStackPanels = true;
             requirements(Category.crafting, with(TriItems.Cu,10,TriItems.TiAlloy,10,TriItems.FeSteel,20,Items.metaglass,10));
             drawer = new DrawMulti(
@@ -298,6 +301,7 @@ public class TriFactory {
             liquidCapacity = 120;
             stackLimit = 5;
             rotate = false;
+            drawArrow = false;
             verticalStackPanels = true;
             requirements(Category.crafting, with(TriItems.Cu,10,TriItems.TiAlloy,10,TriItems.FeSteel,15,Items.metaglass,15));
             drawer = new DrawMulti(
@@ -330,6 +334,7 @@ public class TriFactory {
             health = 67;
             itemCapacity = 50;
             rotate = false;
+            drawArrow = false;
             liquidCapacity = 320;
             requirements(Category.power , with(TriItems.TiAlloy,125,TriItems.FeSteel,105,TriItems.Cu,60,TriItems.MonocrystallineSi,30));
             drawer = new DrawMulti(

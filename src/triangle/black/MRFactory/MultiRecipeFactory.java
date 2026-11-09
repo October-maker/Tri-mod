@@ -1471,12 +1471,65 @@ public class MultiRecipeFactory extends GenericCrafter{
             });
         }
 
-        /** 方块状态：无配方或断电时显示“缺少输入”，其余沿用父类逻辑。 */
+        /**
+         * 当前“可生产”的配方（输入、热量、电力门槛均满足）是否全部输出仓已满。
+         * 用于自动模式的状态提示：此时不是缺输入，而是产得出来但没地方放。
+         */
+        private boolean allProducibleOutputsFull() {
+            boolean anyProducible = false;
+            for (int i = 0; i < recipes.size; i++) {
+                Recipe recipe = recipes.get(i);
+                if (isLocked(recipe)) continue;
+
+                boolean inputs = true;
+                for (ItemStack s : recipe.inputItem) {
+                    if (items.get(s.item) < s.amount) { inputs = false; break; }
+                }
+                if (inputs) {
+                    for (LiquidStack s : recipe.inputLiquid) {
+                        if (liquids.get(s.liquid) < s.amount) { inputs = false; break; }
+                    }
+                }
+                if (inputs) {
+                    for (PayloadStack s : recipe.inputPayload) {
+                        if (getPayloads().get(s.item) < s.amount) { inputs = false; break; }
+                    }
+                }
+                if (!inputs) continue;
+
+                // 与严格检索一致：热量/电力门槛不满足时，该配方不算“现在能够生产”
+                if (recipe.heatEnabled && recipe.heatRequirement > 0
+                        && recipe.stopLowTemperature && rawHeat < recipe.heatRequirement) {
+                    continue;
+                }
+                if (recipe.powerUse > 0 && (power.status <= 0 || powerConsumer.isUndervoltage(this, recipe))) {
+                    continue;
+                }
+
+                anyProducible = true;
+                // 只要还有一个能产出的配方，就不算“输出满”
+                if (canOutputForRecipe(recipe)) return false;
+            }
+            return anyProducible;
+        }
+
+        /** 方块状态：自动模式下可生产配方全满时显示“输出满”，否则无配方/断电显示“缺少输入”，其余沿用父类逻辑。 */
         @Override
         public BlockStatus status() {
-            if (enabled && getRecipe() == null) {return BlockStatus.noInput;}
-            else if (getRecipe() != null && power.status <= 0) {return BlockStatus.noInput;}
-            else return super.status();
+            Recipe current = getRecipe();
+            if (enabled) {
+                // 自动选择状态：输入与热量/电力都满足、但所有可生产配方输出仓已满 → 满
+                if (auto && allProducibleOutputsFull()) {
+                    return BlockStatus.noOutput;
+                }
+                if (current == null) {
+                    return BlockStatus.noInput;
+                }
+                if (power.status <= 0) {
+                    return BlockStatus.noInput;
+                }
+            }
+            return super.status();
         }
 
         /**
