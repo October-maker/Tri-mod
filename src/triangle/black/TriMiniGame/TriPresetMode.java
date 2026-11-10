@@ -108,12 +108,20 @@ public final class TriPresetMode{
         final String detailKey;
         /** 选中该项时执行：可直接改 rules，也可写敌方强化的静态配置（由事件钩子读取）。 */
         final Cons<Rules> apply;
+        /** 自定义词条价值；{@code -1} 表示未指定，按“选项档位”取（同类第 1/2/3 个选项记 1/2/3）。 */
+        final int customValue;
 
         Option(String label, boolean literal, String detailKey, Cons<Rules> apply){
+            this(label, literal, detailKey, apply, -1);
+        }
+
+        /** 带自定义价值的构造：{@code value} 为该词条的显示价值（1~3 等任意整数，-1 表示按档位）。 */
+        Option(String label, boolean literal, String detailKey, Cons<Rules> apply, int value){
             this.label = label;
             this.literal = literal;
             this.detailKey = detailKey;
             this.apply = apply;
+            this.customValue = value;
         }
 
         String text(){
@@ -122,6 +130,24 @@ public final class TriPresetMode{
 
         String detail(){
             return Core.bundle.get(detailKey, detailKey);
+        }
+    }
+
+    /**
+     * 已选词条的结构化条目：名称 / 价值 / 描述，供右侧详情逐条渲染“名称 + 价值数字 + 描述”的排版。
+     *
+     * <p>价值取值：优先用 {@link Option#customValue}（若 ≥ 0），否则按该选项在本类别中的档位
+     * （同类第 1/2/3 个选项分别记 1/2/3；单选项记 1）。
+     */
+    public static final class Entry{
+        public final String name;
+        public final int value;
+        public final String detail;
+
+        Entry(String name, int value, String detail){
+            this.name = name;
+            this.value = value;
+            this.detail = detail;
         }
     }
 
@@ -377,6 +403,28 @@ public final class TriPresetMode{
             if(c.selected >= 0) out.add(c.options.get(c.selected).detail());
         }
         return out;
+    }
+
+    /**
+     * 当前所有已选中词条的结构化条目（名称 / 价值 / 描述，按类别顺序）。
+     * 价值默认按选项档位（同类第 1/2/3 个选项记 1/2/3，单选项记 1），除非该选项设了自定义价值。
+     */
+    public static Seq<Entry> selectedEntries(){
+        Seq<Entry> out = new Seq<>();
+        for(Category c : categories){
+            if(c.selected < 0) continue;
+            Option o = c.options.get(c.selected);
+            int value = o.customValue >= 0 ? o.customValue : (c.selected + 1);
+            out.add(new Entry(o.text(), value, o.detail()));
+        }
+        return out;
+    }
+
+    /** 所有已选词条的价值总和（用于详情右上角“总价值”统计）。 */
+    public static int selectedValueTotal(){
+        int sum = 0;
+        for(Entry e : selectedEntries()) sum += e.value;
+        return sum;
     }
 
     /**
