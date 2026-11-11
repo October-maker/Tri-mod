@@ -9,8 +9,10 @@ import arc.scene.ui.ScrollPane;
 import arc.scene.ui.TextButton;
 import arc.scene.ui.layout.Table;
 import arc.struct.IntMap;
+import arc.struct.IntSeq;
 import arc.struct.ObjectMap;
 import arc.struct.Seq;
+import arc.math.geom.Point2;
 import arc.util.Strings;
 import arc.util.Time;
 import arc.util.io.Reads;
@@ -48,6 +50,53 @@ public class StackedMultiRecipeFactory extends MultiRecipeFactory{
     private static final ObjectMap<MultiRecipeFactory, Seq<StackedMultiRecipeFactory>> variants = new ObjectMap<>();
     /** 放置前捕获的旧建筑，用于迁移库存和层状态。 */
     private static final IntMap<Building> pending = new IntMap<>();
+    /**
+     * “变体覆盖同链工厂”的授权记录：tile 压缩坐标 -> 变体方块。
+     * 只有 {@link MultiRecipeFactory#getReplacement}（手动放置的计划被替换成变体）才会写入；
+     * 蓝图里直接带着变体方块时不会写入，因此无法通过覆盖已有工厂来叠层。
+     */
+    private static final IntMap<Block> stackingApproved = new IntMap<>();
+    private static final IntMap<Integer> stackingApprovedFrame = new IntMap<>();
+    /** 授权有效期（秒）：够覆盖一次排队建造，超时自动失效，避免遗留“幽灵授权”。 */
+    private static final int approveTtlSeconds = 30;
+
+    /** 单调递增的秒计数，用作授权时间戳（Time.time 是游戏内累计秒）。 */
+    private static int approvalTick(){
+        return (int)Time.time;
+    }
+
+    /** 授权某个格子可以用该变体覆盖同链工厂。 */
+    public static void approve(int x, int y, Block block){
+        int pos = Point2.pack(x, y);
+        stackingApproved.put(pos, block);
+        stackingApprovedFrame.put(pos, approvalTick());
+        if(stackingApproved.size > 256) pruneApprovals();
+    }
+
+    /** 该格子是否拿到过用此变体叠层的授权。 */
+    private static boolean isApproved(int pos, Block block){
+        if(stackingApproved.get(pos) != block) return false;
+        int frame = stackingApprovedFrame.get(pos, -1000000);
+        return approvalTick() - frame <= approveTtlSeconds;
+    }
+
+    /** 叠层已经落成，撤销授权。 */
+    public static void consumeApproval(int pos){
+        stackingApproved.remove(pos);
+        stackingApprovedFrame.remove(pos);
+    }
+
+    private static void pruneApprovals(){
+        IntSeq stale = new IntSeq();
+        for(IntMap.Entry<Block> entry : stackingApproved){
+            int frame = stackingApprovedFrame.get(entry.key, -1000000);
+            if(approvalTick() - frame > approveTtlSeconds) stale.add(entry.key);
+        }
+        for(int i = 0; i < stale.size; i++){
+            stackingApproved.remove(stale.get(i));
+            stackingApprovedFrame.remove(stale.get(i));
+        }
+    }
 
     static{
         Events.on(BlockBuildBeginEvent.class, event -> {
@@ -156,7 +205,18 @@ public class StackedMultiRecipeFactory extends MultiRecipeFactory{
         return layersOf(tile.build.block) >= Math.max(1, base.stackLimitNow());
     }
 
-    private static MultiRecipeFactory baseOf(Block block){
+    /** 按层数取基础工厂的变体；不存在时返回 null。 */
+    public static StackedMultiRecipeFactory variantOf(MultiRecipeFactory base, int layerCount){
+        if(base == null) return null;
+        Seq<StackedMultiRecipeFactory> list = variants.get(base);
+        if(list == null) return null;
+        for(StackedMultiRecipeFactory variant : list){
+            if(variant.layerCount == layerCount) return variant;
+        }
+        return null;
+    }
+
+    public static MultiRecipeFactory baseOf(Block block){
         if(block instanceof StackedMultiRecipeFactory stacked) return stacked.baseFactory;
         if(block instanceof MultiRecipeFactory factory) return factory;
         return null;
@@ -181,8 +241,13 @@ public class StackedMultiRecipeFactory extends MultiRecipeFactory{
         // 用 placeablePlayer=false 从建造菜单隐藏，同时保留替换放置能力。
         buildVisibility = base.buildVisibility;
         placeablePlayer = false;
+        // 变体不在建造菜单中，但必须被视为“已解锁”：
+        // 原版 InputHandler 只有在 replacement.unlockedNow() 为真时才会把放置计划替换成变体，
+        // 否则复制（蓝图/存档）出来的堆叠工厂无法继续向上堆叠（战役模式下尤其明显）。
+        alwaysUnlocked = true;
         rotate = base.rotate;
         rotateDraw = base.rotateDraw;
+        quickRotate = false;
         drawer = base.drawer;
         update = base.update;
         hasItems = base.hasItems;
@@ -242,10 +307,12 @@ public class StackedMultiRecipeFactory extends MultiRecipeFactory{
 
     @Override
     public boolean canPlaceOn(Tile tile, Team team, int rotation){
-        if(tile != null && tile.build != null && sameChain(tile.build.block)
-            && layersOf(tile.build.block) + 1 == layerCount
-            && layerCount <= baseFactory.stackLimitNow()){
-            return true;
+        if(tile != null && tile.build != null && sameChain(tile.build.block)){
+            // 变体覆盖同链工厂只在“手动放置计划被替换成变体”时被授权（见 getReplacement）；
+            // 蓝图里直接带着变体方块的计划没有授权，因此无法触发叠层。
+            return isApproved(tile.pos(), this)
+                && layersOf(tile.build.block) + 1 == layerCount
+                && layerCount <= baseFactory.stackLimitNow();
         }
         return super.canPlaceOn(tile, team, rotation);
     }
@@ -253,8 +320,7 @@ public class StackedMultiRecipeFactory extends MultiRecipeFactory{
     @Override
     public boolean canReplace(Block other){
         if(other != null && sameChain(other)){
-            // 只允许“上一层覆盖下一层”。顶层变体仍可作为新方块覆盖 7 层，
-            // 但它自己不能再被更高层覆盖（replaceable=false 负责拦截旧方块方向）。
+            // 授权由 canPlaceOn 负责判定，这里只保留“上一层覆盖下一层”的关系。
             return layerCount == layersOf(other) + 1;
         }
         return super.canReplace(other);
@@ -290,6 +356,8 @@ public class StackedMultiRecipeFactory extends MultiRecipeFactory{
         public void created(){
             super.created();
             ensureLayers();
+            // 叠层已经落成，撤销这一格的叠层授权。
+            consumeApproval(tile.pos());
 
             Building old = pending.remove(tile.pos());
             if(old != null && old != this){

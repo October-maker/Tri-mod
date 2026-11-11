@@ -86,7 +86,7 @@ public class TriPresetDialog extends BaseDialog{
     /** 入场/位移动画基础时长。 */
     private static final float OPEN_DUR = 0.3f;
     /** 每个词条按钮依次显示的间隔。 */
-    private static final float STAGGER = 0.025f;
+    private static final float STAGGER = 0.015f;
     /** 缩略图 ↔ “地图”按钮 形变动画时长。 */
     private static final float MORPH_DUR = 0.32f;
 

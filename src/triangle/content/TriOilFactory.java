@@ -543,7 +543,6 @@ public class TriOilFactory{
             size = 3;
             health = 50;
             itemCapacity = 40;
-            liquidCapacity = 120;
             squareSprite = true;
             researchCostMultiplier = 0.75f;
             buildCostMultiplier = 0.8f;

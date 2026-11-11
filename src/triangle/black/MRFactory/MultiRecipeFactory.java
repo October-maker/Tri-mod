@@ -44,6 +44,7 @@ import mindustry.ui.Bar;
 import mindustry.ui.Styles;
 import mindustry.world.Block;
 import mindustry.world.Tile;
+import mindustry.world.blocks.ConstructBlock.ConstructBuild;
 import mindustry.world.blocks.heat.HeatBlock;
 import mindustry.world.blocks.heat.HeatConsumer;
 import mindustry.world.blocks.payloads.BuildPayload;
@@ -131,7 +132,12 @@ public class MultiRecipeFactory extends GenericCrafter{
     public Block getReplacement(BuildPlan req, Seq<BuildPlan> plans){
         if(stackable){
             Block variant = StackedMultiRecipeFactory.nextVariant(this, req);
-            if(variant != null) return variant;
+            if(variant != null){
+                // 只有经过这里（手动放置被替换成变体）才授权“变体覆盖同链工厂”。
+                // 蓝图里直接带着变体方块时不会经过本方法，因此无法借此叠层。
+                StackedMultiRecipeFactory.approve(req.x, req.y, variant);
+                return variant;
+            }
             // 已达上限时把计划固定到当前顶层方块；顶层 replaceable=false，
             // 避免把已有堆叠替换回基础方块。
             Block top = StackedMultiRecipeFactory.topVariant(this, req);
@@ -140,14 +146,33 @@ public class MultiRecipeFactory extends GenericCrafter{
         return super.getReplacement(req, plans);
     }
 
-    /** 允许同实例覆盖放置，作为堆叠入口。 */
+    /**
+     * 蓝图粘贴时计划里带的是基础方块，而原版 {@code Build.beginPlace} 里有一条分支：
+     * 同团队、同方块、且方块允许 quickRotate 时，只把已有建筑的 rotation 改掉并 return，
+     * 根本不会重建（于是看起来“盖上去”了，实际还是原来那一层）。
+     * 此外 {@code validPlace} 对“同方块 + 同旋转”的覆盖也会直接判非法。
+     * 这里在计划入库前把要建造的方块换成下一层变体：既真正叠层，也让放置走正常重建流程。
+     */
+    @Override
+    public void onNewPlan(BuildPlan plan){
+        super.onNewPlan(plan);
+        if(!stackable || plan == null || plan.block == null) return;
+        // 变体计划（已堆叠工厂的蓝图、或已被 getReplacement 换过的手动计划）不在这里升级。
+        if(this instanceof StackedMultiRecipeFactory) return;
+        Block variant = StackedMultiRecipeFactory.nextVariant(this, plan);
+        if(variant == null) return;
+        StackedMultiRecipeFactory.approve(plan.x, plan.y, variant);
+        plan.block = variant;
+    }
+
     @Override
     public boolean canPlaceOn(Tile tile, mindustry.game.Team team, int rotation){
         if(stackable && tile != null && tile.build != null){
             Block existing = tile.build.block;
             boolean chain = existing == this
                 || (existing instanceof StackedMultiRecipeFactory variant && variant.baseFactory == this);
-            if(chain && StackedMultiRecipeFactory.layersOf(existing) < stackLimitNow()) return true;
+            // 同链时由这里全权判定：未到上限才允许覆盖，达到上限直接判非法（不落回 super）。
+            if(chain) return StackedMultiRecipeFactory.layersOf(existing) < stackLimitNow();
         }
         return super.canPlaceOn(tile, team, rotation);
     }
@@ -158,6 +183,43 @@ public class MultiRecipeFactory extends GenericCrafter{
         if(stackable && other instanceof StackedMultiRecipeFactory variant
             && variant.baseFactory == this && variant.stackable) return true;
         return super.canReplace(other);
+    }
+
+    /**
+     * 蓝图粘贴等“非替换”放置路径不经过 {@link #getReplacement}，
+     * 会直接把基础方块盖到已有同链工厂上（结果仍是 1 层）。
+     * 这里在放置阶段把建造目标提升为下一层变体，使粘贴也能叠层。
+     */
+    @Override
+    public void placeBegan(Tile tile, Block previous, Unit builder){
+        super.placeBegan(tile, previous, builder);
+        if(tile == null || previous == null) return;
+
+        MultiRecipeFactory base = StackedMultiRecipeFactory.baseOf(this);
+        if(base == null || !base.stackable) return;
+        if(StackedMultiRecipeFactory.baseOf(previous) != base) return;
+
+        int prevLayers = StackedMultiRecipeFactory.layersOf(previous);
+        if(prevLayers <= 0) return;
+        int next = prevLayers + 1;
+        if(next > base.stackLimitNow()) return;
+
+        StackedMultiRecipeFactory target = StackedMultiRecipeFactory.variantOf(base, next);
+        if(target == null || target == this) return;
+
+        // 常规建造：此格已被替换成 ConstructBlock 的建造占位，改掉建造目标即可。
+        if(tile.build instanceof ConstructBuild cb){
+            if(cb.current == this) cb.setConstruct(target, cb.previous);
+            return;
+        }
+
+        // 沙盒即时建造：placeBegan 早于 constructFinish，下一帧再把成品换成变体。
+        int pos = tile.pos();
+        Core.app.post(() -> {
+            Tile t = Vars.world.tile(pos);
+            if(t == null || t.build == null || t.build.block != this) return;
+            t.setBlock(target, t.team(), t.build.rotation);
+        });
     }
 
     @Override
@@ -288,6 +350,9 @@ public class MultiRecipeFactory extends GenericCrafter{
         // 即使贴图不旋转，也保留逻辑 rotation，故 rotateDraw 仍为 false。
         rotate = true;
         rotateDraw = false;
+        // 关闭 quickRotate：否则“同方块覆盖同方块”会被原版当成只改朝向并直接 return，
+        // 蓝图粘贴就永远盖不上（更不会叠层）。
+        quickRotate = false;
 
         // 设置输入过滤器和输出列表（去重；同一产物可能被多个配方共享）。
         Seq<ItemStack> allOutputItems = new Seq<>();
@@ -342,6 +407,16 @@ public class MultiRecipeFactory extends GenericCrafter{
 
         craftTime = 60f;
         if (!liquidOutput.isEmpty()) outputsLiquid = true;
+
+        // 把“可堆叠”写入方块描述：description 已由父类 load() 从 bundle 读取。
+        if(stackable){
+            String stackDesc = Core.bundle.format("tri.stack.description", stackLimit);
+            if(description == null || description.isEmpty()){
+                description = stackDesc;
+            }else if(!description.contains(stackDesc)){
+                description += "\n" + stackDesc;
+            }
+        }
     }
 
     @Override
