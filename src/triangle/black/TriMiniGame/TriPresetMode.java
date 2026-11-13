@@ -29,6 +29,7 @@ import mindustry.gen.Bullet;
 import mindustry.gen.Groups;
 import mindustry.gen.Unit;
 import mindustry.maps.Map;
+import mindustry.world.Block;
 import mindustry.world.Tile;
 import triangle.content.TriUnits;
 
@@ -81,6 +82,19 @@ public final class TriPresetMode{
      * {@link #applyReinforce(Rules)}）。
      */
     private static boolean reinforceEnabled = false;
+
+    /**
+     * “禁用任何发射台/接收台”词条是否被选中。
+     *
+     * <p>与增援同理，这里只置标记：真正的拉黑要等 {@link RulesLoadEvent}，
+     * 因为 {@code retainContentFields} 在地图载入时可能把 {@code bannedBlocks} 整份换成地图自带的那份。
+     */
+    private static boolean launchPadsDisabled = false;
+
+    /** 基础设置里默认放开的原版发射台/接收台（不含旧版 3x3 发射台）。 */
+    private static final String[] PAD_NAMES = {"advanced-launch-pad", "landing-pad"};
+    /** 禁用词条要拉黑的对象：任何发射台/接收台，旧版发射台也算在内。 */
+    private static final String[] ALL_PAD_NAMES = {"advanced-launch-pad", "landing-pad", "launch-pad"};
 
     /**
      * 建筑耐久的强化范围是否包含“中立（derelict）”等非玩家队伍的建筑。
@@ -143,11 +157,15 @@ public final class TriPresetMode{
         public final String name;
         public final int value;
         public final String detail;
+        /** 所属类别下标与选项下标：两者组合即该词条的唯一标识，供界面按 key 复用已渲染的词条框。 */
+        public final int category, option;
 
-        Entry(String name, int value, String detail){
+        Entry(String name, int value, String detail, int category, int option){
             this.name = name;
             this.value = value;
             this.detail = detail;
+            this.category = category;
+            this.option = option;
         }
     }
 
@@ -171,7 +189,8 @@ public final class TriPresetMode{
      * - 敌方建筑生命：+100% / +200% / +400%（实例级耐久）；
      * - 敌方炮台伤害：+100% / +200% / +400%（敌方建筑发射的子弹实例级）；
      * - 波次增援：第 1~10 波每波额外 5 个 triangle-coreUnit（单选项）；
-     * - 我方单位伤害 / 我方炮台伤害 / 我方建筑生命 / 我方单位生命：各三段式 -25% / -50% / -75%。
+     * - 我方单位伤害 / 我方炮台伤害 / 我方建筑生命 / 我方单位生命：各三段式 -25% / -50% / -75%；
+     * - 禁用发射台/接收台：单选项，价值固定 3 分（{@link Option#customValue}）。
      */
     private static final Seq<Category> categories = Seq.with(
             new Category(
@@ -216,7 +235,11 @@ public final class TriPresetMode{
             new Category(
                     new Option("-25%", true, "tri.preset.detail.playerUnitHealth.x1", r -> playerUnitHealth = 0.75f),
                     new Option("-50%", true, "tri.preset.detail.playerUnitHealth.x2", r -> playerUnitHealth = 0.5f),
-                    new Option("-75%", true, "tri.preset.detail.playerUnitHealth.x3", r -> playerUnitHealth = 0.25f))
+                    new Option("-75%", true, "tri.preset.detail.playerUnitHealth.x3", r -> playerUnitHealth = 0.25f)),
+            // 单选项：禁用任何发射台/接收台。价值固定 3 分；排在第 3 个单选项（网格第 0 列第 2 行）
+            new Category(
+                    new Option("tri.preset.value.pads", false, "tri.preset.detail.pads.off",
+                            r -> launchPadsDisabled = true, 3))
     );
 
     private TriPresetMode(){}
@@ -305,6 +328,7 @@ public final class TriPresetMode{
         Events.on(RulesLoadEvent.class, e -> {
             if(!presetSession) return;
             applyReinforceGroups(e.rules);
+            applyLaunchPads(e.rules);
         });
 
         // 建筑（双方）：地图自带的存量建筑，世界加载完成后遍历一次。
@@ -411,11 +435,12 @@ public final class TriPresetMode{
      */
     public static Seq<Entry> selectedEntries(){
         Seq<Entry> out = new Seq<>();
-        for(Category c : categories){
+        for(int i = 0; i < categories.size; i++){
+            Category c = categories.get(i);
             if(c.selected < 0) continue;
             Option o = c.options.get(c.selected);
             int value = o.customValue >= 0 ? o.customValue : (c.selected + 1);
-            out.add(new Entry(o.text(), value, o.detail()));
+            out.add(new Entry(o.text(), value, o.detail(), i, c.selected));
         }
         return out;
     }
@@ -508,6 +533,34 @@ public final class TriPresetMode{
     private static void applyEnemyConfig(){
         resetEnemyBuff();
         applyModifiers(new Rules());
+    }
+
+    /**
+     * 发射台/接收台的基础设置：默认放开，选中“禁用”词条时整组拉黑。
+     *
+     * <p>原版把这两类方块的可见性绑在战役上（{@code BuildVisibility.notLegacyLaunchPadOnly}：
+     * 只有“不在对局中 / 沙盒无限资源 / 战役且未启用旧版发射台机制”才可见），
+     * 所以在自定义生存里 {@code Block.isHidden()} 会返回 true，建造菜单里根本选不到。
+     * {@code Block.isHidden()} 的第二个判据是 {@code state.rules.revealedBlocks.contains(this)}，
+     * 因此把它们塞进 {@code revealedBlocks} 就等于“已揭示”，无需改原版类。
+     *
+     * <p>禁用走 {@code bannedBlocks} + {@code hideBannedBlocks}：前者让 {@code Block.isBanned()} 为真
+     * （放不下去），后者让 {@code Block.isVisible()} 为假（菜单里彻底不显示）。
+     */
+    private static void applyLaunchPads(Rules rules){
+        if(rules == null || Vars.content == null) return;
+
+        for(String name : PAD_NAMES){
+            Block pad = Vars.content.block(name);
+            if(pad != null && rules.revealedBlocks != null) rules.revealedBlocks.add(pad);
+        }
+
+        if(!launchPadsDisabled) return;
+        for(String name : ALL_PAD_NAMES){
+            Block pad = Vars.content.block(name);
+            if(pad != null && rules.bannedBlocks != null) rules.bannedBlocks.add(pad);
+        }
+        rules.hideBannedBlocks = true;
     }
 
     /**
@@ -766,6 +819,7 @@ public final class TriPresetMode{
         playerBlockHealth = 1f;
         playerTurretDamage = 1f;
         reinforceEnabled = false;
+        launchPadsDisabled = false;
         buffedUnits.clear();
         scaledBullets.clear();
         prevBuildingHealth.clear();
