@@ -10,18 +10,29 @@ import arc.graphics.g2d.Lines;
 import arc.graphics.g2d.TextureRegion;
 import arc.math.Mathf;
 import arc.scene.style.Drawable;
+import arc.scene.Element;
+import arc.scene.event.ClickListener;
+import arc.scene.event.InputEvent;
+import arc.scene.event.InputListener;
+import arc.scene.event.Touchable;
 import arc.scene.ui.Button;
 import arc.scene.ui.Image;
+import arc.scene.ui.Label;
 import arc.scene.ui.TextButton;
+import arc.scene.ui.Tooltip;
+import arc.scene.ui.layout.Cell;
 import arc.scene.ui.layout.Stack;
 import arc.scene.ui.layout.Table;
 import arc.struct.FloatSeq;
 import arc.struct.ObjectMap;
 import arc.struct.Seq;
 import arc.util.Log;
+import arc.util.Align;
+import arc.util.Eachable;
 import arc.util.Scaling;
 import arc.util.Strings;
 import arc.util.Time;
+import arc.util.Tmp;
 import arc.util.io.Reads;
 import arc.util.io.Writes;
 import mindustry.content.Items;
@@ -43,8 +54,8 @@ import mindustry.type.*;
 import mindustry.ui.Bar;
 import mindustry.ui.Styles;
 import mindustry.world.Block;
+import mindustry.world.Build;
 import mindustry.world.Tile;
-import mindustry.world.blocks.ConstructBlock.ConstructBuild;
 import mindustry.world.blocks.heat.HeatBlock;
 import mindustry.world.blocks.heat.HeatConsumer;
 import mindustry.world.blocks.payloads.BuildPayload;
@@ -132,12 +143,7 @@ public class MultiRecipeFactory extends GenericCrafter{
     public Block getReplacement(BuildPlan req, Seq<BuildPlan> plans){
         if(stackable){
             Block variant = StackedMultiRecipeFactory.nextVariant(this, req);
-            if(variant != null){
-                // 只有经过这里（手动放置被替换成变体）才授权“变体覆盖同链工厂”。
-                // 蓝图里直接带着变体方块时不会经过本方法，因此无法借此叠层。
-                StackedMultiRecipeFactory.approve(req.x, req.y, variant);
-                return variant;
-            }
+            if(variant != null) return variant;
             // 已达上限时把计划固定到当前顶层方块；顶层 replaceable=false，
             // 避免把已有堆叠替换回基础方块。
             Block top = StackedMultiRecipeFactory.topVariant(this, req);
@@ -146,33 +152,14 @@ public class MultiRecipeFactory extends GenericCrafter{
         return super.getReplacement(req, plans);
     }
 
-    /**
-     * 蓝图粘贴时计划里带的是基础方块，而原版 {@code Build.beginPlace} 里有一条分支：
-     * 同团队、同方块、且方块允许 quickRotate 时，只把已有建筑的 rotation 改掉并 return，
-     * 根本不会重建（于是看起来“盖上去”了，实际还是原来那一层）。
-     * 此外 {@code validPlace} 对“同方块 + 同旋转”的覆盖也会直接判非法。
-     * 这里在计划入库前把要建造的方块换成下一层变体：既真正叠层，也让放置走正常重建流程。
-     */
-    @Override
-    public void onNewPlan(BuildPlan plan){
-        super.onNewPlan(plan);
-        if(!stackable || plan == null || plan.block == null) return;
-        // 变体计划（已堆叠工厂的蓝图、或已被 getReplacement 换过的手动计划）不在这里升级。
-        if(this instanceof StackedMultiRecipeFactory) return;
-        Block variant = StackedMultiRecipeFactory.nextVariant(this, plan);
-        if(variant == null) return;
-        StackedMultiRecipeFactory.approve(plan.x, plan.y, variant);
-        plan.block = variant;
-    }
-
+    /** 允许同实例覆盖放置，作为堆叠入口。 */
     @Override
     public boolean canPlaceOn(Tile tile, mindustry.game.Team team, int rotation){
         if(stackable && tile != null && tile.build != null){
             Block existing = tile.build.block;
             boolean chain = existing == this
                 || (existing instanceof StackedMultiRecipeFactory variant && variant.baseFactory == this);
-            // 同链时由这里全权判定：未到上限才允许覆盖，达到上限直接判非法（不落回 super）。
-            if(chain) return StackedMultiRecipeFactory.layersOf(existing) < stackLimitNow();
+            if(chain && StackedMultiRecipeFactory.layersOf(existing) < stackLimitNow()) return true;
         }
         return super.canPlaceOn(tile, team, rotation);
     }
@@ -185,43 +172,6 @@ public class MultiRecipeFactory extends GenericCrafter{
         return super.canReplace(other);
     }
 
-    /**
-     * 蓝图粘贴等“非替换”放置路径不经过 {@link #getReplacement}，
-     * 会直接把基础方块盖到已有同链工厂上（结果仍是 1 层）。
-     * 这里在放置阶段把建造目标提升为下一层变体，使粘贴也能叠层。
-     */
-    @Override
-    public void placeBegan(Tile tile, Block previous, Unit builder){
-        super.placeBegan(tile, previous, builder);
-        if(tile == null || previous == null) return;
-
-        MultiRecipeFactory base = StackedMultiRecipeFactory.baseOf(this);
-        if(base == null || !base.stackable) return;
-        if(StackedMultiRecipeFactory.baseOf(previous) != base) return;
-
-        int prevLayers = StackedMultiRecipeFactory.layersOf(previous);
-        if(prevLayers <= 0) return;
-        int next = prevLayers + 1;
-        if(next > base.stackLimitNow()) return;
-
-        StackedMultiRecipeFactory target = StackedMultiRecipeFactory.variantOf(base, next);
-        if(target == null || target == this) return;
-
-        // 常规建造：此格已被替换成 ConstructBlock 的建造占位，改掉建造目标即可。
-        if(tile.build instanceof ConstructBuild cb){
-            if(cb.current == this) cb.setConstruct(target, cb.previous);
-            return;
-        }
-
-        // 沙盒即时建造：placeBegan 早于 constructFinish，下一帧再把成品换成变体。
-        int pos = tile.pos();
-        Core.app.post(() -> {
-            Tile t = Vars.world.tile(pos);
-            if(t == null || t.build == null || t.build.block != this) return;
-            t.setBlock(target, t.team(), t.build.rotation);
-        });
-    }
-
     @Override
     public void drawPlace(int x, int y, int rotation, boolean valid){
         super.drawPlace(x, y, rotation, valid);
@@ -229,6 +179,28 @@ public class MultiRecipeFactory extends GenericCrafter{
             && StackedMultiRecipeFactory.atStackLimit(this, x, y)){
             drawPlaceText(Core.bundle.get("tri.stack.limit"), x, y, false);
         }
+    }
+
+    /**
+     * 预览合法性：原版按“菜单里的方块”判定，同方块同朝向覆盖到自身会被判非法，
+     * 而堆叠实际会把计划换成下一层变体。这里只有“同链覆盖且还有层数”这一种情况
+     * 改判为合法，其它非法原因（遮挡、敌核心范围等）仍然显示红色虚影。
+     */
+    private boolean stackPreviewValid(BuildPlan req){
+        if(!stackable || req == null || Vars.world == null || Vars.player == null) return false;
+        Tile tile = Vars.world.tile(req.x, req.y);
+        if(tile == null || tile.build == null) return false;
+        if(tile.team() != Vars.player.team()) return false;
+        Block existing = tile.build.block;
+        boolean chain = existing == this
+            || (existing instanceof StackedMultiRecipeFactory variant && variant.baseFactory == this);
+        if(!chain) return false;
+        return StackedMultiRecipeFactory.nextVariant(this, req) != null;
+    }
+
+    @Override
+    public void drawPlan(BuildPlan req, Eachable<BuildPlan> list, boolean valid){
+        super.drawPlan(req, list, valid || stackPreviewValid(req));
     }
 
     /** 一条堆叠层数科技增长线。 */
@@ -350,9 +322,6 @@ public class MultiRecipeFactory extends GenericCrafter{
         // 即使贴图不旋转，也保留逻辑 rotation，故 rotateDraw 仍为 false。
         rotate = true;
         rotateDraw = false;
-        // 关闭 quickRotate：否则“同方块覆盖同方块”会被原版当成只改朝向并直接 return，
-        // 蓝图粘贴就永远盖不上（更不会叠层）。
-        quickRotate = false;
 
         // 设置输入过滤器和输出列表（去重；同一产物可能被多个配方共享）。
         Seq<ItemStack> allOutputItems = new Seq<>();
@@ -839,6 +808,183 @@ public class MultiRecipeFactory extends GenericCrafter{
         public int selectedIndex = -1;
         /** 欠压跳闸后的恢复锁定（秒）；避免一断电就重启、重启又断电的逐帧振荡。 */
         public float undervoltageLock = 0f;
+        /** 最近一次被逻辑 {@code control config} 驱动的时刻（Vars 的 Time.time）；< 0 表示从未被逻辑控制。 */
+        public float logicControlTime = -1f;
+        /** 逻辑控制的判定时间窗（秒）。逻辑每帧都可能执行，超出窗口即认为逻辑已不再驱动本建筑。 */
+        public static final float logicControlWindow = 1.5f;
+        /** true = 玩家启用了“超控”：本建筑忽略任何逻辑控制（control 等逻辑入口直接跳过）。随配置/蓝图/存档保存。 */
+        public boolean logicOverride = false;
+        /** 配置编码里“超控”的偏移基数；旧配置值（-1 与 0..n-1）都小于它，因此向后兼容。 */
+        protected static final int logicOverrideBase = 10000;
+        /** 控制面板刷新回调（面板打开时挂上，关闭后为 null）：逻辑控制指令到达时立刻重刷面板，避免下一帧才更新。 */
+        protected transient Runnable panelRefresh;
+
+        /** 本建筑当前是否处于逻辑控制下（最近 logicControlWindow 秒内收到过 control config，且玩家未启用超控）。 */
+        public boolean logicControlled(){
+            return !logicOverride && logicControlTime >= 0f && Time.time - logicControlTime <= logicControlWindow;
+        }
+
+        /** 悬停描述文案：随当前“受控 / 超控”状态变化。 */
+        protected String logicHintDesc(){
+            return logicOverride ? Core.bundle.get("tri.stack.logicOverrideDesc") : Core.bundle.get("tri.stack.logicControlledDesc");
+        }
+
+        /** 就地重填悬停 tooltip 的文案（正在显示时会立刻反映最新状态，不改变面板布局）。 */
+        protected void refillHintTooltip(Tooltip tooltip){
+            Table c = tooltip.container;
+            String desc = logicHintDesc();
+            // 文案没变就不重建：悬停期间会被驱动循环反复调用，避免每帧 clear+add 造成抖动
+            if(c.getChildren().size == 1 && c.getChildren().first() instanceof Label
+                && desc.contentEquals(((Label)c.getChildren().first()).getText())) return;
+            c.clearChildren();
+            c.add(desc);
+            if(c.hasParent()) c.pack();
+        }
+
+        /**
+         * 把“自动/手动配方 + 超控状态”编码成一个 int（配置、蓝图、存档共用同一份编码）。
+         * 普通状态保持旧编码（自动 -1 / 手动为索引）；超控状态加 {@link #logicOverrideBase} 偏移。
+         */
+        protected int encodeConfig(){
+            if(logicOverride) return logicOverrideBase + (auto ? 0 : selectedIndex + 1);
+            return auto ? -1 : selectedIndex;
+        }
+
+        /** 解码 {@link #encodeConfig()} 的结果；旧值（-1 / 0..n-1）按“未超控”处理。 */
+        protected void decodeConfig(int value){
+            if(value >= logicOverrideBase){
+                logicOverride = true;
+                int sel = value - logicOverrideBase;
+                if(sel == 0 || sel - 1 >= recipes.size){
+                    // 自动模式（或索引越界时退回自动），超控状态保持
+                    auto = true;
+                    selectedIndex = -1;
+                }else{
+                    auto = false;
+                    selectedIndex = sel - 1;
+                }
+            }else{
+                logicOverride = false;
+                if(value < 0){
+                    auto = true;
+                    selectedIndex = -1;
+                }else if(value < recipes.size){
+                    auto = false;
+                    selectedIndex = value;
+                }
+            }
+        }
+
+        /**
+         * 建成本体时若存在被替换的旧建筑（放置覆盖、或降层换回 1 层），迁移库存与配方状态。
+         * 堆叠变体在自己的 created() 里还要迁移各层状态，所以这里只做只读搬运，不消耗迁移记录。
+         */
+        @Override
+        public void created(){
+            super.created();
+            StackedMultiRecipeFactory.Snapshot snap = StackedMultiRecipeFactory.pendingSnapshot(tile.pos());
+            if(snap == null) return;
+            // 堆叠体在自己的 created() 里统一迁移（含逐层状态），这里再迁移一次会把库存重复累加。
+            if(this instanceof StackedMultiRecipeFactory.StackedBuild) return;
+
+            migrateFrom(snap);
+
+            if(snap.layers.size > 0){
+                StackedMultiRecipeFactory.LayerState src = snap.layers.first();
+                recipeIndex = src.recipeIndex;
+                auto = src.auto;
+                selectedIndex = src.selectedIndex;
+            }
+            StackedMultiRecipeFactory.clearPending(tile.pos());
+            // 换块后重新向热量/电力网络登记，保证热量输入和电网能自动连上。
+            Core.app.post(this::refreshNetworks);
+        }
+
+        /** 找出去掉自己以外的第一个同链旧建筑（原版完工时通过了 overwrote 交回来）。 */
+        protected Building previousFactory(Seq<Building> previous){
+            if(previous == null) return null;
+            for(Building b : previous){
+                if(b != null && b != this && b instanceof MultiRecipeFactoryBuild) return b;
+            }
+            return null;
+        }
+
+        /** 把旧建筑的库存整体搬过来；换成更小容量后超出部分丢弃（与原版缩容一致）。 */
+        protected void migrateFrom(Building old){
+            if(old == null) return;
+            if(items != null && old.items != null){
+                items.set(old.items);
+                clampItems();
+            }
+            if(liquids != null && old.liquids != null){
+                old.liquids.each((liquid, amount) -> liquids.add(liquid, amount));
+            }
+        }
+
+        /** 按纯数据快照迁移库存，避免持有旧建筑引用。 */
+        protected void migrateFrom(StackedMultiRecipeFactory.Snapshot snap){
+            if(snap == null) return;
+            if(items != null){
+                for(ItemStack stack : snap.items) items.add(stack.item, stack.amount);
+                clampItems();
+            }
+            if(liquids != null){
+                for(LiquidStack stack : snap.liquids) liquids.add(stack.liquid, stack.amount);
+            }
+        }
+
+        /** 超出本建筑物品容量上限的部分丢弃（缩容时与原版行为一致）。 */
+        protected void clampItems(){
+            if(items == null) return;
+            for(Item item : Vars.content.items()){
+                int amount = items.get(item);
+                if(amount > itemCapacity) items.remove(item, amount - itemCapacity);
+            }
+        }
+
+        /**
+         * 换块之后重新向两张网登记自己：
+         * 热量靠 {@code calculateHeat} 沿 proximity 做 BFS，换了 Building 之后必须重建邻接；
+         * 电力靠 PowerGraph，需要重新并到相邻电网并刷新整体需求。
+         * 少了这一步，升/降层后的新方块会“看不见”周边的供热与供电建筑。
+         */
+        public void refreshNetworks(){
+            updateProximity();
+            if(power != null && power.graph != null){
+                if(!power.graph.all.contains(this)) power.graph.add(this);
+                updatePowerGraph();
+                power.graph.update();
+            }
+        }
+
+        /**
+         * 原版 constructFinish 会用 ConstructBlock.prevBuild 调用本方法，
+         * 这是“放置覆盖 / 配置面板堆叠”时拿到真正旧建筑的唯一可靠时机
+         * （beginPlace / beginBreak 都会填充 prevBuild）。
+         * 直接调 Build.beginPlace 时拿不到旧建筑，所以迁移放在这里而不是 created()。
+         */
+        @Override
+        public void overwrote(Seq<Building> previous){
+            super.overwrote(previous);
+            Building old = previousFactory(previous);
+            if(old == null) return;
+            migrateFrom(old);
+            if(!(this instanceof StackedMultiRecipeFactory.StackedBuild)){
+                StackedMultiRecipeFactory.LayerState src = StackedMultiRecipeFactory.stateOf(old);
+                if(src != null){
+                    recipeIndex = src.recipeIndex;
+                    auto = src.auto;
+                    selectedIndex = src.selectedIndex;
+                }else if(old instanceof MultiRecipeFactoryBuild base){
+                    recipeIndex = base.recipeIndex;
+                    auto = base.auto;
+                    selectedIndex = base.selectedIndex;
+                }
+            }
+            if(tile != null) StackedMultiRecipeFactory.clearPending(tile.pos());
+            // 升层完工后同样要重新登记热量/电力网络。
+            Core.app.post(this::refreshNetworks);
+        }
 
         /** 当前生效配方；索引越界时返回 null。 */
         public Recipe getRecipe() {
@@ -897,26 +1043,20 @@ public class MultiRecipeFactory extends GenericCrafter{
             return getRecipe();
         }
 
-        /** 配置序列化：自动模式编码为 -1，手动模式编码为选中的配方索引（供蓝图复制/粘贴）。 */
+        /** 配置序列化：自动模式编码为 -1，手动模式编码为选中的配方索引，超控状态另加偏移（供蓝图复制/粘贴）。 */
         @Override
         public Object config() {
-            return auto ? -1 : selectedIndex;
+            return encodeConfig();
         }
 
         /**
          * 配置处理入口：蓝图粘贴（configureAny）与 UI 配置（configure）都会经 Call.tileConfig 触发本方法。
-         * 负数表示切回自动模式，其余值作为手动配方索引。
+         * 负数表示切回自动模式，其余值作为手动配方索引，>= logicOverrideBase 表示“超控 + 对应配方状态”。
          */
         @Override
         public void configured(Unit unit, Object value) {
             if (value instanceof Integer v) {
-                if (v < 0) {
-                    auto = true;
-                    selectedIndex = -1;
-                } else if (v >= 0 && v < recipes.size) {
-                    auto = false;
-                    selectedIndex = v;
-                }
+                decodeConfig(v);
             } else {
                 super.configured(unit, value);
             }
@@ -928,27 +1068,20 @@ public class MultiRecipeFactory extends GenericCrafter{
             return 1;
         }
 
-        /** 写入自动/手动配方状态。 */
+        /** 写入自动/手动配方状态与超控状态（同一份编码，旧存档仍可解码）。 */
         @Override
         public void write(Writes write) {
             super.write(write);
-            write.i(auto ? -1 : selectedIndex);
+            write.i(encodeConfig());
         }
 
-        /** 读取配方状态；旧存档（revision < 1）保持默认的自动模式。 */
+        /** 读取配方状态与超控状态；旧存档（revision < 1）保持默认的自动模式。 */
         @Override
         public void read(Reads read, byte revision) {
             super.read(read, revision);
             // 兼容旧存档：仅当版本 >= 1 时才存在额外 int，否则保持默认（自动模式）
             if (revision >= 1) {
-                int v = read.i();
-                if (v < 0) {
-                    auto = true;
-                    selectedIndex = -1;
-                } else if (v >= 0 && v < recipes.size) {
-                    auto = false;
-                    selectedIndex = v;
-                }
+                decodeConfig(read.i());
             }
         }
 
@@ -1425,6 +1558,56 @@ public class MultiRecipeFactory extends GenericCrafter{
         }
 
         /**
+         * 配置面板里的“堆叠 / 降层”按钮。点击后走原版放置流程（{@link Build#beginPlace}），
+         * 因此生成的是 ConstructBuild 建造蓝图：按变体 requirements 扣资源、按 buildTime 计时，
+         * 而不是直接替换方块。
+         *
+         * <p>按钮会登记到 logicButtons / baseDisabled，由面板的 refresh 统一套用
+         * “逻辑控制时置灰”的规则。
+         */
+        protected void addStackButtons(Table table, Seq<Button> logicButtons, Seq<Boolp> baseDisabled){
+            int layers = StackedMultiRecipeFactory.layersOf(block);
+            int limit = StackedMultiRecipeFactory.stackLimitFor(block);
+            if(layers <= 0 || limit <= 0) return;
+
+            boolean canUp = StackedMultiRecipeFactory.canStackUp(block);
+            boolean canDown = StackedMultiRecipeFactory.canStackDown(block);
+
+            TextButton upBtn = new TextButton(
+                Core.bundle.format("tri.stack.upgrade", layers, limit), Styles.defaultt);
+            upBtn.setDisabled(!canUp);
+            upBtn.clicked(() -> {
+                if(!canUp || logicControlled() || !isValid()) return;
+                // 先收起面板：本建筑随后会被建造蓝图替换
+                if(Vars.control != null && Vars.control.input != null){
+                    Vars.control.input.config.hideConfig();
+                }
+                Core.app.post(() -> StackedMultiRecipeFactory.stackUp(this));
+            });
+
+            TextButton downBtn = new TextButton(
+                Core.bundle.format("tri.stack.downgrade", layers, limit), Styles.defaultt);
+            downBtn.setDisabled(!canDown);
+            downBtn.clicked(() -> {
+                if(!canDown || logicControlled() || !isValid()) return;
+                if(Vars.control != null && Vars.control.input != null){
+                    Vars.control.input.config.hideConfig();
+                }
+                Core.app.post(() -> StackedMultiRecipeFactory.stackDown(this));
+            });
+
+            logicButtons.add(upBtn);
+            baseDisabled.add(() -> !canUp);
+            logicButtons.add(downBtn);
+            baseDisabled.add(() -> !canDown);
+
+            table.table(row -> {
+                row.add(upBtn).size(116f, 46f).padRight(8f);
+                row.add(downBtn).size(116f, 46f);
+            }).padBottom(8f).row();
+        }
+
+        /**
          * 配置界面：顶部 AUTO 开关，下方一行一个配方（输入图标 → 输出图标 + 选中指示灯）。
          * 点击已选中的配方会取消选择并恢复自动模式；打开面板时刷新一次，之后仅在状态变化时刷新。
          */
@@ -1443,12 +1626,93 @@ public class MultiRecipeFactory extends GenericCrafter{
             autoInactive.down = Tex.buttonTrans;
             autoInactive.fontColor = Color.white; // 半透明底，白字可读（标记失效时兜底）
 
-            Seq<Button> rows = new Seq<>();
             Seq<Image> checks = new Seq<>();
-
+            // 所有受“逻辑控制”影响的按钮：逻辑接管配方选择时统一置灰，面板只做状态显示
+            Seq<Button> logicButtons = new Seq<>();
+            Seq<Boolp> baseDisabled = new Seq<>();
             TextButton autoBtn = new TextButton("AUTO", autoActive);
+            logicButtons.add(autoBtn);
+            baseDisabled.add(() -> false);
 
-            // 状态刷新：AUTO 激活贴图/文本、配方指示灯、禁用灰显
+            // 逻辑控制提示：一个可点击的紫色按钮，背景沿用“置灰按钮”的 Tex.buttonDisabled，
+            // 外观与被禁用的按钮一致；点击在“被逻辑处理器控制 / 超控状态”之间切换。
+            TextButton.TextButtonStyle hintStyle = new TextButton.TextButtonStyle(Styles.defaultt);
+            hintStyle.up = Tex.buttonDisabled;
+            hintStyle.over = Tex.buttonOver;          // 悬停暂时高亮，与配方选择按钮的 over 一致
+            hintStyle.down = Tex.buttonDisabled;
+            hintStyle.disabled = Tex.buttonDisabled;
+            hintStyle.fontColor = Color.valueOf("a020f0");
+            hintStyle.disabledFontColor = Color.valueOf("a020f0");
+            TextButton logicHint = new TextButton("", hintStyle);
+            // 超控状态专用样式：文字改为橙色 #ffa500（其余贴图与紫色态一致）
+            TextButton.TextButtonStyle hintStyleOverride = new TextButton.TextButtonStyle(hintStyle);
+            hintStyleOverride.fontColor = Color.valueOf("ffa500");
+            hintStyleOverride.disabledFontColor = Color.valueOf("ffa500");
+            // 提示行容器：只在受控或超控时挂上按钮；移除后容器为空，行高为 0，不会留下空行
+            Table hintBox = new Table();
+            // 悬停描述：浮于控制面板之上的 tooltip（不参与面板布局，显示/隐藏不会改变面板尺寸）
+            // 样式对齐设置界面的条目描述：Styles.black8 黑底 + 4 边距；位置贴在提示按钮左下角的下方
+            final Runnable[] tipSync = {null};
+            Tooltip hintTooltip = new Tooltip(t -> {
+                t.background(Styles.black8);
+                t.margin(4f);
+                t.touchable = Touchable.disabled;
+            }) {
+                {
+                    // 已打开时只同步文案与位置，绝不再次 show（避免重复打开或被重新排布导致收起）
+                    tipSync[0] = () -> {
+                        refillHintTooltip(this);
+                        setContainerPosition(logicHint, 0f, 0f);
+                    };
+                    // 面板关闭、按钮离开场景后浮框若还挂着就自行收起，避免残留在屏幕上
+                    container.update(() -> {
+                        if (!logicHint.hasParent() && container.hasParent()) hide();
+                    });
+                }
+
+                @Override
+                public void show(Element target, float x, float y) {
+                    // 每次显示前重填文案，保证与当前“受控 / 超控”状态一致
+                    refillHintTooltip(this);
+                    super.show(target, x, y);
+                }
+
+                @Override
+                protected void setContainerPosition(Element target, float x, float y) {
+                    targetActor = target;
+                    // 垂直位置：贴住提示按钮的下边缘
+                    float yPos = target.localToStageCoordinates(Tmp.v1.set(0f, 0f)).y;
+                    container.pack();
+                    // 水平位置：以配置面板的水平中点为锚（按钮本身也是居中的）
+                    Tmp.v1.set(table.getWidth() / 2f, 0f);
+                    float centerX = table.localToStageCoordinates(Tmp.v1).x;
+                    container.setPosition(centerX - container.getWidth() / 2f, yPos, Align.left | Align.top);
+                    container.setOrigin(0f, target.getHeight());
+                }
+            };
+            hintTooltip.allowMobile = true;
+            logicHint.getLabel().setWrap(false);
+            // 提示按钮所在的单元格（用于按文案实测宽度适配）；按钮显示/隐藏时整格重建，避免残留空单元格
+            Cell<?>[] hintCell = {null};
+            boolean[] hintShown = {false};
+            final boolean[] hintHover = {false};
+            String[] lastHintText = {null};
+            boolean[] hintSizeDirty = {true};
+            // 刷新按钮状态前，先按“即将显示的文案”实测宽度并适配单元格，避免用旧宽度排版导致换行
+            Runnable applyHintText = () -> {
+                String text = logicOverride ? Core.bundle.get("tri.stack.logicOverrideOn") : Core.bundle.get("tri.stack.logicControlled");
+                if (text.equals(lastHintText[0]) && !hintSizeDirty[0]) return;
+                lastHintText[0] = text;
+                logicHint.setStyle(logicOverride ? hintStyleOverride : hintStyle);
+                logicHint.setText(text);
+                if (hintCell[0] != null) {
+                    // 宽度 = 当前文案的实测宽度（含贴图内边距），单元格不会再按旧宽度挤成两行
+                    hintCell[0].width(logicHint.getPrefWidth());
+                }
+                hintSizeDirty[0] = false;
+            };
+
+            // 状态刷新：AUTO 激活贴图/文本、配方指示灯、禁用灰显、逻辑提示
             Runnable refresh = () -> {
                 if (auto) {
                     autoBtn.setStyle(autoActive);
@@ -1457,20 +1721,96 @@ public class MultiRecipeFactory extends GenericCrafter{
                     autoBtn.setStyle(autoInactive);
                     autoBtn.setText("[white]" + Core.bundle.get("autoRecipe") + "[lightgray]" + Core.bundle.get("offRe"));
                 }
-                for (int i = 0; i < rows.size; i++) {
-                    rows.get(i).setDisabled(isLocked(recipes.get(i)));
+                // 受逻辑控制、或玩家已启用超控时都要显示提示按钮（超控时按钮仍显示）
+                boolean logic = logicControlled();
+                boolean override = logicOverride;
+                // 只在“显示/隐藏”状态真正翻转时重建该行：整格 clear + 重新 add，
+                // 避免反复 remove 留下的空单元格把按钮越挤越偏（切换若干次后向右漂移）
+                boolean show = logic || override;
+                if (show != hintShown[0]) {
+                    hintShown[0] = show;
+                    hintBox.clearChildren();
+                    hintCell[0] = null;
+                    if (show) {
+                        hintCell[0] = hintBox.add(logicHint).center().padBottom(6f);
+                        hintSizeDirty[0] = true;
+                    } else {
+                        // 逻辑结束、按钮撤下时同时收起悬停描述，避免浮框残留
+                        hintHover[0] = false;
+                        hintTooltip.hide();
+                    }
+                }
+                // 统一同步按钮文字/样式（内部按实测宽度适配单元格）
+                applyHintText.run();
+                for (int i = 0; i < logicButtons.size; i++) {
+                    logicButtons.get(i).setDisabled(logic || baseDisabled.get(i).get());
+                }
+                for (int i = 0; i < checks.size; i++) {
                     boolean sel = !auto && selectedIndex == i;
                     checks.get(i).setDrawable(sel ? Tex.checkOnOver : Tex.checkOff);
                 }
             };
 
+            // 悬停状态自己维护：不挂 Tooltip 监听器（它的 touchDown 会先把浮框摘掉再重开，表现为“收回”）
+            logicHint.addListener(new InputListener() {
+                @Override
+                public void enter(InputEvent event, float x, float y, int pointer, Element fromActor) {
+                    if (pointer == -1) hintHover[0] = true;
+                }
+
+                @Override
+                public void exit(InputEvent event, float x, float y, int pointer, Element toActor) {
+                    if (pointer == -1) hintHover[0] = false;
+                }
+            });
+            // 浮框开关的唯一入口：只要鼠标在按钮上就尝试打开；已经打开时只同步文案/位置，不重复打开
+            logicHint.update(() -> {
+                if (!logicHint.hasParent()) {
+                    if (hintTooltip.container.hasParent()) hintTooltip.hide();
+                    return;
+                }
+                if (hintHover[0]) {
+                    if (!hintTooltip.container.hasParent()) {
+                        hintTooltip.show(logicHint, 0f, 0f);
+                    } else if (tipSync[0] != null) {
+                        tipSync[0].run();
+                    }
+                } else if (hintTooltip.container.hasParent()) {
+                    hintTooltip.hide();
+                }
+            });
+            // 点击切换超控状态（切换后通过 configure 同步并进入蓝图/存档）
+            logicHint.addListener(new ClickListener() {
+                @Override
+                public void clicked(InputEvent event, float x, float y) {
+                    if (!logicHint.hasParent()) return;
+                    logicOverride = !logicOverride;
+                    // 编码里带上超控位：这一份编码同时用于 UI 配置、蓝图复制与存档
+                    configure(encodeConfig());
+                    applyHintText.run();
+                    refresh.run();
+                    // 若 tooltip 正在显示，就地换成切换后的描述（不重新显示、不影响布局）
+                    refillHintTooltip(hintTooltip);
+                }
+            });
+
             autoBtn.clicked(() -> {
+                if (logicControlled()) return;
                 auto = true;
                 selectedIndex = -1;
-                configure(-1);
+                // 用带超控位的编码下发布局：直接 configure(-1) 会把超控状态清掉
+                configure(encodeConfig());
                 refresh.run(); // 点击后立即反映黄底/指示灯
             });
             table.add(autoBtn).size(240f, 46f).padBottom(8f).row();
+
+            // 堆叠 / 降层按钮（只对可堆叠工厂出现）
+            addStackButtons(table, logicButtons, baseDisabled);
+
+            // 逻辑控制提示：位于堆叠按钮组与配方列表之间，水平居中；不受控时整行高度为 0
+            table.add(hintBox).growX().row();
+            // 有逻辑控制指令到达时用它立刻重刷面板
+            panelRefresh = refresh;
 
             // 配方选择区：一行一个配方，仅显示资源贴图，行尾带选中指示灯
             table.table(cont -> {
@@ -1509,17 +1849,23 @@ public class MultiRecipeFactory extends GenericCrafter{
                         }).growX();
                     }).growX();
                     row.clicked(() -> {
-                        if (isLocked(recipe)) return;
+                        if (logicControlled() || isLocked(recipe)) return;
                         if (!auto && selectedIndex == finalI) {
                             // 再次点击已选中的配方：取消选择，恢复自动
-                            configure(-1);
+                            auto = true;
+                            selectedIndex = -1;
                         } else {
                             // 选中该配方：切到手动（旧选中自动被本按钮替代）
-                            configure(finalI);
+                            auto = false;
+                            selectedIndex = finalI;
                         }
+                        // 用带超控位的编码下发：直接 configure(index) 会把超控状态清掉
+                        configure(encodeConfig());
                         refresh.run(); // 点击后立即同步指示灯与黄底
                     });
-                    rows.add(row);
+                    // 未解锁的配方保持置灰；逻辑控制时由 refresh 统一再置灰
+                    logicButtons.add(row);
+                    baseDisabled.add(() -> isLocked(recipes.get(finalI)));
                     // 选中指示灯（check-off=未选中，check-on-over=选中）
                     Image check = new Image(Tex.checkOff);
                     checks.add(check);
@@ -1537,10 +1883,15 @@ public class MultiRecipeFactory extends GenericCrafter{
             //（研究解锁不会在面板打开期间发生，锁定状态无需逐帧检查）
             boolean[] lastAuto = {auto};
             int[] lastSelected = {selectedIndex};
+            boolean[] lastLogic = {logicControlled()};
+            boolean[] lastOverride = {logicOverride};
             table.update(() -> {
-                if(auto != lastAuto[0] || selectedIndex != lastSelected[0]){
+                boolean logic = logicControlled();
+                if(auto != lastAuto[0] || selectedIndex != lastSelected[0] || logic != lastLogic[0] || logicOverride != lastOverride[0]){
                     lastAuto[0] = auto;
                     lastSelected[0] = selectedIndex;
+                    lastLogic[0] = logic;
+                    lastOverride[0] = logicOverride;
                     refresh.run();
                 }
             });
@@ -1613,11 +1964,44 @@ public class MultiRecipeFactory extends GenericCrafter{
          */
         @Override
         public void control(LAccess access, double p1, double p2, double p3, double p4) {
+            // 玩家启用超控：忽略一切逻辑控制指令（既不记录驱动时刻，也不改动配方选择）
+            if (logicOverride) return;
             if (access == LAccess.config) {
+                // 记录逻辑驱动时刻：面板据此把按钮全部置灰，只显示逻辑生效后的最终状态
+                logicControlTime = Time.time;
                 applyLogicRecipe((int) p1);
+                // 立刻重刷面板（不等面板 update 的下一帧比较）：逻辑块一传入控制就显示最新方块状态
+                Runnable panelRefresh = this.panelRefresh;
+                if (panelRefresh != null) panelRefresh.run();
                 return;
             }
             super.control(access, p1, p2, p3, p4);
+        }
+
+        /** 逻辑的对象型 control（如把某个单位/内容作为 config 值）；超控期间一并忽略。 */
+        @Override
+        public void control(LAccess access, Object p1, double p2, double p3, double p4) {
+            if (logicOverride) return;
+            super.control(access, p1, p2, p3, p4);
+        }
+
+        /** 逻辑的属性写入入口；超控期间一并忽略。 */
+        @Override
+        public void setProp(LAccess prop, double value) {
+            if (logicOverride) return;
+            super.setProp(prop, value);
+        }
+
+        @Override
+        public void setProp(LAccess prop, Object value) {
+            if (logicOverride) return;
+            super.setProp(prop, value);
+        }
+
+        @Override
+        public void setProp(UnlockableContent content, double value) {
+            if (logicOverride) return;
+            super.setProp(content, value);
         }
 
         /** 应用逻辑指令的配方选择：编号 1-based（对应面板 [n]），<=0 切自动；切换时重置生产进度。 */

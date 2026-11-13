@@ -224,10 +224,69 @@ public class TriDraw{
         return typewriter(host, text, speed, Align.center, null, null);
     }
 
-    /** 打字机：通过宿主 Action 播放，按字符/秒刷新文本；不会覆盖宿主已有 update。
+    /**
+     * 预计算“已显示可见字符数 → 原始文本截取位置”的映射。
+     *
+     * <p>规则：颜色/样式标记（{@code [yellow]}、{@code [#FF0000]} 等）整体计入截取位置但不计入可见字符，
+     * 因此任一时刻截取出来的前缀都不会以半个标记结尾；{@code [[} 视为转义的字面方括号，按一个可见字符计。
+     *
+     * @return 长度为“总可见字符数 + 1”的数组，{@code cuts[n]} 表示显示 n 个可见字符时应截取到的原始下标
+     *         （末位等于 {@code text.length()}）
+     */
+    static int[] markupCuts(String text){
+        int[] cuts = new int[text.length() + 1];
+        int visible = 0;
+        int i = 0;
+        while(i < text.length()){
+            char c = text.charAt(i);
+            // 转义的 "[["：字面方括号，算一个可见字符
+            if(c == '[' && i + 1 < text.length() && text.charAt(i + 1) == '['){
+                i += 2;
+                visible++;
+                cuts[visible] = i;
+                continue;
+            }
+            if(c == '['){
+                int close = text.indexOf(']', i + 1);
+                int newline = text.indexOf('\n', i + 1);
+                // 长度合理、不跨行、且内部无空白才视为标记，否则按普通方括号字符处理
+                if(close > i + 1 && close - i <= 24 && (newline < 0 || newline > close) && noWhitespace(text, i + 1, close)){
+                    i = close + 1;
+                    cuts[visible] = i; // 标记完整越过，截取位置随之前移（不占用可见字符数）
+                    continue;
+                }
+            }
+            i++;
+            visible++;
+            cuts[visible] = i;
+        }
+        int[] out = new int[visible + 1];
+        System.arraycopy(cuts, 0, out, 0, visible + 1);
+        return out;
+    }
+
+    /**
+     * 标记内部（{@code [} 之后到 {@code ]} 之前）是否不含空白字符；
+     * 含空白的方括号按普通文字处理，避免把 "…[备注 说明]…" 这类正文误当标记吞掉。
+     */
+    private static boolean noWhitespace(String text, int from, int to){
+        for(int k = from; k < to; k++){
+            if(Character.isWhitespace(text.charAt(k))) return false;
+        }
+        return true;
+    }
+
+    /** 打字机：通过宿主 Action 播放，按“可见字符/秒”刷新文本；不会覆盖宿主已有 update。
+     *
+     *  <p>标记感知：颜色/样式标记（如 {@code [yellow]}、{@code [#FF0000]}）会被整体吐出，
+     *  既不占用打字进度，也不会出现被截断的半个标记（旧版 {@code [lightgray]} 之类标记
+     *  在打到一半时既不显示颜色、又会把标记原文露出来的问题由此解决）。
+     *  {@code [[} 作为转义的字面方括号，按一个可见字符计。这样文本可以继续沿用旧版内联标记排版，
+     *  同时也兼容调用方用 Label 样式统一设定基色（未被标记覆盖的文字使用样式的字体颜色）。
+     *
      *  @param host 场景中的宿主（需持续 act；Action 会随宿主移除而停止）
      *  @param text 完整文本
-     *  @param speed 字符/秒
+     *  @param speed 可见字符/秒
      *  @param align 文本对齐（arc.util.Align）
      *  @param onFirstChar 首字出现时执行一次（如动态加入布局；可为 null）
      *  @param onFinish 播放完成时执行一次（如动态加入按钮；可为 null）
@@ -238,6 +297,11 @@ public class TriDraw{
         typed.setWrap(true);
         typed.setAlignment(align);
         float charsPerSecond = Math.max(0f, speed);
+
+        // 预计算“已显示可见字符数 → 原始文本截取位置”映射（实现见 markupCuts）。
+        int[] cuts = markupCuts(text);
+        int total = cuts.length - 1;
+
         host.addAction(new Action(){
             float elapsed;
             int shown;
@@ -246,20 +310,20 @@ public class TriDraw{
             @Override
             public boolean act(float delta){
                 elapsed += delta;
-                int next = Math.min(text.length(), (int)(elapsed * charsPerSecond));
+                int next = Math.min(total, (int)(elapsed * charsPerSecond));
                 if(next != shown){
                     shown = next;
-                    typed.setText(text.substring(0, shown));
+                    typed.setText(text.substring(0, cuts[shown]));
                     if(shown > 0 && !firstDone){
                         firstDone = true;
                         if(onFirstChar != null) onFirstChar.run();
                     }
                 }
-                if(shown >= text.length() && !finishDone){
+                if(shown >= total && !finishDone){
                     finishDone = true;
                     if(onFinish != null) onFinish.run();
                 }
-                return shown >= text.length();
+                return shown >= total;
             }
         });
         return typed;

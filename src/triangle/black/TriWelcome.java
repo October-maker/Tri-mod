@@ -1,6 +1,7 @@
 package triangle.black;
 
 import arc.*;
+import arc.graphics.Color;
 import arc.graphics.g2d.TextureRegion;
 import arc.math.Interp;
 import arc.math.geom.Vec2;
@@ -50,7 +51,24 @@ public class TriWelcome{
      *  移动到欢迎页停靠位时随移动缩放回 1（“砸入面板”效果）。独立变量，可按观感调整。 */
     private static final float ASSEMBLE_SCALE = 1.25f;
 
+    /** 欢迎文案的基色（未被内联标记覆盖的文字使用该颜色），与配置面板逻辑控制提示保持一致。 */
+    private static final String BASE_TEXT_COLOR = "FFFFFF";
+    /** 各段文案的默认颜色（旧版 bundle 中若已自带段首标记，则以 bundle 内的为准）。 */
+    private static final String SEGMENT_OPEN = "[yellow]";    // 简报开始
+    private static final String SEGMENT_WORD = "[white]";     // 正文
+    private static final String SEGMENT_REMIND = "[#FF0000]"; // 免责声明
+    private static final String SEGMENT_END = "[yellow]";     // 简报结束
+
     private TriWelcome(){}
+
+    /**
+     * 给段落补默认颜色：段首（跳过空白/换行后）已有 {@code [标记} 时原样保留（兼容旧版 bundle 排版），
+     * 否则在段首补上 {@code color}。四段文案在 bundle 中是分开取出的，因此可以逐段单独配色。
+     */
+    private static String segment(String text, String color){
+        String trimmed = text == null ? "" : text.trim();
+        return trimmed.startsWith("[") ? text : color + text;
+    }
 
     /**
      * 注册启动欢迎界面（受 STARTUP_DIALOG_KEY 控制，默认显示）。
@@ -222,10 +240,21 @@ public class TriWelcome{
         Table textBox = new Table();
         textBox.setSize(textW, textH);
         textBox.setPosition(cx - textW / 2f, textCy - textH / 2f + 50f);
-        // 打字机：复用 TriDraw.typewriter（Time.time + 字符/秒 + update 刷新 substring）
-        String full = open + "\n" + word + "\n" + remind + "\n" + stop;
-        float typeSpeed = 6f * 60f; // 字符/秒
+        // 打字机：复用 TriDraw.typewriter（可见字符/秒 + 逐帧 substring 刷新）。
+        // 两条路径同时生效：
+        //  1) 旧版排版：bundle 文本自带内联颜色标记（[yellow]/[white]/[#FF0000]/[lightgray]…）原样保留，
+        //     由标记感知的打字机整体吐出完整标记、且标记不占打字进度，不会再露出半个标记或颜色不生效；
+        //  2) 新版设置：未被标记覆盖的文字使用 Label 样式设定的基色（紫 #a020f0）。
+        // 四段文本是分开取的，可为每段单独设定颜色：段首缺少颜色标记时按 SEGMENT_* 常量补齐。
+        String full = segment(open, SEGMENT_OPEN) + "\n"
+                    + segment(word, SEGMENT_WORD) + "\n"
+                    + segment(remind, SEGMENT_REMIND) + "\n"
+                    + segment(stop, SEGMENT_END);
+        float typeSpeed = 6f * 60f; // 可见字符/秒
         Label typed = TriDraw.typewriter(textBox, full, typeSpeed, Align.center, null, null);
+        Label.LabelStyle typedStyle = new Label.LabelStyle(typed.getStyle());
+        typedStyle.fontColor = Color.valueOf(BASE_TEXT_COLOR);
+        typed.setStyle(typedStyle);
         textBox.add(typed).grow().pad(4);
         intro.add(textBox);
 
