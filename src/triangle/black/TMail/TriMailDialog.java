@@ -38,7 +38,13 @@ public class TriMailDialog{
     private enum Filter{ ALL, READ, UNREAD, HISTORY }
 
     private static final float CARD_WIDTH = 480f;
-    private static final float CARD_HEIGHT = 76f;
+    /** TMail 分割线线宽（同时作为该行的单元格高度：贴图线条在单元格内垂直居中，格子矮于线宽会被裁掉）。 */
+    static final float DIVIDER_THICKNESS = 10f;
+    /**
+     * 卡片高度 = 发件人行（32 + padTop 7）+ 分割线行 + 内容行（28 + padBottom 7）。
+     * 分割线由 2px 改为 {@link #DIVIDER_THICKNESS} 后行高同步变化，这里按同一口径配平，避免内容顶出卡片背景。
+     */
+    private static final float CARD_HEIGHT = 32f + 7f + DIVIDER_THICKNESS + 28f + 7f;
     private static final float DETAIL_WIDTH = 560f;
 
     // Logo intro animation
@@ -151,6 +157,19 @@ public class TriMailDialog{
 
     private static Action scaleTo(float sx, float sy, float seconds, Interp interp){
         return Actions.scaleTo(sx, sy, anim(seconds), interp);
+    }
+
+    /**
+     * TMail 的分割线元素：用 TriDraw 的贴图线条（点划线 = 1+3 号贴图循环 + 4 号包边）。
+     *
+     * <p>原先是一条 {@code Tex.whiteui} 竖直纯色条，这里换成 32×32 贴图首尾相接的制表线条，
+     * 颜色仍沿用原来的 {@link Color#gray}（走 Image 染色，贴图会跟着变灰）。
+     * 线宽由 {@link #DIVIDER_THICKNESS} 控制，调用方需把单元格高度也用该值，否则可见线体会被裁。
+     */
+    static Image divider(){
+        Image line = new Image(TriDraw.hLine(TriDraw.LineStyle.DASH_DOT, DIVIDER_THICKNESS));
+        line.setColor(Color.gray);
+        return line;
     }
 
     private static Action delay(float seconds){
@@ -673,8 +692,8 @@ public class TriMailDialog{
         senderLabels.put(mail, sender); // 记录引用，供 refreshReadState 局部刷新未 已读高亮
 
         // 分割线：发件人与内容之间
-        Image divider = new Image(Tex.whiteui, Color.gray);
-        card.add(divider).growX().height(2).padLeft(14).padRight(14).row();
+        Image divider = divider();
+        card.add(divider).growX().height(DIVIDER_THICKNESS).padLeft(14).padRight(14).row();
 
         // 下一行：内容（过长省略，换行折叠为单行），顶部左对齐
         Label content = new Label(mail.body.replace('\n', ' '));
@@ -702,8 +721,8 @@ public class TriMailDialog{
         sender.setAlignment(Align.topLeft);
         card.add(sender).top().left().width(innerW).height(32).padLeft(14).padRight(14).padTop(7).row();
 
-        Image divider = new Image(Tex.whiteui, Color.gray);
-        card.add(divider).growX().height(2).padLeft(14).padRight(14).row();
+        Image divider = divider();
+        card.add(divider).growX().height(DIVIDER_THICKNESS).padLeft(14).padRight(14).row();
 
         Label content = new Label(mail.body.replace('\n', ' '));
         content.setEllipsis(true);
@@ -1095,9 +1114,9 @@ public class TriMailDialog{
         to.touchable = Touchable.disabled;
         paper.add(to).left().pad(12).row();
 
-        Image divider = new Image(Tex.whiteui, Color.gray);
+        Image divider = divider();
         divider.touchable = Touchable.disabled;
-        paper.add(divider).growX().height(2).padLeft(12).padRight(12).row();
+        paper.add(divider).growX().height(DIVIDER_THICKNESS).padLeft(12).padRight(12).row();
     }
 
     /** 已回 发送完成后的完整信纸内。 */
@@ -1451,8 +1470,8 @@ public class TriMailDialog{
         content.add("[accent]" + mail.sender).left().growX().pad(12).row();
 
         // 分割线：发件人与正文之间
-        Image divider = new Image(Tex.whiteui, Color.gray);
-        content.add(divider).growX().height(2).padLeft(12).padRight(12).row();
+        Image divider = divider();
+        content.add(divider).growX().height(DIVIDER_THICKNESS).padLeft(12).padRight(12).row();
 
         Label body = new Label(mail.body);
         body.setWrap(true);
@@ -1462,8 +1481,8 @@ public class TriMailDialog{
 
         // 附件：正文下方，用与发件 正文同款的分割线分隔；可点“收取附件”执行动
         if(TriInbox.hasAttachment(mail)){
-            Image div2 = new Image(Tex.whiteui, Color.gray);
-            content.add(div2).growX().height(2).padLeft(12).padRight(12).row();
+            Image div2 = divider();
+            content.add(div2).growX().height(DIVIDER_THICKNESS).padLeft(12).padRight(12).row();
             content.add("[accent]" + bundle("tri.mail.attachment") + mail.attachment).left().growX().pad(12).row();
 
             TextButton collect = new TextButton(bundle("tri.mail.collect"));
