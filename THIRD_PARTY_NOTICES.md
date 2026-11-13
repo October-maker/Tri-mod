@@ -1,6 +1,6 @@
 # Third-Party Notices
 
-[中文版](THIRD_PARTY_NOTICES.zh-CN.md) | [English](THIRD_PARTY_NOTICES.md)
+[切换至中文版](THIRD_PARTY_NOTICES.zh-CN.md) 
 
 This file records third-party artwork and other externally sourced material used by Triangle-mod. The project's own code is licensed under the MIT License in [LICENSE](LICENSE); original project assets are licensed under CC BY 4.0 in [LICENSE-ASSETS](LICENSE-ASSETS).
 
@@ -21,65 +21,7 @@ The following textures were drawn by **ZL洋葱** and are used in this project u
   delivery; no artistic changes were made by this project. Any later edits are
   traceable through the repository history.
 
-### ZL洋葱 refinement of `error.png`
-
-`assets/sprites-override/error.png` is based on an original drawing by
-**October**, with refinement by **ZL洋葱**. Both the original work and the
-refined version are used under CC BY 4.0; attribution is given to both
-creators for this file.
-
-## CH不太懒 — all rights reserved
-
-The following texture sets were drawn by **CH不太懒**. The author could not be
-contacted and no public author page was found at the time of this notice.
-Accordingly, **all rights remain with CH不太懒**. These textures are **not**
-licensed under this project's CC BY 4.0 grant, and this notice does not grant
-any permission to copy, modify, or redistribute them beyond their inclusion in
-this project.
-
-- **Creator:** CH不太懒
-- **Copyright:** CH不太懒
-- **License:** All rights reserved (no license granted)
-- **Source:** Assets supplied to this project; no public author page available
-  at the time of this notice
-- **Excluded assets:**
-  - `assets/sprites/factory/SAbsorptionTower/SAbsorptionTower.png`
-  - `assets/sprites/factory/SAbsorptionTower/SAbsorptionTower-bottom.png`
-  - `assets/sprites/factory/SAbsorptionTower/SAbsorptionTower-glow.png`
-  - `assets/sprites/factory/SAbsorptionTower/SAbsorptionTower-heat.png`
-  - `assets/sprites/factory/SAbsorptionTower/SAbsorptionTower-rotator.png`
-  - `assets/sprites/factory/SAbsorptionTower/SAbsorptionTower-top1.png`
-  - `assets/sprites/factory/SAbsorptionTower/SAbsorptionTower-top2.png`
-  - `assets/sprites/factory/TiRollingMill/TiRollingMill.png`
-  - `assets/sprites/factory/TiRollingMill/TiRollingMill-top.png`
-
-## battleplan-planetaryTerminal map — GPL-3.0
-
-`assets/maps/battleplan-planetaryTerminal.msav` is the **Planetary Launch Terminal** map
-from the Mindustry project.
-
-- **Author tag:** Skeledragon
-- **Source:** <https://github.com/Anuken/Mindustry/blob/master/core/assets/maps/serpulo/planetaryTerminal.msav>
-- **License:** GNU General Public License v3.0 (GPL-3.0)
-- **License text:** [LICENSE-GPL-3.0](LICENSE-GPL-3.0)
-- **Current snapshot:** Mindustry master, 123372 bytes
-- **SHA-256:** `C1FDB6CCB043FF413F17DB17847DE70A0E6DD720660CDC7B5019DF50016FE158`
-- **Modifications:** None. The map file is bundled as-is.
-
-## Project asset authorship
-
-Unless listed above or in another third-party notice, the remaining project
-textures in `assets/` were drawn by **October**, including files under
-`assets/sprites-override/`. A small number of textures originally created by
-other contributors are still being confirmed for attribution; those files
-will be added here once the contributor and permission details are confirmed.
-
-All project-owned textures are licensed under CC BY 4.0 as described in
-[LICENSE-ASSETS](LICENSE-ASSETS).
-
-### Asset-to-file correspondence
-
-The left column preserves the supplied asset-list names one-for-one. The right column lists the corresponding files in this repository.
+- **Related image files：**
 
 | Listed asset | Repository file(s) |
 |---|---|
@@ -111,6 +53,61 @@ The left column preserves the supplied asset-list names one-for-one. The right c
 | `WSteel` | `assets/sprites/item/WSteel.png` |
 | `coilgun-head` | `assets/sprites/turret/coilgun/coilgun-head.png` |
 | `coilgun-base` | `assets/sprites/turret/coilgun/coilgun-base.png` |
+
+
+### ZL洋葱 refinement of `error.png`
+
+`assets/sprites-override/error.png` is based on an original drawing by
+**October**, with refinement by **ZL洋葱**. Both the original work and the
+refined version are used under CC BY 4.0; attribution is given to both
+creators for this file.
+
+## CH不太懒 — all rights reserved
+
+The following texture sets were drawn by **CH不太懒**. The author could not be
+contacted and no public author page was found at the time of this notice.
+Accordingly, **all rights remain with CH不太懒**. These textures are **not**
+licensed under this project's CC BY 4.0 grant, and this notice does not grant
+any permission to copy, modify, or redistribute them beyond their inclusion in
+this project.
+
+- **Creator:** CH不太懒
+- **Copyright:** CH不太懒
+- **License:** All rights reserved (no license granted)
+- **Source:** Assets supplied to this project; no public author page available
+  at the time of this notice
+- **Related image files:**
+  - `assets/sprites/factory/SAbsorptionTower/SAbsorptionTower.png`
+  - `assets/sprites/factory/SAbsorptionTower/SAbsorptionTower-bottom.png`
+  - `assets/sprites/factory/SAbsorptionTower/SAbsorptionTower-glow.png`
+  - `assets/sprites/factory/SAbsorptionTower/SAbsorptionTower-heat.png`
+  - `assets/sprites/factory/SAbsorptionTower/SAbsorptionTower-rotator.png`
+  - `assets/sprites/factory/SAbsorptionTower/SAbsorptionTower-top1.png`
+  - `assets/sprites/factory/SAbsorptionTower/SAbsorptionTower-top2.png`
+  - `assets/sprites/factory/TiRollingMill/TiRollingMill.png`
+  - `assets/sprites/factory/TiRollingMill/TiRollingMill-top.png`
+
+## battleplan-planetaryTerminal map — GPL-3.0
+
+`assets/maps/battleplan-planetaryTerminal.msav` is the **Planetary Launch Terminal** map
+from the Mindustry project.
+
+- **Author tag:** Skeledragon
+- **Source:** <https://github.com/Anuken/Mindustry/blob/master/core/assets/maps/serpulo/planetaryTerminal.msav>
+- **License:** GNU General Public License v3.0 (GPL-3.0)
+- **License text:** [LICENSE-GPL-3.0](LICENSE-GPL-3.0)
+- **Current snapshot:** Mindustry master, 123372 bytes
+- **SHA-256:** `C1FDB6CCB043FF413F17DB17847DE70A0E6DD720660CDC7B5019DF50016FE158`
+- **Modifications:** None. The map file is bundled as-is.
+
+## Other materials
+
+Unless listed above or in another third-party notice, the remaining project
+textures in `assets/` were drawn by **October**, including files under
+`assets/sprites-override/`. 
+
+All project-owned textures are licensed under CC BY 4.0 as described in
+[LICENSE-ASSETS](LICENSE-ASSETS).
 
 ## TooManyItems (TMI) — optional integration
 

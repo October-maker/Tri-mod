@@ -1,6 +1,6 @@
 # 第三方声明
 
-[中文版](THIRD_PARTY_NOTICES.zh-CN.md) | [English](THIRD_PARTY_NOTICES.md)
+[Switch to the English version](THIRD_PARTY_NOTICES.md)
 
 本文件记录 Triangle-mod 使用的第三方美术素材及其他外部来源内容。项目自有代码采用 [LICENSE](LICENSE) 中的 MIT 许可证；项目自有素材采用 [LICENSE-ASSETS](LICENSE-ASSETS) 中的 CC BY 4.0 许可证。
 
@@ -18,50 +18,7 @@
 - **授权说明：** ZL洋葱 已明确授权这些贴图按 CC BY 4.0 使用。
 - **修改说明：** 仅文件名和项目内目录组织与原始交付版本不同，本项目未对原画作进行艺术修改。后续修改可通过仓库历史追溯。
 
-### ZL洋葱对 `error.png` 的细化
-
-`assets/sprites-override/error.png` 的原稿由 **October** 绘制，**ZL洋葱** 进行了细化。该文件的原稿与细化版本均按 CC BY 4.0 使用，署名同时保留两位创作者。
-
-## CH不太懒 — 保留所有权利
-
-以下贴图由 **CH不太懒** 绘制。发布此声明时无法联系到作者，也未找到其公开主页，因此**全部权利仍归 CH不太懒 所有**。这些贴图**不适用**本项目的 CC BY 4.0 授权；本声明也不授予任何人在本项目范围之外复制、修改或再分发这些文件的权利。
-
-- **作者：** CH不太懒
-- **版权：** CH不太懒
-- **许可证：** 保留所有权利（未授予许可证）
-- **来源：** 提供给本项目的素材；发布此声明时未找到公开作者主页
-- **例外文件：**
-  - `assets/sprites/factory/SAbsorptionTower/SAbsorptionTower.png`
-  - `assets/sprites/factory/SAbsorptionTower/SAbsorptionTower-bottom.png`
-  - `assets/sprites/factory/SAbsorptionTower/SAbsorptionTower-glow.png`
-  - `assets/sprites/factory/SAbsorptionTower/SAbsorptionTower-heat.png`
-  - `assets/sprites/factory/SAbsorptionTower/SAbsorptionTower-rotator.png`
-  - `assets/sprites/factory/SAbsorptionTower/SAbsorptionTower-top1.png`
-  - `assets/sprites/factory/SAbsorptionTower/SAbsorptionTower-top2.png`
-  - `assets/sprites/factory/TiRollingMill/TiRollingMill.png`
-  - `assets/sprites/factory/TiRollingMill/TiRollingMill-top.png`
-
-## battleplan-planetaryTerminal 地图 — GPL-3.0
-
-`assets/maps/battleplan-planetaryTerminal.msav` 是 Mindustry 项目中的 **行星发射终端（Planetary Launch Terminal）** 地图。
-
-- **作者标签：** Skeledragon
-- **来源：** <https://github.com/Anuken/Mindustry/blob/master/core/assets/maps/serpulo/planetaryTerminal.msav>
-- **许可证：** GNU General Public License v3.0（GPL-3.0）
-- **许可证文本：** [LICENSE-GPL-3.0](LICENSE-GPL-3.0)
-- **当前版本：** Mindustry master，123372 字节
-- **SHA-256：** `C1FDB6CCB043FF413F17DB17847DE70A0E6DD720660CDC7B5019DF50016FE158`
-- **修改情况：** 未修改，按原样打包。
-
-## 项目素材作者
-
-除上方及第三方声明中列出的素材外，`assets/` 中其余项目贴图均由 **October** 绘制，包括 `assets/sprites-override/` 下的文件。少数由其他贡献者原创的贴图仍在确认署名与授权信息，确认后将补充到本文件。
-
-项目自有贴图均按 [LICENSE-ASSETS](LICENSE-ASSETS) 中的 CC BY 4.0 授权。
-
-### 素材与文件对应关系
-
-左列逐项保留作者提供的素材清单名称，右列为本仓库中对应的文件。
+- **相关贴图文件：**
 
 | 清单名称 | 仓库文件 |
 |---|---|
@@ -93,6 +50,47 @@
 | `WSteel` | `assets/sprites/item/WSteel.png` |
 | `coilgun-head` | `assets/sprites/turret/coilgun/coilgun-head.png` |
 | `coilgun-base` | `assets/sprites/turret/coilgun/coilgun-base.png` |
+
+### ZL洋葱对 `error.png` 的细化
+
+`assets/sprites-override/error.png` 的原稿由 **October** 绘制，**ZL洋葱** 进行了细化。该文件的原稿与细化版本均按 CC BY 4.0 使用，署名同时保留两位创作者。
+
+## CH不太懒 — 保留所有权利
+
+以下贴图由 **CH不太懒** 绘制。发布此声明时无法联系到作者，也未找到其公开主页，因此**全部权利仍归 CH不太懒 所有**。这些贴图**不适用**本项目的 CC BY 4.0 授权；本声明也不授予任何人在本项目范围之外复制、修改或再分发这些文件的权利。
+
+- **作者：** CH不太懒
+- **版权：** CH不太懒
+- **许可证：** 保留所有权利（未授予许可证）
+- **来源：** 提供给本项目的素材；发布此声明时未找到公开作者主页
+- **相关贴图文件：**
+  - `assets/sprites/factory/SAbsorptionTower/SAbsorptionTower.png`
+  - `assets/sprites/factory/SAbsorptionTower/SAbsorptionTower-bottom.png`
+  - `assets/sprites/factory/SAbsorptionTower/SAbsorptionTower-glow.png`
+  - `assets/sprites/factory/SAbsorptionTower/SAbsorptionTower-heat.png`
+  - `assets/sprites/factory/SAbsorptionTower/SAbsorptionTower-rotator.png`
+  - `assets/sprites/factory/SAbsorptionTower/SAbsorptionTower-top1.png`
+  - `assets/sprites/factory/SAbsorptionTower/SAbsorptionTower-top2.png`
+  - `assets/sprites/factory/TiRollingMill/TiRollingMill.png`
+  - `assets/sprites/factory/TiRollingMill/TiRollingMill-top.png`
+
+## battleplan-planetaryTerminal 地图 — GPL-3.0
+
+`assets/maps/battleplan-planetaryTerminal.msav` 是 Mindustry 项目中的 **行星发射终端（Planetary Launch Terminal）** 地图。
+
+- **作者标签：** Skeledragon
+- **来源：** <https://github.com/Anuken/Mindustry/blob/master/core/assets/maps/serpulo/planetaryTerminal.msav>
+- **许可证：** GNU General Public License v3.0（GPL-3.0）
+- **许可证文本：** [LICENSE-GPL-3.0](LICENSE-GPL-3.0)
+- **当前版本：** Mindustry master，123372 字节
+- **SHA-256：** `C1FDB6CCB043FF413F17DB17847DE70A0E6DD720660CDC7B5019DF50016FE158`
+- **修改情况：** 未修改，按原样打包。
+
+## 其余素材
+
+除上方及第三方声明中列出的素材外，`assets/` 中其余项目贴图均由 **October** 绘制，包括 `assets/sprites-override/` 下的文件。
+
+项目自有贴图均按 [LICENSE-ASSETS](LICENSE-ASSETS) 中的 CC BY 4.0 授权。
 
 ## TooManyItems (TMI) — 可选兼容
 
