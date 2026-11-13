@@ -19,9 +19,10 @@ This module can also be viewed in the in-game module browser
 When you encounter issues or feel confused, please check if the module version is the latest pr version
 
 ---
-### How to play a mod campaign
-After clearing the original "biomassFacility", the mod campaign will appear in the technology tree.\
-The module campaign is not solely attached to a single original Serpulo map. If you find that you cannot progress in the campaign, please try advancing the original campaign progress
+### Regarding the Mod Wiki
+
+[Click to enter TriWiki](https://github.com/October-maker/Tri-mod/wiki) \
+If you want to gain a deeper understanding of this module, you may wish to check out TriWiki
 
 ---
 ### Regarding Erekir
