@@ -15,6 +15,7 @@ import arc.scene.ui.Image;
 import arc.scene.ui.Label;
 import arc.scene.ui.ScrollPane;
 import arc.scene.ui.TextButton;
+import arc.scene.ui.Tooltip;
 import arc.scene.ui.layout.Stack;
 import arc.scene.ui.layout.Table;
 import arc.struct.ObjectMap;
@@ -411,14 +412,23 @@ public class TriPresetDialog extends BaseDialog{
 
     // ============================ 词条切换 ============================
 
-    /** 生成一个词条按钮：点击即切换该选项，并同步同类按钮的选中态与右侧信息栏。 */
+    /** 生成一个词条按钮：点击即切换该选项，并同步所有按钮的选中态与可用态。 */
     private TextButton optionButton(int category, int option){
         TextButton button = new TextButton(TriPresetMode.optionLabel(category, option), Styles.togglet);
         button.setChecked(TriPresetMode.isSelected(category, option));
+        button.setDisabled(TriPresetMode.isOptionLocked(category, option));
+
+        // 悬停提示：锁住时说清“需要先选什么”，可选时显示该词条的详情
+        button.addListener(new Tooltip(t -> t.background(Styles.black6).margin(8f).label(() -> {
+            String reason = TriPresetMode.lockReason(category, option);
+            return reason != null ? reason : TriPresetMode.optionDetail(category, option);
+        })));
+
         button.clicked(() -> {
             boolean wasSelected = TriPresetMode.hasSelection();
             TriPresetMode.toggle(category, option);
-            refresh(category);
+            // 前置变化会影响别的词条组，必须整表刷新而不是只刷本组
+            refreshAll();
             boolean nowSelected = TriPresetMode.hasSelection();
             previewMap = false; // 改变选择即离开“预览地图”态
 
@@ -948,11 +958,20 @@ public class TriPresetDialog extends BaseDialog{
 
     // ============================ 工具 ============================
 
-    /** 同步某一类别的按钮选中态（同类互斥由 TriPresetMode 保证，其余类别不动）。 */
-    private void refresh(int category){
-        TextButton[] buttons = optionButtons[category];
-        for(int i = 0; i < buttons.length; i++){
-            buttons[i].setChecked(TriPresetMode.isSelected(category, i));
+    /**
+     * 同步所有按钮的状态：选中态 + 可用态。
+     *
+     * <p>必须整表刷新：前置条件会让别的词条组一起变灰/解锁（例如取消“毁灭”难度，
+     * 六个最高档词条要立刻变灰并且已被清除）。
+     */
+    private void refreshAll(){
+        for(int c = 0; c < TriPresetMode.categoryCount(); c++){
+            TextButton[] buttons = optionButtons[c];
+            if(buttons == null) continue;
+            for(int i = 0; i < buttons.length; i++){
+                buttons[i].setChecked(TriPresetMode.isSelected(c, i));
+                buttons[i].setDisabled(TriPresetMode.isOptionLocked(c, i));
+            }
         }
     }
 

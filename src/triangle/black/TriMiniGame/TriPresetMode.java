@@ -75,6 +75,34 @@ public final class TriPresetMode{
     private static float playerBlockHealth = 1f, playerTurretDamage = 1f;
 
     /**
+     * “游戏难度”词条附带的两个乘子。
+     *
+     * <p>原版 {@code Difficulty} 的 {@code enemyHealthMultiplier / enemySpawnMultiplier /
+     * waveTimeMultiplier} 只在战役里生效：{@code WaveSpawner} 与 {@code Logic} 都是先判
+     * {@code state.isCampaign()}，为真才去读 {@code state.getPlanet().campaignRules.difficulty}
+     * （{@code Rules} 本身并不继承 {@code CampaignRules}）。本模式是自定义局，planet 为 null，
+     * 所以这三项要由模组自己实现：
+     * <ul>
+     *   <li>单位生命：{@code difficultyUnitHealth} 与敌方单位生命词条的倍率<b>相乘</b>后写进实例；</li>
+     *   <li>每波敌军数量：{@code difficultySpawn} 在 {@link RulesLoadEvent} 里乘到各生成组的
+     *       {@code unitAmount/max} 上（生成组的写入在那里才不会被 {@code retainContentFields} 覆盖）；</li>
+     *   <li>波次间隔：词条的 apply 里直接 {@code waveSpacing *= …}，自然与出怪间隔词条相乘叠加。</li>
+     * </ul>
+     */
+    /**
+     * 未选任何难度时的默认基线：对齐原版 {@code Difficulty.casual}（“休闲”）——
+     * 敌方单位生命 ×0.5、每波敌军数量 ×0.5、波次间隔 ×2（原版实证常量见类注释）。
+     * 选了“正常”才回到 1/1/1 的基准。
+     */
+    private static final float DEFAULT_DIFFICULTY_HEALTH = 0.5f, DEFAULT_DIFFICULTY_SPAWN = 0.5f,
+            DEFAULT_DIFFICULTY_TIME = 2f;
+
+    private static float difficultyUnitHealth = DEFAULT_DIFFICULTY_HEALTH,
+            difficultySpawn = DEFAULT_DIFFICULTY_SPAWN;
+    /** 生成组是否已按难度放大过（同一局只放大一次，避免重复乘）。 */
+    private static boolean spawnScaled;
+
+    /**
      * 增援词条是否被选中。
      *
      * <p>选中只置这个标记，真正往波次表追加生成组要等 {@link RulesLoadEvent}：
@@ -115,6 +143,57 @@ public final class TriPresetMode{
     /** 本帧收集到的“生成即结算”弹道，逐帧重建（复用同一个 Seq，避免每帧分配对象）。 */
     private static final Seq<Bullet> instantBeams = new Seq<>();
 
+    /**
+     * 词条前置条件：必须先选中“另一个词条组里的某一档”，本词条才可选。
+     *
+     * <p>前置组是复数选项时有两种解锁模式：
+     * {@link #any(String)} 选中其中任意一档即开放；{@link #every(String)} 必须整组全选才开放
+     * （“全选开放”）；{@link #is(String, int)} 精确要求某一档，例如“毁灭”难度。
+     */
+    private static final class Req{
+        /** 前置词条组的 {@link Category#key}。 */
+        final String category;
+        /** 需要的选项下标；{@code -1} 表示“任一选项”。 */
+        final int option;
+        /** 仅当 {@code option < 0} 时有效：true = 该组全部选项都必须选中。 */
+        final boolean all;
+
+        private Req(String category, int option, boolean all){
+            this.category = category;
+            this.option = option;
+            this.all = all;
+        }
+
+        /** “选择一种就开放”：前置组有任何一档被选中即可。 */
+        static Req any(String category){
+            return new Req(category, -1, false);
+        }
+
+        /** “全选开放”：前置组的全部选项都必须被选中。 */
+        static Req every(String category){
+            return new Req(category, -1, true);
+        }
+
+        /** 精确要求前置组选中某一档。 */
+        static Req is(String category, int option){
+            return new Req(category, option, false);
+        }
+
+        boolean satisfied(){
+            Category c = byKey(category);
+            // 配置了不存在的前置：按“不锁”处理，避免一处笔误让整片词条永久不可用
+            if(c == null) return true;
+
+            if(all){
+                for(int i = 0; i < c.options.size; i++){
+                    if(c.selected != i) return false;
+                }
+                return true;
+            }
+            return option < 0 ? c.selected >= 0 : c.selected == option;
+        }
+    }
+
     /** 类别中的一个可选项：显示文案 + 详情文案 + 选中时施加的改动。 */
     private static final class Option{
         final String label;
@@ -124,18 +203,26 @@ public final class TriPresetMode{
         final Cons<Rules> apply;
         /** 自定义词条价值；{@code -1} 表示未指定，按“选项档位”取（同类第 1/2/3 个选项记 1/2/3）。 */
         final int customValue;
+        /** 该项自身的前置；{@code null} 表示无前置，始终可选。 */
+        final Req req;
 
         Option(String label, boolean literal, String detailKey, Cons<Rules> apply){
-            this(label, literal, detailKey, apply, -1);
+            this(label, literal, detailKey, apply, -1, null);
         }
 
         /** 带自定义价值的构造：{@code value} 为该词条的显示价值（1~3 等任意整数，-1 表示按档位）。 */
         Option(String label, boolean literal, String detailKey, Cons<Rules> apply, int value){
+            this(label, literal, detailKey, apply, value, null);
+        }
+
+        /** 带前置条件的构造：{@code req} 未满足时该词条整格变灰且不可点。 */
+        Option(String label, boolean literal, String detailKey, Cons<Rules> apply, int value, Req req){
             this.label = label;
             this.literal = literal;
             this.detailKey = detailKey;
             this.apply = apply;
             this.customValue = value;
+            this.req = req;
         }
 
         String text(){
@@ -171,19 +258,48 @@ public final class TriPresetMode{
 
     /** 一个词条类别；selected 为当前选中的选项下标，-1 表示同类选项都未选中（该类不生效）。 */
     private static final class Category{
+        /** 稳定标识：前置条件按 key 引用类别，避免用下标（增删词条组会让下标整体漂移）。 */
+        final String key;
         final Seq<Option> options;
         int selected = -1;
+        /** 类别级前置：需全部满足，本组任何一档才可选（{@link #lockClass(Req)} 声明）。 */
+        final Seq<Req> locks = new Seq<>();
 
-        Category(Option... options){
+        Category(String key, Option... options){
+            this.key = key;
             this.options = Seq.with(options);
+        }
+
+        /** 给整组挂一条前置（可链式写在 {@link #categories} 的字面里）。 */
+        Category lockClass(Req req){
+            locks.add(req);
+            return this;
+        }
+
+        /** 本组是否被前置锁住（整组变灰）。 */
+        boolean locked(){
+            for(Req r : locks){
+                if(!r.satisfied()) return true;
+            }
+            return false;
         }
     }
 
-    /**
-     * 词条类别。顺序即界面上的列顺序；只有<b>一个</b>选项的类别不会单独占一列，
+    /** 按 {@link Category#key} 查类别；找不到返回 null。 */
+    private static Category byKey(String key){
+        for(Category c : categories){
+            if(c.key.equals(key)) return c;
+        }
+        return null;
+    }
+
+    /** 词条类别。顺序即界面上的列顺序；只有<b>一个</b>选项的类别不会单独占一列，
      * 而是统一收进右侧那个定高网格 table（坐标见 {@link #singleCategory(int)}）。
      *
-     * - 出怪倍率：1.5x / 2x（waveSpacing 除以对应倍率；都不选为默认 1x）；
+     * - 出怪间隔：0.8x / 0.66x / 0.5x（waveSpacing 乘以对应倍率；都不选为原版默认间隔）；
+     * - 游戏难度：正常 / 困难 / 毁灭（对应原版战役难度：单位生命 ×1/×1.25/×1.5、
+     *   每波敌军数量 ×1/×1.5/×2、波次间隔 ×1/×0.8/×0.6；与本模式其它词条相乘叠加）；
+     *   一个都不选 = 原版“休闲”（×0.5 / ×0.5 / ×2，见 {@link #DEFAULT_DIFFICULTY_HEALTH}）；
      * - 战争迷雾：fog/staticFog（单选项）；
      * - 敌方单位生命 / 敌方单位伤害：各三段式 ×2 / ×3 / ×5（实例级，互相独立）；
      * - 敌方建筑生命：+100% / +200% / +400%（实例级耐久）；
@@ -191,53 +307,72 @@ public final class TriPresetMode{
      * - 波次增援：第 1~10 波每波额外 5 个 triangle-coreUnit（单选项）；
      * - 我方单位伤害 / 我方炮台伤害 / 我方建筑生命 / 我方单位生命：各三段式 -25% / -50% / -75%；
      * - 禁用发射台/接收台：单选项，价值固定 3 分（{@link Option#customValue}）。
+     *
+     * <p>前置（{@link Req}）：各三段式数值词条的<b>第三档</b>（+400% / -75%）要求先选中
+     * “毁灭”难度，未选中时该格整格变灰、不可点；把前置取消后依赖项会被自动清除（见 {@link #pruneLocks()}）。
      */
     private static final Seq<Category> categories = Seq.with(
-            new Category(
-                    new Option("1.5x", true, "tri.preset.detail.waveRate.x15", r -> r.waveSpacing /= 1.5f),
-                    new Option("2x", true, "tri.preset.detail.waveRate.x2", r -> r.waveSpacing /= 2f)),
-            new Category(
+            new Category("waveInterval",
+                    new Option("0.8x", true, "tri.preset.detail.waveInterval.x08", r -> r.waveSpacing *= 0.8f),
+                    new Option("0.66x", true, "tri.preset.detail.waveInterval.x066", r -> r.waveSpacing *= 0.66f),
+                    new Option("0.5x", true, "tri.preset.detail.waveInterval.x05", r -> r.waveSpacing *= 0.5f)),
+            new Category("difficulty",
+                    new Option("tri.preset.value.difficulty.normal", false, "tri.preset.detail.difficulty.normal",
+                            r -> applyDifficulty(r, 1f, 1f, 1f)),
+                    new Option("tri.preset.value.difficulty.hard", false, "tri.preset.detail.difficulty.hard",
+                            r -> applyDifficulty(r, 1.25f, 1.5f, 0.8f)),
+                    new Option("tri.preset.value.difficulty.eradication", false, "tri.preset.detail.difficulty.eradication",
+                            r -> applyDifficulty(r, 1.5f, 2f, 0.6f))),
+            new Category("fog",
                     new Option("tri.preset.value.fog", false, "tri.preset.detail.fog.on", r -> {
                         r.fog = true;
                         r.staticFog = true;
                     })),
-            new Category(
+            new Category("unitHealth",
                     new Option("+100%", true, "tri.preset.detail.unitHealth.x1", r -> enemyUnitHealth = 2f),
                     new Option("+200%", true, "tri.preset.detail.unitHealth.x2", r -> enemyUnitHealth = 3f),
-                    new Option("+400%", true, "tri.preset.detail.unitHealth.x3", r -> enemyUnitHealth = 5f)),
-            new Category(
+                    new Option("+400%", true, "tri.preset.detail.unitHealth.x3", r -> enemyUnitHealth = 5f,
+                            -1, Req.is("difficulty", 2))),
+            new Category("unitDamage",
                     new Option("+100%", true, "tri.preset.detail.unitDamage.x1", r -> enemyUnitDamage = 2f),
                     new Option("+200%", true, "tri.preset.detail.unitDamage.x2", r -> enemyUnitDamage = 3f),
-                    new Option("+400%", true, "tri.preset.detail.unitDamage.x3", r -> enemyUnitDamage = 5f)),
-            new Category(
+                    new Option("+400%", true, "tri.preset.detail.unitDamage.x3", r -> enemyUnitDamage = 5f,
+                            -1, Req.is("difficulty", 2))),
+            new Category("blockHealth",
                     new Option("+100%", true, "tri.preset.detail.blockHealth.x1", r -> enemyBlockHealth = 2f),
                     new Option("+200%", true, "tri.preset.detail.blockHealth.x2", r -> enemyBlockHealth = 3f),
-                    new Option("+400%", true, "tri.preset.detail.blockHealth.x3", r -> enemyBlockHealth = 5f)),
-            new Category(
+                    new Option("+400%", true, "tri.preset.detail.blockHealth.x3", r -> enemyBlockHealth = 5f,
+                            -1, Req.is("difficulty", 2))),
+            new Category("turretDamage",
                     new Option("+100%", true, "tri.preset.detail.turret.x1", r -> enemyTurretDamage = 2f),
                     new Option("+200%", true, "tri.preset.detail.turret.x2", r -> enemyTurretDamage = 3f),
-                    new Option("+400%", true, "tri.preset.detail.turret.x3", r -> enemyTurretDamage = 5f)),
-            new Category(
+                    new Option("+400%", true, "tri.preset.detail.turret.x3", r -> enemyTurretDamage = 5f,
+                            -1, Req.is("difficulty", 2))),
+            new Category("reinforce",
                     new Option("tri.preset.value.reinforce", false, "tri.preset.detail.reinforce.on",
                             TriPresetMode::applyReinforce)),
-            new Category(
+            new Category("playerUnitDamage",
                     new Option("-25%", true, "tri.preset.detail.playerUnitDamage.x1", r -> playerUnitDamage = 0.75f),
                     new Option("-50%", true, "tri.preset.detail.playerUnitDamage.x2", r -> playerUnitDamage = 0.5f),
-                    new Option("-75%", true, "tri.preset.detail.playerUnitDamage.x3", r -> playerUnitDamage = 0.25f)),
-            new Category(
+                    new Option("-75%", true, "tri.preset.detail.playerUnitDamage.x3", r -> playerUnitDamage = 0.25f,
+                            -1, Req.is("difficulty", 2))),
+            new Category("playerTurret",
                     new Option("-25%", true, "tri.preset.detail.playerTurret.x1", r -> playerTurretDamage = 0.75f),
                     new Option("-50%", true, "tri.preset.detail.playerTurret.x2", r -> playerTurretDamage = 0.5f),
-                    new Option("-75%", true, "tri.preset.detail.playerTurret.x3", r -> playerTurretDamage = 0.25f)),
-            new Category(
+                    new Option("-75%", true, "tri.preset.detail.playerTurret.x3", r -> playerTurretDamage = 0.25f,
+                            -1, Req.is("difficulty", 2))),
+            new Category("playerBlockHealth",
                     new Option("-25%", true, "tri.preset.detail.playerBlockHealth.x1", r -> playerBlockHealth = 0.75f),
                     new Option("-50%", true, "tri.preset.detail.playerBlockHealth.x2", r -> playerBlockHealth = 0.5f),
-                    new Option("-75%", true, "tri.preset.detail.playerBlockHealth.x3", r -> playerBlockHealth = 0.25f)),
-            new Category(
+                    new Option("-75%", true, "tri.preset.detail.playerBlockHealth.x3", r -> playerBlockHealth = 0.25f,
+                            -1, Req.is("difficulty", 2))),
+            new Category("playerUnitHealth",
                     new Option("-25%", true, "tri.preset.detail.playerUnitHealth.x1", r -> playerUnitHealth = 0.75f),
                     new Option("-50%", true, "tri.preset.detail.playerUnitHealth.x2", r -> playerUnitHealth = 0.5f),
-                    new Option("-75%", true, "tri.preset.detail.playerUnitHealth.x3", r -> playerUnitHealth = 0.25f)),
-            // 单选项：禁用任何发射台/接收台。价值固定 3 分；排在第 3 个单选项（网格第 0 列第 2 行）
-            new Category(
+                    new Option("-75%", true, "tri.preset.detail.playerUnitHealth.x3", r -> playerUnitHealth = 0.25f,
+                            -1, Req.is("difficulty", 2))),
+            // 单选项：禁用任何发射台/接收台。价值固定 3 分；排在单选项网格里（每列 3 个）
+            new Category("pads",
                     new Option("tri.preset.value.pads", false, "tri.preset.detail.pads.off",
                             r -> launchPadsDisabled = true, 3))
     );
@@ -327,6 +462,7 @@ public final class TriPresetMode{
         // 此时 rules.spawns 就是本局最终使用的那份波次表，追加不会再被 retainContentFields 覆盖。
         Events.on(RulesLoadEvent.class, e -> {
             if(!presetSession) return;
+            applySpawnMultiplier(e.rules);
             applyReinforceGroups(e.rules);
             applyLaunchPads(e.rules);
         });
@@ -438,6 +574,7 @@ public final class TriPresetMode{
         for(int i = 0; i < categories.size; i++){
             Category c = categories.get(i);
             if(c.selected < 0) continue;
+            if(optionLocked(c, c.selected)) continue;   // 失去前置的残留选择不计入
             Option o = c.options.get(c.selected);
             int value = o.customValue >= 0 ? o.customValue : (c.selected + 1);
             out.add(new Entry(o.text(), value, o.detail(), i, c.selected));
@@ -455,10 +592,82 @@ public final class TriPresetMode{
     /**
      * 切换某个选项：已选中则取消（回到该类默认状态）；未选中则选中，同时清除同类其它选项
      * （同类选项互斥，任何时刻至多一个生效）。
+     *
+     * <p>前置未满足时直接忽略点击（与界面上的灰化状态一致）。取消前置后会连带清掉依赖它的选择，
+     * 见 {@link #pruneLocks()}。
      */
     public static void toggle(int category, int option){
+        if(isOptionLocked(category, option)) return;
+
         Category c = categories.get(category);
         c.selected = c.selected == option ? -1 : option;
+        pruneLocks();
+    }
+
+    /**
+     * 清除“失去前置”的已选词条。
+     *
+     * <p>取消前置（例如把难度从“毁灭”改回“困难”）时，依赖它的最高档词条必须一起失效，
+     * 否则会出现“没选毁灭却留着 +400%”。清除可能级联（A 依赖 B、B 依赖 C），所以循环到稳定。
+     */
+    private static void pruneLocks(){
+        boolean changed = true;
+        while(changed){
+            changed = false;
+            for(Category c : categories){
+                if(c.selected < 0) continue;
+                if(!c.locked() && !optionLocked(c, c.selected)) continue;
+                c.selected = -1;
+                changed = true;
+            }
+        }
+    }
+
+    /** 该词条组是否整组被前置锁住。 */
+    public static boolean isLocked(int category){
+        return categories.get(category).locked();
+    }
+
+    /** 该选项当前是否不可选（整组被锁，或自身前置未满足）。 */
+    public static boolean isOptionLocked(int category, int option){
+        return optionLocked(categories.get(category), option);
+    }
+
+    private static boolean optionLocked(Category category, int option){
+        if(category.locked()) return true;
+        Option o = category.options.get(option);
+        return o.req != null && !o.req.satisfied();
+    }
+
+    /** 该选项的详情文案（供界面悬停提示使用）。 */
+    public static String optionDetail(int category, int option){
+        return categories.get(category).options.get(option).detail();
+    }
+
+    /**
+     * 该选项不可选的原因（已本地化的“需要先选择：X”），可选时返回 null，供界面提示使用。
+     */
+    public static String lockReason(int category, int option){
+        Category c = categories.get(category);
+        Option o = c.options.get(option);
+        Req req = null;
+
+        for(Req r : c.locks){
+            if(!r.satisfied()){
+                req = r;
+                break;
+            }
+        }
+        if(req == null && o.req != null && !o.req.satisfied()) req = o.req;
+        if(req == null) return null;
+
+        Category pre = byKey(req.category);
+        if(pre == null) return null;
+
+        String label = req.option >= 0
+                ? pre.options.get(req.option).text()
+                : Core.bundle.get("tri.preset.lock.anyOption", "该组任意一项");
+        return Core.bundle.format("tri.preset.lock.requires", label);
     }
 
     /**
@@ -518,11 +727,60 @@ public final class TriPresetMode{
 
     /** 数据驱动：只执行当前选中项的 apply；加词条不需要改这里。 */
     private static void applyModifiers(Rules rules){
-        for(Category c : categories){
-            if(c.selected >= 0 && c.options.get(c.selected).apply != null){
-                c.options.get(c.selected).apply.get(rules);
-            }
+        // 难度组一个都没选 → 落在原版“休闲”基线（敌军更弱更少、波次更慢）
+        Category diff = byKey("difficulty");
+        if(diff != null && diff.selected < 0){
+            difficultyUnitHealth = DEFAULT_DIFFICULTY_HEALTH;
+            difficultySpawn = DEFAULT_DIFFICULTY_SPAWN;
+            if(rules != null) rules.waveSpacing *= DEFAULT_DIFFICULTY_TIME;
         }
+
+        for(Category c : categories){
+            if(c.selected < 0 || c.locked()) continue;
+            Option o = c.options.get(c.selected);
+            if(o.req != null && !o.req.satisfied()) continue;
+            if(o.apply != null) o.apply.get(rules);
+        }
+    }
+
+    /**
+     * “游戏难度”词条的落地：三个乘子写进静态配置，波次间隔直接乘到 {@code waveSpacing}。
+     *
+     * <p>写成“乘”而不是“赋值”是刻意的：难度与其它词条是叠加关系——例如“毁灭”的单位生命 ×1.5
+     * 与敌方单位生命 +400%（×5）叠加后是 ×7.5，而不是谁覆盖谁；波次间隔同理
+     * （难度 ×0.6 与出怪间隔 ×0.5 叠加 = ×0.3）。
+     */
+    private static void applyDifficulty(Rules rules, float unitHealth, float spawn, float waveTime){
+        difficultyUnitHealth = unitHealth;
+        difficultySpawn = spawn;
+        if(rules != null && waveTime != 1f) rules.waveSpacing *= waveTime;
+    }
+
+    /**
+     * 把“每波敌军数量”倍率乘到本局最终的生成组上。
+     *
+     * <p>落点必须是 {@link RulesLoadEvent}：地图载入时 {@code retainContentFields} 会把
+     * {@code rules.spawns} 整份换成地图自带那份，之前改的生成组会全部丢失（见
+     * {@link #applyReinforce(Rules)} 的说明）。
+     *
+     * <p>缩放口径对齐 {@code SpawnGroup.getSpawned()}：
+     * {@code spawned = min(unitAmount + (int)(((wave-begin)/spacing) / unitScaling), max)}。
+     * 所以放大 {@code unitAmount}、并把<b>除数</b> {@code unitScaling} 缩小同样的倍数，
+     * 才能让每一波的数量都按倍率放大；{@code max} 表示“同时在场上限”，默认 -1（不限），只对正数上限放大。
+     */
+    private static void applySpawnMultiplier(Rules rules){
+        if(spawnScaled || rules == null || rules.spawns == null) return;
+        if(difficultySpawn == 1f) return;
+
+        Seq<SpawnGroup> spawns = new Seq<>(rules.spawns);
+        for(SpawnGroup group : spawns){
+            if(group == null) continue;
+            group.unitAmount = Math.max(1, Mathf.round(group.unitAmount * difficultySpawn));
+            if(group.unitScaling > 0f) group.unitScaling = group.unitScaling / difficultySpawn;
+            if(group.max > 0) group.max = Math.max(1, Mathf.round(group.max * difficultySpawn));
+        }
+        rules.spawns = spawns;
+        spawnScaled = true;
     }
 
     /**
@@ -609,7 +867,8 @@ public final class TriPresetMode{
 
         float health, damage, armor;
         if(unit.team == Vars.state.rules.waveTeam){
-            health = enemyUnitHealth; damage = enemyUnitDamage; armor = enemyUnitArmor;
+            // 难度词条的单位生命倍率与敌方单位生命词条相乘叠加（不是覆盖）
+            health = enemyUnitHealth * difficultyUnitHealth; damage = enemyUnitDamage; armor = enemyUnitArmor;
         }else if(unit.team == Vars.state.rules.defaultTeam){
             health = playerUnitHealth; damage = playerUnitDamage; armor = 0f;
         }else{
@@ -798,6 +1057,7 @@ public final class TriPresetMode{
     /** 是否有任何单位倍率生效（双方），用于跳过每秒兜底扫描。 */
     private static boolean unitBuffActive(){
         return enemyUnitHealth != 1f || enemyUnitDamage != 1f || enemyUnitArmor != 0f
+                || difficultyUnitHealth != 1f
                 || playerUnitHealth != 1f || playerUnitDamage != 1f;
     }
 
@@ -818,6 +1078,9 @@ public final class TriPresetMode{
         playerUnitDamage = 1f;
         playerBlockHealth = 1f;
         playerTurretDamage = 1f;
+        difficultyUnitHealth = DEFAULT_DIFFICULTY_HEALTH;
+        difficultySpawn = DEFAULT_DIFFICULTY_SPAWN;
+        spawnScaled = false;
         reinforceEnabled = false;
         launchPadsDisabled = false;
         buffedUnits.clear();
