@@ -12,10 +12,12 @@ import mindustry.type.LiquidStack;
 import mindustry.world.blocks.heat.HeatProducer;
 import mindustry.world.blocks.production.GenericCrafter;
 import mindustry.world.blocks.production.HeatCrafter;
+import mindustry.world.draw.DrawBubbles;
 import mindustry.world.draw.DrawDefault;
 import mindustry.world.draw.DrawBlock;
 import mindustry.world.draw.DrawFlame;
 import mindustry.world.draw.DrawGlowRegion;
+import mindustry.world.draw.DrawLiquidTile;
 import mindustry.world.draw.DrawMulti;
 import mindustry.world.draw.DrawRegion;
 import triangle.black.MRFactory.MultiRecipeFactory;
@@ -37,13 +39,8 @@ public class TriFactory {
     // ---- 常规单配方工厂（物品/液体加工） ----
     public static GenericCrafter
             electrolyticCell,oxygenReductionFurnace,IExtractor,IodinationPurificationFurnace,bauxiteElectrolyticCell,VBlastFurnace,VBlastFurnaceBlowing,VacuumAluminothermicGenerator,CoSulfationRoaster,
-            FeBlastFurnace,TiRollingMill,SCombustionVessel,AcidReactionKettle,AcidResistantHeater,saltDistillationFurnace,SaltMixingPool,CuElectrolyticRefiningPool,NickelDiaphragmElectrolyzer,alkalineElectrolyzer,CopperConcentrator,CoElectrolyticCell,
+            FeBlastFurnace,TiRollingMill,SCombustionVessel,AcidReactionKettle,AcidResistantHeater,saltDistillationFurnace,SaltMixingPool,CuElectrolyticRefiningPool,NickelDiaphragmElectrolyzer,CopperConcentrator,CoElectrolyticCell,
             CrThermiteReactionChamber,armoredSinteringFurnace,Condenser;
-
-    /** WC / 原版碳化物双配方碳化钨炉。 */
-    public static MultiRecipeFactory WCarbideFurnace;
-    /** WC / 原版碳化物双配方钨钢混合炉。 */
-    public static MultiRecipeFactory WSteelMixingFurnace;
 
     // ---- 热量相关工厂（产热 / 耗热） ----
     public static HeatProducer SAbsorptionTower,FeMixingPool;
@@ -55,7 +52,7 @@ public class TriFactory {
     // 石油化工线工厂位于 TriOilFactory，由 load() 单独注册。
 
     // ---- 多配方工厂（配方在 Java 中声明） ----
-    public static MultiRecipeFactory BulletFactory,liquidFillingMachine,liquidPourer;
+    public static MultiRecipeFactory BulletFactory,liquidFillingMachine,liquidPourer,WSteelMixingFurnace,WCarbideFurnace,alkalineElectrolyzer;
     public static MultiRecipeFactory boiler;
 
     /** 创建全部工厂方块并声明多配方工厂的配方（由 {@code triangle.loadContent()} 调用）。 */
@@ -92,7 +89,6 @@ public class TriFactory {
         saltDistillationFurnace = new GenericCrafter("saltDistillationFurnace");
         sandRefiningPool = new HeatCrafter("sandRefiningPool");
         NickelDiaphragmElectrolyzer = new GenericCrafter("NickelDiaphragmElectrolyzer");
-        alkalineElectrolyzer = new GenericCrafter("alkalineElectrolyzer");
         CoSulfationRoaster = new GenericCrafter("CoSulfationRoaster");
         CopperConcentrator = new GenericCrafter("CopperConcentrator");
         CoElectrolyticCell = new GenericCrafter("CoElectrolyticCell");
@@ -101,6 +97,62 @@ public class TriFactory {
         Condenser = new GenericCrafter("Condenser");
 
         // ---- 多配方工厂 ----
+        // 碱电解池：原先由 alkalineElectrolyzer.json（单配方 GenericCrafter）定义，
+        // 现转为 MRF，方块数值与配方全部在 Java 中声明（同名 JSON 已删除）。
+        // 配方顺序即面板显示顺序：①原盐水电解 ②高效电解水。
+        alkalineElectrolyzer = new MultiRecipeFactory("alkalineElectrolyzer"){{
+            size = 4;
+            health = 120;
+            itemCapacity = 40;
+            liquidCapacity = 120;
+            rotate = true;
+            squareSprite = true;
+            buildCostMultiplier = 0.8f;
+            researchCostMultiplier = 0.75f;
+            // 两路液体输出方向（与原 JSON 的 "liquidOutputDirections":[1,3] 一致）
+            liquidOutputDirections = new int[]{1, 3};
+            updateEffect = Fx.none;
+            requirements(Category.crafting, with(
+                    TriItems.Cu, 35,
+                    TriItems.TiAlloy, 45,
+                    TriItems.FeSteel, 45,
+                    TriItems.Ni, 12,
+                    TriItems.Ti, 10
+            ));
+            drawer = new DrawMulti(
+                    new DrawRegion(){{ suffix = "-bottom"; }},
+                    // 不固定液体：按当前所存液体着色（两条配方的原料不同，固定写死盐水会画错色）
+                    new DrawLiquidTile(){{ padding = 4f; }},
+                    new DrawBubbles(Color.valueOf("FFFFFF")){{
+                        sides = 10;
+                        recurrence = 6f;
+                        spread = 4f;
+                        radius = 1.5f;
+                        amount = 10;
+                    }},
+                    new DrawRegion()
+            );
+            // ① 原盐水电解配方：卤水 → 氯 + 氢 + 烧碱
+            //    数值与转换前的 JSON 完全一致：power 4、salineWater 0.6、Cl 0.3、hydrogen 0.4、NaOH 10、craftTime 60
+            recipes.add(new Recipe(){{
+                inputLiquid.add(new LiquidStack(TriLiquids.salineWater, 0.6f));
+                outputLiquid.add(new LiquidStack(TriLiquids.Cl, 0.3f));
+                outputLiquid.add(new LiquidStack(Liquids.hydrogen, 0.4f));
+                outputItem.add(new ItemStack(TriItems.NaOH, 10));
+                craftTime = 60f;
+                powerUse = 4f;              // 每 tick；每秒消耗 = 4 × 60 = 240
+            }});
+            // ② 高效电解水：以电解池（electrolyticCell）的水电解配方为基准，效率 ×5、生产时间不变
+            //    原配方：water 0.6 → ozone 0.3 + hydrogen 0.2，craftTime 60，power 4.4
+            //    新配方：液体产出 ×5（ozone 1.5 / hydrogen 1.0），输入与耗电沿用原配方
+            recipes.add(new Recipe(){{
+                inputLiquid.add(new LiquidStack(Liquids.water, 3.0f));
+                outputLiquid.add(new LiquidStack(Liquids.ozone, 1.5f));
+                outputLiquid.add(new LiquidStack(Liquids.hydrogen, 1.0f));
+                craftTime = 60f;
+                powerUse = 12.4f;
+            }});
+        }};
         WCarbideFurnace = new MultiRecipeFactory("WCarbideFurnace"){{
             size = 3;
             health = 120;

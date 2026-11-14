@@ -53,5 +53,4 @@
 		"MonocrystallineSi/12"
 	],
 	"category": "crafting",//建造栏分类
-	"research": "alkalineElectrolyzer",//前置研究
 }

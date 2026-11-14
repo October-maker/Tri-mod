@@ -39,6 +39,14 @@ public class SerTriTechTree {
         Events.on(EventType.ContentInitEvent.class, e -> addNode(TriFactory.saltDistillationFurnace, TriFactory.liquidFillingMachine));
         Events.on(EventType.ContentInitEvent.class, e -> addNode(TriFactory.liquidFillingMachine, TriFactory.liquidPourer));
 
+        // 碱电解池从 JSON 转为 Java（MultiRecipeFactory）后，重建其自身及其往后的整条研究链：
+        // 对应 json 中的 research 字段已删除，因此节点顺序必须“父在前、子在后”。
+        // 注意：这三条必须排在下面 CoElectrolyticCell → WCarbideFurnace 的 addNode 之前，
+        // 否则 CoElectrolyticCell 节点尚未挂载，WCarbideFurnace 会因父节点找不到而被丢弃。
+        Events.on(EventType.ContentInitEvent.class, e -> addNode(TriFactory.NickelDiaphragmElectrolyzer, TriFactory.alkalineElectrolyzer));
+        Events.on(EventType.ContentInitEvent.class, e -> addNode(TriFactory.alkalineElectrolyzer, TriFactory.CoSulfationRoaster));
+        Events.on(EventType.ContentInitEvent.class, e -> addNode(TriFactory.CoSulfationRoaster, TriFactory.CoElectrolyticCell));
+
         // WCarbideFurnace 从 JSON 转为 Java 后，补回原 research: CoElectrolyticCell。
         Events.on(EventType.ContentInitEvent.class, e -> addNode(TriFactory.CoElectrolyticCell, TriFactory.WCarbideFurnace));
         // WSteelMixingFurnace 从 JSON 转为 Java 后，补回原 research: WCarbideFurnace。
