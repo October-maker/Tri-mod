@@ -38,11 +38,11 @@ public class TriMailDialog{
     private enum Filter{ ALL, READ, UNREAD, HISTORY }
 
     private static final float CARD_WIDTH = 480f;
-    /** TMail 分割线线宽（同时作为该行的单元格高度：贴图线条在单元格内垂直居中，格子矮于线宽会被裁掉）。 */
-    static final float DIVIDER_THICKNESS = 10f;
+    /** TMail 分割线线宽（一行横线的高度）。 */
+    static final float DIVIDER_THICKNESS = 2f;
     /**
      * 卡片高度 = 发件人行（32 + padTop 7）+ 分割线行 + 内容行（28 + padBottom 7）。
-     * 分割线由 2px 改为 {@link #DIVIDER_THICKNESS} 后行高同步变化，这里按同一口径配平，避免内容顶出卡片背景。
+     * 分割线为一行 2px 横线，这里按同一口径配平，避免内容顶出卡片背景。
      */
     private static final float CARD_HEIGHT = 32f + 7f + DIVIDER_THICKNESS + 28f + 7f;
     private static final float DETAIL_WIDTH = 560f;
@@ -160,14 +160,13 @@ public class TriMailDialog{
     }
 
     /**
-     * TMail 的分割线元素：用 TriDraw 的贴图线条（点划线 = 1+3 号贴图循环 + 4 号包边）。
+     * TMail 的分割线元素：一行灰色横线。
      *
-     * <p>原先是一条 {@code Tex.whiteui} 竖直纯色条，这里换成 32×32 贴图首尾相接的制表线条，
-     * 颜色仍沿用原来的 {@link Color#gray}（走 Image 染色，贴图会跟着变灰）。
-     * 线宽由 {@link #DIVIDER_THICKNESS} 控制，调用方需把单元格高度也用该值，否则可见线体会被裁。
+     * <p>{@code Tex.whiteui} 由单元格 growX 拉伸成一条 {@link #DIVIDER_THICKNESS} 高的纯色横线，
+     * 颜色为 {@link Color#gray}。调用方需把单元格高度也用该值。
      */
     static Image divider(){
-        Image line = new Image(TriDraw.hLine(TriDraw.LineStyle.DASH_DOT, DIVIDER_THICKNESS));
+        Image line = new Image(Tex.whiteui);
         line.setColor(Color.gray);
         return line;
     }

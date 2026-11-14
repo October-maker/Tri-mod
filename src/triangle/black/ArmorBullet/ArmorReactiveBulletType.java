@@ -103,6 +103,22 @@ public class ArmorReactiveBulletType extends BasicBulletType {
         return Math.max(total, minTotalDamage);
     }
 
+    /**
+     * 运行时伤害倍率：本类不使用引擎的 {@code Damage.damage}，而是自己按护甲公式结算，
+     * 所以“按阵营改写 {@code Bullet.damage}”那种外部倍率（如特殊模式的增伤/减伤词条）不会自动生效。
+     * 这里用 {@code b.damage() / type.damage} 把那个改写还原出来——子弹创建时 {@code b.damage}
+     * 就等于 {@code type.damage}，之后只被外部倍率改写过，所以这个比值恰好是倍率本身。
+     */
+    private float runtimeMult(Bullet b){
+        if(b == null) return 1f;
+        // 绝大多数情况 type.damage 就是基准值（构造器把 baseDamage 同时写进 damage）；
+        // 若 JSON 只填了 baseDamage 而把 damage 写成 0，退回 baseDamage 当基准。
+        float base = damage > 0f ? damage : baseDamage;
+        if(base <= 0f) return 1f;
+        float mult = b.damage() / base;
+        return mult > 0f ? mult : 1f;
+    }
+
     /** 目标护甲值：单位取当前护甲，建筑取方块护甲；未知目标按 0 甲处理。 */
     private float armorOf(Hitboxc entity){
         if(entity instanceof Unit unit) return unit.armor();
@@ -117,19 +133,19 @@ public class ArmorReactiveBulletType extends BasicBulletType {
      * 建筑在护甲结算后额外乘以 {@link #buildingDamageMultiplier}，与原生建筑减伤保持一致。
      * 直接命中目标通过 {@code exclude} 排除，中心目标只吃一次直接伤害，不会被范围重复结算。
      */
-    private void armorSplash(Bullet b, Object exclude){
+    private void armorSplash(Bullet b, Object exclude, float mult){
         if(armorSplashRadius <= 0f) return;
         // 敌方单位（nearbyEnemies 自动排除友军与 derelict；再排除直接命中目标）
         Units.nearbyEnemies(b.team, b.x, b.y, armorSplashRadius, unit -> {
             if(unit.dead() || unit == exclude) return;
-            float dmg = totalDamage(unit.armor()) * splashFalloff(Mathf.dst(b.x, b.y, unit.x(), unit.y()));
+            float dmg = totalDamage(unit.armor()) * mult * splashFalloff(Mathf.dst(b.x, b.y, unit.x(), unit.y()));
             if(dmg > 0) unit.damagePierce(dmg);
         });
         // 敌方建筑（nearbyBuildings 不按队伍过滤，手动排除友军与直接命中目标）
         Units.nearbyBuildings(b.x, b.y, armorSplashRadius, build -> {
             if(build.dead() || build == exclude || build.team == b.team) return;
             // 护甲反应伤害结算后，再应用原版建筑减伤倍率
-            float dmg = totalDamage(build.block.armor) * buildingDamageMultiplier
+            float dmg = totalDamage(build.block.armor) * buildingDamageMultiplier * mult
                 * splashFalloff(Mathf.dst(b.x, b.y, build.x, build.y));
             if(dmg > 0) build.damagePierce(dmg);
         });
@@ -161,15 +177,16 @@ public class ArmorReactiveBulletType extends BasicBulletType {
         // 队伍门控（防御性）：默认碰撞已过滤友军，但 JSON 一旦配置 collidesTeam=true
         // 子弹会命中友军，这里显式排除，避免误伤
         if(entity instanceof Teamc tc && tc.team() == b.team) return;
+        float mult = runtimeMult(b);
         // 实体（单位/建筑）命中：结算自定义伤害；弹头移除/穿透由引擎 Bullet.collision 处理
         if(entity instanceof Healthc h){
-            float dmg = totalDamage(armorOf(entity));
+            float dmg = totalDamage(armorOf(entity)) * mult;
             // 建筑在护甲反应伤害之后再应用原版建筑减伤倍率
             if(entity instanceof Building) dmg *= buildingDamageMultiplier;
             if(dmg > 0) h.damagePierce(dmg);
         }
         // 可选范围伤害：命中点周围所有敌方单位与建筑按各自护甲结算（armorSplashRadius>0 时启用）；排除直接命中目标
-        armorSplash(b, entity);
+        armorSplash(b, entity, mult);
     }
 
     @Override
@@ -177,11 +194,12 @@ public class ArmorReactiveBulletType extends BasicBulletType {
         // 与默认 hitTile 一致的门控：仅对敌对建筑且 apply 时结算
         if(build.team != b.team && apply){
             hit(b, x, y); // 命中特效/音效
+            float mult = runtimeMult(b);
             // 先按建筑护甲结算护甲反应伤害，再乘原版建筑减伤倍率
-            float dmg = totalDamage(build.block.armor) * buildingDamageMultiplier;
+            float dmg = totalDamage(build.block.armor) * buildingDamageMultiplier * mult;
             if(dmg > 0) build.damagePierce(dmg);
             // 可选范围伤害：命中点周围所有敌方单位与建筑按各自护甲结算（armorSplashRadius>0 时启用）；排除直接命中建筑
-            armorSplash(b, build);
+            armorSplash(b, build, mult);
         }
     }
 
