@@ -121,7 +121,11 @@ public class ExSerBlocks {
         //    lifetime 手动设为「(新射程+10)/speed」，保证弹种能飞到新射程 700 而不提前消失
         //    （不调用 foreshadow.limitRange()，以免误改原版 speed=0 的轨道弹）
         BulletType bhe = new ArmorReactiveBulletType(10f){{ // 高爆弹
-            ammoMultiplier = 1f;
+            // 弹药消耗：噩兆 ammoPerShot = 5，每发扣 5 点弹药，而每枚物品只补 ammoMultiplier 点。
+            // 这里填 ammoPerShot（=5）→ 每发恰好消耗 1 枚 BHE；原版弹种的 ammoMultiplier 不动。
+            ammoMultiplier = foreshadow.ammoPerShot;
+            shootEffect = Fx.instShoot;   // 开火特效：与合金子弹（surgeAlloy 轨道弹）的 shootEffect 相同
+            smokeEffect = Fx.smokeCloud;  // 开火烟雾：与合金子弹的 smokeEffect 相同
             speed = 40f;
             lifetime = (foreshadow.range + 10f) / 40f;
             baseArmor = 50f;           // 基准装甲：目标装甲低于此→伤害提升，高于此→降低
@@ -145,7 +149,9 @@ public class ExSerBlocks {
             width = 10f;
             height = 20f;
             speed = 40f;
-            ammoMultiplier = 1f;       // 每次供弹提供的弹药数
+            ammoMultiplier = foreshadow.ammoPerShot; // 弹药消耗：每发消耗 1 枚 BHEAT（说明见上 BHE）
+            shootEffect = Fx.instShoot;   // 开火特效：与合金子弹（surgeAlloy 轨道弹）的 shootEffect 相同
+            smokeEffect = Fx.smokeCloud;  // 开火烟雾：与合金子弹的 smokeEffect 相同
             knockback = 20f;           // 击退
             pierce = false;            // 不穿透
             drag = 0f;
@@ -171,7 +177,9 @@ public class ExSerBlocks {
         foreshadow.ammoTypes.put(TriItems.BHEAT, bheat);
 
         BulletType bhesh = new HeshBulletType(1000f, HeshBulletType.DEFAULT_LARGE_SIZE){{ // 碎甲弹（护甲反应型）
-            ammoMultiplier = 1f;
+            ammoMultiplier = foreshadow.ammoPerShot; // 弹药消耗：每发消耗 1 枚 BHESH（说明见上 BHE）
+            shootEffect = Fx.instShoot;   // 开火特效：与合金子弹（surgeAlloy 轨道弹）的 shootEffect 相同
+            smokeEffect = Fx.smokeCloud;  // 开火烟雾：与合金子弹的 smokeEffect 相同
             speed = 40f;
             lifetime = (foreshadow.range + 10f) / 40f;
             baseArmor = 100f;           // 基准装甲：目标装甲低于此→伤害提升，高于此→降低
@@ -182,7 +190,7 @@ public class ExSerBlocks {
             sprite = "triangle-205HE"; // 自定义贴图（图集建好后由下方 ContentInitEvent 解析）
             drag = 0f;
             hitSize = 24f;
-            buildingDamageMultiplier = 0.2f;
+            buildingDamageMultiplier = 1f;
         }};
         foreshadow.ammoTypes.put(TriItems.BHESH, bhesh);
 

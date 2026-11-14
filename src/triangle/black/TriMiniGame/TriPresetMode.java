@@ -8,6 +8,7 @@ import arc.util.Timer;
 import arc.func.Cons;
 import arc.struct.Seq;
 import mindustry.Vars;
+import mindustry.content.Blocks;
 import mindustry.core.GameState.State;
 import mindustry.entities.bullet.BulletType;
 import mindustry.entities.bullet.LaserBulletType;
@@ -31,6 +32,8 @@ import mindustry.gen.Unit;
 import mindustry.maps.Map;
 import mindustry.world.Block;
 import mindustry.world.Tile;
+import mindustry.world.blocks.campaign.LandingPad;
+import mindustry.world.blocks.campaign.LaunchPad;
 import triangle.content.TriUnits;
 
 /**
@@ -132,6 +135,8 @@ public final class TriPresetMode{
 
     /** 本模式启动的对局标记：进入对局后调用 saves.resetSave()，让退出菜单只剩“不保存退出”。 */
     private static boolean presetSession, enteredPlaying;
+    /** 接收台 Build 实现的覆写是否已经打过补丁（内容加载后只能成功一次，之后幂等跳过）。 */
+    private static boolean padPatched;
     /** 已强化过的敌方单位 id，保证同一只单位只乘一次（创建钩子与兜底扫描都走它）。 */
     private static final arc.struct.IntSet buffedUnits = new arc.struct.IntSet();
     /** 已经乘过伤害的“这一次生成”的子弹（子弹池化复用，需要按生成周期区分）。 */
@@ -381,6 +386,9 @@ public final class TriPresetMode{
 
     /** 注册敌方/我方数值的事件钩子；由 triangle 主类在启动时调用一次。 */
     public static void init(){
+        // 接收台的 accessible() 覆写要等内容加载完才做得成（见 patchLandingPad），开局时再补。
+        patchLandingPad();
+
         // 单位（双方）：创建瞬间改写实例数值。maxHealth/health 是字段（不会随倍率自动重算），
         // damageMultiplier 会在其武器的伤害结算中被读取。
         Events.on(UnitCreateEvent.class, e -> applyUnitBuff(e.unit));
@@ -531,6 +539,45 @@ public final class TriPresetMode{
         if(Vars.control.saves.getCurrent() == null) return;
 
         Vars.control.saves.resetSave();
+    }
+
+    /**
+     * 所有接收台（原版 {@code landing-pad} 与模组自带的 {@code SerTriLandingPad}，两者都是
+     * {@code LandingPad} 的子类）在非战役局里都“不可用”：原版 {@code LandingPadBuild.accessible()}
+     * 只在战役 / 编辑器 / {@code infiniteResources}（沙盒）下返回 true。它一旦为 false，玩家既不能
+     * 给接收台配置物品，{@code updateTile} 里“仓空 → 请求落地”那段也就永远走不到。
+     *
+     * <p>做法是按类型遍历内容，给每个 {@code LandingPad} 方块换一个 Build 实现，
+     * 在 {@code presetSession} 期间放开 {@code accessible()}：配置好物品后，非战役下
+     * {@code isFake()} 恒为 true → 空仓就 {@code Call.landingPadLanded} 直接补满
+     * {@code itemCapacity}，再 dump 给相邻方块，和沙盒是同一条原版代码路径。
+     * {@code presetSession} 之外仍交回 super，战役与其它自定义局的行为一律不变。
+     *
+     * <p>按类型而不是按名字表，是因为模组 JSON 方块的 name 就是文件名（大小写原样保留，
+     * 如 {@code SerTriLandingPad}），写死名字既容易笔误也经不起改名。
+     *
+     * <p>时机：{@code Blocks} 的字段是在 {@code ContentList.load()} 里赋值的，mod 的 init 跑在那之前，
+     * 那时内容还是空的，所以在 init 里只做一次尝试（多半是空转），真正生效放在 {@link #start()}。
+     */
+    private static void patchLandingPad(){
+        if(padPatched || Vars.content == null) return;
+
+        int patched = 0;
+        for(Block block : Vars.content.blocks()){
+            if(!(block instanceof LandingPad)) continue;
+
+            LandingPad pad = (LandingPad)block;
+            pad.buildType = () -> pad.new LandingPadBuild(){
+                @Override
+                public boolean accessible(){
+                    return super.accessible() || presetSession;
+                }
+            };
+            patched++;
+        }
+
+        // 一个都没找到说明内容还没加载，不置标记，下次进来再试
+        if(patched > 0) padPatched = true;
     }
 
     /** 预设模式使用的自带地图；每次调用重新查找（地图可能被重载）。 */
@@ -710,6 +757,8 @@ public final class TriPresetMode{
 
     /** 以当前词条状态新建一局自定义游戏。 */
     public static void start(){
+        patchLandingPad();
+
         Map map = map();
         // 地图缺失时不启动（避免 playMap(null) 抛异常）；界面侧无需额外提示
         if(map == null) return;
@@ -813,10 +862,24 @@ public final class TriPresetMode{
             if(pad != null && rules.revealedBlocks != null) rules.revealedBlocks.add(pad);
         }
 
+        // 接收台按类型兜底揭示：模组自带的 SerTriLandingPad 名字保留大小写，不适合走名字表，
+        // 按 instanceof 处理既不依赖命名，也顺带覆盖以后再加的同类方块。
+        if(rules.revealedBlocks != null){
+            for(Block b : Vars.content.blocks()){
+                if(b instanceof LandingPad) rules.revealedBlocks.add(b);
+            }
+        }
+
         if(!launchPadsDisabled) return;
         for(String name : ALL_PAD_NAMES){
             Block pad = Vars.content.block(name);
             if(pad != null && rules.bannedBlocks != null) rules.bannedBlocks.add(pad);
+        }
+        // 同上：任何发射台/接收台（含模组那对发射台、接收台）都按类型拉黑，不依赖方块名字。
+        if(rules.bannedBlocks != null){
+            for(Block b : Vars.content.blocks()){
+                if(b instanceof LandingPad || b instanceof LaunchPad) rules.bannedBlocks.add(b);
+            }
         }
         rules.hideBannedBlocks = true;
     }
