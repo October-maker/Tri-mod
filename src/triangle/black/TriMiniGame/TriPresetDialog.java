@@ -788,7 +788,17 @@ public class TriPresetDialog extends BaseDialog{
         }
     }
 
-    /** 详情 → 地图的退场：卡片按“从下到上”的顺序依次向右滑出，缩略图与卡片退场同步出现并展开。 */
+    /**
+     * 详情 → 地图的退场：<b>就是入场的倒放</b>——延时顺序、缓动、时长与
+     * {@link #showDetailContent(boolean) showDetailContent(true)} 一一对应，只是方向相反：
+     * <ul>
+     *   <li>延时：入场自上而下 {@code i * BOX_STAGGER}，倒放即自下而上 {@code (n-1-i) * BOX_STAGGER}；</li>
+     *   <li>位移：入场自右侧 {@code +detailW} 滑到 0，倒放即回到 {@code +detailW}；</li>
+     *   <li>缓动：入场的 {@code pow2Out} 的时间反演正是 {@code pow2In}（1-pow2Out(1-t)=t²）；</li>
+     *   <li>时长：与入场同为 {@link #BOX_IN_DUR}，不用单独的 {@link #BOX_EXIT_DUR}。</li>
+     * </ul>
+     * 缩略图与卡片退场同步出现并展开。
+     */
     private void exitDetailToMap(boolean morphThumb){
         int epoch = ++detailEpoch;
 
@@ -799,18 +809,19 @@ public class TriPresetDialog extends BaseDialog{
         }
 
         int n = detailOrder.size;
+        float off = detailW; // 与入场同一个横向位移量（入场起点 = 详情区右边界）
         for(int i = 0; i < n; i++){
             Table box = detailBoxes.get(detailOrder.get(i));
             if(box == null) continue;
-            float delay = (n - 1 - i) * BOX_SHIFT_DELAY; // 最下面的先动，往上逐张延后
+            float delay = (n - 1 - i) * BOX_STAGGER; // 倒放：入场最后动的那张最先退场
             box.clearActions();
             box.setTranslation(0f, 0f);
             box.addAction(Actions.sequence(Actions.delay(delay),
-                    Actions.translateBy(detailW, 0f, BOX_EXIT_DUR, Interp.pow2Out))); // 向右滑出（被 ScrollPane 裁掉）
+                    Actions.translateBy(off, 0f, BOX_IN_DUR, Interp.pow2In))); // 向右滑出（被 ScrollPane 裁掉）
         }
 
         // 卡片全部离开视区后才收起详情区（缩略图此时已经 morph 到位）
-        float total = Math.max(0, n - 1) * BOX_SHIFT_DELAY + BOX_EXIT_DUR;
+        float total = Math.max(0, n - 1) * BOX_STAGGER + BOX_IN_DUR;
         pane.clearActions();
         pane.addAction(Actions.sequence(Actions.delay(total), Actions.run(() -> {
             if(epoch != detailEpoch) return; // 期间已切回详情或关闭界面：作废

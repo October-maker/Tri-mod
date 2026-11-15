@@ -48,13 +48,25 @@ public class TriMailDialog{
     private static final float DETAIL_WIDTH = 560f;
 
     // Logo intro animation
-    private static final float LOGO_PIECE_DURATION = 0.55f;
+    /** 单片滑入时长：缩短后每片“快进→到位”更干脆，配合错帧形成更强的顿挫节奏。 */
+    private static final float LOGO_PIECE_DURATION = 0.22f;
 
-    private static final float LOGO_PIECE_STAGGER = 0.08f;
+    /** 相邻分帧的起始间隔：保证“前一片急停到位、下一片再冲刺”的独立节奏。 */
+    private static final float LOGO_PIECE_STAGGER = 0.1f;
 
-    private static final float LOGO_ASSEMBLE_HOLD = 0.12f;
+    /** 组合完成后的额外停顿：0 表示最后一片到位即进入收尾滑动（保证连贯；如需顿挫可调大）。 */
+    private static final float LOGO_ASSEMBLE_HOLD = 0f;
 
-    private static final float LOGO_COVER_MOVE_DURATION = 0.5f;
+    /** combo 入场：从屏幕右外侧高速滑入到组合起点（先快后慢 pow2Out，高速进入后变慢）。 */
+    private static final float LOGO_ENTRY_DURATION = 0.45f;
+
+    /** 分帧滑入角度（度）：2 沿 -60° 自左下进入，3 正上、4 正下、5 正右（60° 倾斜 + 中心对称）；
+     *  1 号不参与斜线，固定从 combo 右侧水平进入（跟随 combo 的入场方向）。 */
+    private static final float LOGO_SLIDE_ANGLE = 60f;
+
+    /** 组合期 combo 匀速横移的距离（屏幕宽比例）：组合起点在中心右侧、终点在中心左侧，
+     *  组合过程的中点恰好落在屏幕正中。 */
+    private static final float LOGO_COMBO_DRIFT_RATIO = 0.1f;
 
     private static final float LOGO_ASSEMBLE_SCALE = 1.15f;
 
@@ -309,13 +321,23 @@ public class TriMailDialog{
         });
     }
 
-    /** 在已打开Tmail 页面内播TmailLogo 组合动画 <p>与开始界面（TriWelcome）类似： TmailLogo-1 从页面上方滑入、TmailLogo-2 从页面下方滑入，两片在页面中央拼合； 随后完整TmailLogo 覆盖并替换两片，移动到页面左侧停靠； 动画结束后移除黑色遮罩并构建/滑入邮件卡片 <p>整个 Logo 层是 {@code inbox.cont} 的子节点，与 content 一样位Tmail 页面内部。 */
+    /**
+     * 在已打开的 Tmail 页面内播放 TmailLogo 组合动画。
+     *
+     * <p>五片分帧依次滑入屏幕中央拼合：
+     * <ul>
+     *   <li>TmailLogo-1 从右边快速水平滑入（先快后慢，接近中央时放缓）；</li>
+     *   <li>TmailLogo-2 从左下、TmailLogo-3 从右上、TmailLogo-4 从左下、TmailLogo-5 从右边水平依次滑入；</li>
+     * </ul>
+     * 拼合完成后整体替换为完整 TmailLogo，并在滑向左 3/4 停靠位的过程中缩放回正常大小；
+     * 动画结束后移除黑色遮罩并构建/滑入邮件卡片。
+     *
+     * <p>整个 Logo 层是 {@code inbox.cont} 的子节点，与 content 一样位于 Tmail 页面内部。
+     */
     private static void playLogoIntro(boolean story){
         cancelLogoIntro();
 
         float sw = Core.graphics.getWidth(), sh = Core.graphics.getHeight();
-        TextureRegion piece1Tex = TriDraw.tex("Tmail/TmailLogo-1");
-        TextureRegion piece2Tex = TriDraw.tex("Tmail/TmailLogo-2");
         TextureRegion coverTex = TriDraw.tex("Tmail/TmailLogo");
         float logoW = Math.min(sw * LOGO_WIDTH_RATIO, LOGO_MAX_WIDTH);
         float logoH = logoW * coverTex.height / Math.max(coverTex.width, 1);
@@ -348,79 +370,127 @@ public class TriMailDialog{
 
         float pieceX = centerX - logoW / 2f;
         float pieceY = centerY - logoH / 2f;
-        float topStartY = pageH + LOGO_OFFSCREEN_MARGIN;
-        float bottomStartY = -logoH - LOGO_OFFSCREEN_MARGIN;
 
-        Image piece1 = new Image(piece1Tex);
-        piece1.setSize(logoW, logoH);
-        piece1.setOrigin(Align.center);
-        piece1.setScale(LOGO_ASSEMBLE_SCALE);
-        piece1.setPosition(pieceX, topStartY);
-        layer.addChild(piece1);
+        // 停靠位（左 3/4）与中央位提前记录（相对 inbox.cont 的局部坐标）：
+        // combo 自组合开始就向左移动，因此目标坐标需在启动移动前就绪
+        logoHomeX = targetX - logoW / 2f;
+        logoHomeY = targetY - logoH / 2f;
+        logoCenterX = pieceX;
+        logoCenterY = pieceY;
 
-        Image piece2 = new Image(piece2Tex);
-        piece2.setSize(logoW, logoH);
-        piece2.setOrigin(Align.center);
-        piece2.setScale(LOGO_ASSEMBLE_SCALE);
-        piece2.setPosition(pieceX, bottomStartY);
-        layer.addChild(piece2);
+        // 五片位移的统一父级：一个与 logo 同尺寸的 Table（以 TmailLogo-1 这一片为基准），
+        // 五片都是它的子节点，在表内局部坐标位移（拼合后“家”位置为 (0,0)）；
+        // 组合完成后的停靠与缩放也只需操作该 Table。
+        Table combo = new Table();
+        combo.setSize(logoW, logoH);
+        // 入场起点：屏幕右外侧（整块 combo 完全在画面之外，随后高速滑入并减速）
+        float comboStartX = pageW + logoW * LOGO_ASSEMBLE_SCALE / 2f + LOGO_OFFSCREEN_MARGIN - logoW / 2f;
+        combo.setPosition(comboStartX, pieceY);
+        combo.setOrigin(Align.center);
+        combo.setScale(LOGO_ASSEMBLE_SCALE);
+        combo.setLayoutEnabled(false); // 冻结自身布局，子节点位置由动画手动控制
+        layer.addChild(combo);
+        tmailLogoTable = combo;
 
-        piece1.actions(moveTo(pieceX, pieceY, LOGO_PIECE_DURATION, Interp.pow2Out));
-        piece2.actions(
-            delay(LOGO_PIECE_STAGGER),
-            moveTo(pieceX, pieceY, LOGO_PIECE_DURATION, Interp.pow2Out)
+        // 组合期匀速横移的起终点：以屏幕中心为对称中点（组合过程的中点 = 屏幕正中）
+        float drift = sw * LOGO_COMBO_DRIFT_RATIO;
+        float comboAssembleFromX = pieceX + drift / 2f;
+        float comboAssembleToX = pieceX - drift / 2f;
+
+        // 分帧方位（相对 combo 中心固定）：1 从 combo 右侧水平进入（跟随 combo 的入场方向）；
+        // 2 沿 -60° 自左下、3 正上、4 正下、5 正右
+        float rad = (float)Math.toRadians(LOGO_SLIDE_ANGLE);
+        float dirCos = (float)Math.cos(rad), dirSin = (float)Math.sin(rad);
+        float comboCenterX = logoW / 2f, comboCenterY = logoH / 2f;
+        float as = LOGO_ASSEMBLE_SCALE;
+        // 斜线起点距离：按放大后尺寸估算，保证整片完全落在屏幕外
+        float dist = Math.max(
+            (pageW + logoW * as + 2f * LOGO_OFFSCREEN_MARGIN) / (2f * dirCos),
+            (pageH + logoH * as + 2f * LOGO_OFFSCREEN_MARGIN) / (2f * dirSin)
         );
+        float distUp = pageH + logoH * as / 2f + LOGO_OFFSCREEN_MARGIN; // 正上/正下外沿
+        float distRight1 = logoW + LOGO_OFFSCREEN_MARGIN;               // 1 号：紧贴 combo 右缘外侧，随 combo 一起进屏
 
-        float assembleAt = LOGO_PIECE_STAGGER + LOGO_PIECE_DURATION + LOGO_ASSEMBLE_HOLD;
-        layer.actions(delay(assembleAt), Actions.run(() -> {
-            if(logoIntro != layer) return;
-
-            // 完整 TmailLogo 覆盖并替换两片分帧；放入独立 Table，便于详情打开时整体移
-            Image cover = new Image(coverTex);
-            cover.setSize(logoW, logoH);
-            cover.setOrigin(Align.center);
-            cover.setScale(LOGO_ASSEMBLE_SCALE);
-
-            Table logoTable = new Table();
-            logoTable.add(cover).size(logoW, logoH);
-            logoTable.pack();
-            logoTable.setOrigin(Align.center);
-            logoTable.setPosition(pieceX, pieceY);
-            layer.addChild(logoTable);
-            tmailLogoTable = logoTable;
-
-            piece1.remove();
-            piece2.remove();
-            dim.remove();
-
-            // 记录停靠 中央位（相对 inbox.cont 的局部坐标）
-            logoHomeX = targetX - logoW / 2f;
-            logoHomeY = targetY - logoH / 2f;
-            logoCenterX = pieceX;
-            logoCenterY = pieceY;
-
-            // 类似 TriWelcome：先慢后快滑入停靠位，同时缩放回正常大小
-            logoTable.actions(
-                moveTo(logoHomeX, logoHomeY, LOGO_COVER_MOVE_DURATION, Interp.pow2In),
-                Actions.run(() -> {
-                    if(logoIntro != layer) return;
-                    layer.touchable = Touchable.disabled;
-                    // 兜底：正常情况下 content 已在下面提前构建；若因关闭等原因未构建，则这里补一
-                    if(inbox != null && inbox.isShown() && lastContent == null && !TriMailRefreshController.hasLoading()){
-                        openInitialContent(inbox);
-                    }
-                })
+        // 五片分帧：1（右侧水平）、2（左下 -60°）、3 正上、4 正下、5 正右；
+        // 顺序仍为 1 → 2 → 3 → 4 → 5，每片快速冲刺后在 combo 中心到位
+        String[] pieceNames = {"Tmail/TmailLogo-1", "Tmail/TmailLogo-2", "Tmail/TmailLogo-3", "Tmail/TmailLogo-4", "Tmail/TmailLogo-5"};
+        float[] pieceFromX = {
+            comboCenterX + distRight1,      // 1 右侧（水平，跟随 combo）
+            comboCenterX - dist * dirCos,   // 2 左下（与斜线中心对称）
+            comboCenterX,                    // 3 正上
+            comboCenterX,                    // 4 正下
+            comboCenterX + dist              // 5 正右
+        };
+        float[] pieceFromY = {
+            comboCenterY,
+            comboCenterY - dist * dirSin,
+            comboCenterY + distUp,
+            comboCenterY - distUp,
+            comboCenterY
+        };
+        Image[] pieces = new Image[5];
+        for(int i = 0; i < 5; i++){
+            Image piece = new Image(TriDraw.tex(pieceNames[i]));
+            piece.setSize(logoW, logoH);
+            piece.setOrigin(Align.center);
+            piece.setPosition(pieceFromX[i], pieceFromY[i]);
+            combo.addChild(piece);
+            piece.actions(
+                delay(i * LOGO_PIECE_STAGGER),
+                moveTo(0f, 0f, LOGO_PIECE_DURATION, Interp.pow2Out)
             );
-            cover.actions(scaleTo(1f, 1f, LOGO_COVER_MOVE_DURATION, Interp.pow2In));
+            pieces[i] = piece;
+        }
 
-            // 调整 content 入场时机：content 滑入（SLIDE_IN_DURATION）结 + 1 tick 延迟
-            // 恰好 Logo 滑到停靠位（LOGO_COVER_MOVE_DURATION）同一时刻
-            float contentStartDelay = Math.max(0f, LOGO_COVER_MOVE_DURATION - SLIDE_IN_DURATION - 1f / 60f);
-            layer.actions(delay(contentStartDelay), Actions.run(() -> {
-                if(logoIntro == layer && inbox != null && inbox.isShown() && lastContent == null && !TriMailRefreshController.hasLoading()){
+        // 组合完成时刻 = 最后一片到位（4 段错帧 + 单片时长）+ 停顿（LOGO_ASSEMBLE_HOLD 现为 0，
+        // 即最后一片到位瞬间即进入收尾滑动，保证连贯）
+        float assembleAt = 4f * LOGO_PIECE_STAGGER + LOGO_PIECE_DURATION + LOGO_ASSEMBLE_HOLD;
+
+        // combo 动线：
+        //  1) 右外高速滑入并减速（pow2Out）到组合起点（屏幕中心右侧 drift/2）；
+        //  2) 以恒定速度（linear）横移完成组合，位移中点正好落在屏幕正中；
+        //  3) 组合完成后以 content 滑入同速（SLIDE_IN_DURATION）快速移到左 3/4，同时缩放回正常大小。
+        //     ——不改 content 的滑入速度，由 combo 适应它。
+        // 收尾缓动：初速度与匀速组合段完全一致（速度连续，消除“匀速 → 急停 → 再加速”的突变）。
+        // 二次曲线 d(t) = v0·t + (1-v0)·t²：d'(0)=v0（等于匀速段归一化速度），末段仍自行加速到位。
+        float comboDriftSpeed = Math.abs(drift) / assembleAt;             // 匀速段速度（像素/秒）
+        float finalTravelDist = Math.abs(logoHomeX - comboAssembleToX);   // 收尾段位移
+        float normV0 = finalTravelDist > 0f ? comboDriftSpeed * SLIDE_IN_DURATION / finalTravelDist : 0f;
+        float easeV0 = Math.max(0f, Math.min(1f, normV0));
+        Interp easeFromSpeed = t -> easeV0 * t + (1f - easeV0) * t * t;
+
+        combo.actions(
+            moveTo(comboAssembleFromX, pieceY, LOGO_ENTRY_DURATION, Interp.pow2Out),
+            moveTo(comboAssembleToX, pieceY, assembleAt, Interp.linear),
+            Actions.parallel(
+                moveTo(logoHomeX, logoHomeY, SLIDE_IN_DURATION, easeFromSpeed),
+                scaleTo(1f, 1f, SLIDE_IN_DURATION, easeFromSpeed)
+            ),
+            Actions.run(() -> {
+                if(logoIntro != layer) return;
+                layer.touchable = Touchable.disabled;
+                // 兜底：正常情况下 content 已在此前构建并滑入；若因关闭等原因未构建，则这里补一次
+                if(inbox != null && inbox.isShown() && lastContent == null && !TriMailRefreshController.hasLoading()){
                     openInitialContent(inbox);
                 }
-            }));
+            })
+        );
+
+        // 拼合完成（入场 + 组合结束）的同一时刻：五片替换为完整 TmailLogo（“变为 TmailLogo”），
+        // 并触发 content 重建——随后 combo 与 content 同速并行收尾（combo 到左 3/4、content 从右侧滑入）
+        layer.actions(delay(LOGO_ENTRY_DURATION + assembleAt), Actions.run(() -> {
+            if(logoIntro != layer) return;
+
+            for(Image piece : pieces) piece.remove();
+            Image cover = new Image(coverTex);
+            cover.setSize(logoW, logoH);
+            cover.setPosition(0f, 0f);
+            combo.addChild(cover);
+            dim.remove();
+
+            if(inbox != null && inbox.isShown() && lastContent == null && !TriMailRefreshController.hasLoading()){
+                openInitialContent(inbox);
+            }
         }));
 
         logoIntro = layer;
