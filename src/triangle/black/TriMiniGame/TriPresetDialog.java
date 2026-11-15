@@ -14,6 +14,7 @@ import arc.scene.style.TextureRegionDrawable;
 import arc.scene.ui.Image;
 import arc.scene.ui.Label;
 import arc.scene.ui.ScrollPane;
+import arc.scene.ui.ScrollPane.ScrollPaneStyle;
 import arc.scene.ui.TextButton;
 import arc.scene.ui.Tooltip;
 import arc.scene.ui.layout.Stack;
@@ -226,7 +227,12 @@ public class TriPresetDialog extends BaseDialog{
         Table frame = new Table();
         frame.add(buttonBox).pad(4f);
 
-        ScrollPane scroller = new ScrollPane(frame, Styles.horizontalPane);
+        // 横向滚动条不显示：复制一份 Styles.horizontalPane 并清掉滑槽/滑块，
+        // 滑动本身仍保留（滚轮与拖拽都能横移），只是不再绘制位置提示条。
+        ScrollPaneStyle noBarHorizontal = new ScrollPaneStyle(Styles.horizontalPane);
+        noBarHorizontal.hScroll = null;
+        noBarHorizontal.hScrollKnob = null;
+        ScrollPane scroller = new ScrollPane(frame, noBarHorizontal);
         scroller.setScrollingDisabled(false, true); // 只许横向滑动
         scroller.setClip(true);                     // 视口外不绘制，避免整卡滑出去盖住右栏
         // 鼠标滚轮在原版窗口里只产生纵向位移，这里用捕获监听把它映射成横向滚动，免去必须拖拽

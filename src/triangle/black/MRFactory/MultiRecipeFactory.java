@@ -84,6 +84,21 @@ public class MultiRecipeFactory extends GenericCrafter{
     public Seq<Recipe> recipes = new Seq<>();
     /** 是否允许同实例堆叠；由具体工厂在内容加载前设置。 */
     public boolean stackable = false;
+    /**
+     * 特殊模式开关：无视“需要研究”直接放开配方。{@code true} 时 {@link #isLocked(Recipe)}
+     * 不再做研究/额外条件判定（默认态）。由 {@code TriPresetMode} 按“不完整数据库”词条切换。
+     */
+    public static boolean ignoreRecipeResearch = false;
+    /**
+     * 特殊模式开关：堆叠层数上限无视堆叠研究节点（叠到 {@link #stackLimit} 为止）。
+     * 由 {@code TriPresetMode} 按“砂石地质”词条与默认态切换。
+     */
+    public static boolean ignoreStackResearch = false;
+    /**
+     * 特殊模式开关：禁止多配方工厂堆叠。{@code true} 时放置、覆盖、蓝图、配置面板的堆叠入口
+     * 全部拒绝。由 {@code TriPresetMode} 按“砂石地质”词条切换。
+     */
+    public static boolean stackingDisabled = false;
     /** 最大堆叠层数（含基础层）；堆叠变体按该值预生成。 */
     public int stackLimit = 8;
     /** 战役科技增长线；为空时 stackLimitNow() 直接返回 stackLimit。 */
@@ -138,10 +153,15 @@ public class MultiRecipeFactory extends GenericCrafter{
         drawArrow = false;//是否显示箭头
     }
 
+    /** 当前是否真的允许堆叠：工厂自身的 {@link #stackable} 加上特殊模式的禁用开关。 */
+    public boolean stackAllowed(){
+        return stackable && !stackingDisabled;
+    }
+
     /** 放置计划实际建造的方块；堆叠工厂在这里切换为固定层数变体。 */
     @Override
     public Block getReplacement(BuildPlan req, Seq<BuildPlan> plans){
-        if(stackable){
+        if(stackAllowed()){
             Block variant = StackedMultiRecipeFactory.nextVariant(this, req);
             if(variant != null) return variant;
             // 已达上限时把计划固定到当前顶层方块；顶层 replaceable=false，
@@ -155,7 +175,7 @@ public class MultiRecipeFactory extends GenericCrafter{
     /** 允许同实例覆盖放置，作为堆叠入口。 */
     @Override
     public boolean canPlaceOn(Tile tile, mindustry.game.Team team, int rotation){
-        if(stackable && tile != null && tile.build != null){
+        if(stackAllowed() && tile != null && tile.build != null){
             Block existing = tile.build.block;
             boolean chain = existing == this
                 || (existing instanceof StackedMultiRecipeFactory variant && variant.baseFactory == this);
@@ -166,16 +186,16 @@ public class MultiRecipeFactory extends GenericCrafter{
 
     @Override
     public boolean canReplace(Block other){
-        if(stackable && other == this) return true;
-        if(stackable && other instanceof StackedMultiRecipeFactory variant
-            && variant.baseFactory == this && variant.stackable) return true;
+        if(stackAllowed() && other == this) return true;
+        if(stackAllowed() && other instanceof StackedMultiRecipeFactory variant
+            && variant.baseFactory == this && variant.stackAllowed()) return true;
         return super.canReplace(other);
     }
 
     @Override
     public void drawPlace(int x, int y, int rotation, boolean valid){
         super.drawPlace(x, y, rotation, valid);
-        if((stackable || this instanceof StackedMultiRecipeFactory)
+        if((stackAllowed() || this instanceof StackedMultiRecipeFactory)
             && StackedMultiRecipeFactory.atStackLimit(this, x, y)){
             drawPlaceText(Core.bundle.get("tri.stack.limit"), x, y, false);
         }
@@ -187,7 +207,7 @@ public class MultiRecipeFactory extends GenericCrafter{
      * 改判为合法，其它非法原因（遮挡、敌核心范围等）仍然显示红色虚影。
      */
     private boolean stackPreviewValid(BuildPlan req){
-        if(!stackable || req == null || Vars.world == null || Vars.player == null) return false;
+        if(!stackAllowed() || req == null || Vars.world == null || Vars.player == null) return false;
         Tile tile = Vars.world.tile(req.x, req.y);
         if(tile == null || tile.build == null) return false;
         if(tile.team() != Vars.player.team()) return false;
@@ -299,7 +319,11 @@ public class MultiRecipeFactory extends GenericCrafter{
 
     /** 当前实际允许的堆叠层数；未配置科技增长线时直接使用 stackLimit。 */
     public int stackLimitNow(){
+        // 特殊模式“砂石地质”：整条链上都不允许再叠
+        if(stackingDisabled) return 1;
         if(Vars.state != null && Vars.state.rules.infiniteResources) return stackLimit;
+        // 特殊模式默认态：无视堆叠研究节点，直接叠到该工厂的 stackLimit
+        if(ignoreStackResearch) return stackLimit;
         if(stackUpgrades.isEmpty()) return stackLimit;
         int limit = 1;
         for(StackUpgrade upgrade : stackUpgrades){
@@ -776,6 +800,8 @@ public class MultiRecipeFactory extends GenericCrafter{
         if (r == null) return false;
         // 沙盒模式：所有配方、研究条目和额外解锁条件都视为已满足。
         if (Vars.state != null && Vars.state.rules.infiniteResources) return false;
+        // 特殊模式默认态（“不完整数据库”未选中）：需要研究的配方也直接可用。
+        if (ignoreRecipeResearch) return false;
         // unlockCondition 只约束需要研究的配方；普通配方即使误设条件也保持原行为。
         if (r.requiresResearch && r.unlockCondition != null) {
             try {

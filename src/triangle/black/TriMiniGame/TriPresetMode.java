@@ -35,6 +35,7 @@ import mindustry.world.Tile;
 import mindustry.world.blocks.campaign.LandingPad;
 import mindustry.world.blocks.campaign.LaunchPad;
 import triangle.content.TriUnits;
+import triangle.black.MRFactory.MultiRecipeFactory;
 
 /**
  * “特殊模式”的启动入口与词条状态。
@@ -121,6 +122,22 @@ public final class TriPresetMode{
      * 因为 {@code retainContentFields} 在地图载入时可能把 {@code bannedBlocks} 整份换成地图自带的那份。
      */
     private static boolean launchPadsDisabled = false;
+
+    /**
+     * “不完整数据库”词条是否被选中。
+     *
+     * <p>默认（未选中）时，多配方工厂里所有“需要研究”的配方都直接可用；选中后恢复原版行为——
+     * 未研究出来（或额外解锁条件没满足）的配方不能生产，对应的配置面板条目也会变灰。
+     */
+    private static boolean recipesLockedByResearch = false;
+
+    /**
+     * “砂石地质”词条是否被选中。
+     *
+     * <p>默认（未选中）时多配方工厂可以堆叠，且叠层上限无视堆叠研究节点（直接到 {@code stackLimit}）；
+     * 选中后所有堆叠入口一并关闭。
+     */
+    private static boolean factoryStackingDisabled = false;
 
     /** 基础设置里默认放开的原版发射台/接收台（不含旧版 3x3 发射台）。 */
     private static final String[] PAD_NAMES = {"advanced-launch-pad", "landing-pad"};
@@ -311,10 +328,15 @@ public final class TriPresetMode{
      * - 敌方炮台伤害：+100% / +200% / +400%（敌方建筑发射的子弹实例级）；
      * - 波次增援：第 1~10 波每波额外 5 个 triangle-coreUnit（单选项）；
      * - 我方单位伤害 / 我方炮台伤害 / 我方建筑生命 / 我方单位生命：各三段式 -25% / -50% / -75%；
-     * - 禁用发射台/接收台：单选项，价值固定 3 分（{@link Option#customValue}）。
+     * - 亚轨道压制（原“禁发射台/接收台”）：单选项，价值固定 3 分（{@link Option#customValue}）；
+     * - 不完整数据库：单选项——需要研究的配方重新变回不可生产（默认全部放开）；
+     * - 砂石地质：单选项——多配方工厂无法堆叠（默认可以叠满，且无视堆叠研究节点）；
+     * - 人工智能：单选项——打开原版“不可预测波次 AI”与波次敌方的“RTS 进攻 AI”。
      *
-     * <p>前置（{@link Req}）：各三段式数值词条的<b>第三档</b>（+400% / -75%）要求先选中
-     * “毁灭”难度，未选中时该格整格变灰、不可点；把前置取消后依赖项会被自动清除（见 {@link #pruneLocks()}）。
+     * <p>前置（{@link Req}）：各三段式数值词条的<b>第三档</b>（+400% / -75%）按方向分两组——
+     * 敌方提升类（敌方单位生命/伤害、敌方建筑生命、敌方炮台伤害）要求先选中“毁灭”难度；
+     * 我方削弱类（我方单位伤害/生命、我方炮台伤害、我方建筑生命）要求先选中“亚轨道压制”词条。
+     * 前置未满足时该格整格变灰、不可点；把前置取消后依赖项会被自动清除（见 {@link #pruneLocks()}）。
      */
     private static final Seq<Category> categories = Seq.with(
             new Category("waveInterval",
@@ -360,26 +382,38 @@ public final class TriPresetMode{
                     new Option("-25%", true, "tri.preset.detail.playerUnitDamage.x1", r -> playerUnitDamage = 0.75f),
                     new Option("-50%", true, "tri.preset.detail.playerUnitDamage.x2", r -> playerUnitDamage = 0.5f),
                     new Option("-75%", true, "tri.preset.detail.playerUnitDamage.x3", r -> playerUnitDamage = 0.25f,
-                            -1, Req.is("difficulty", 2))),
+                            -1, Req.is("pads", 0))),
             new Category("playerTurret",
                     new Option("-25%", true, "tri.preset.detail.playerTurret.x1", r -> playerTurretDamage = 0.75f),
                     new Option("-50%", true, "tri.preset.detail.playerTurret.x2", r -> playerTurretDamage = 0.5f),
                     new Option("-75%", true, "tri.preset.detail.playerTurret.x3", r -> playerTurretDamage = 0.25f,
-                            -1, Req.is("difficulty", 2))),
+                            -1, Req.is("pads", 0))),
             new Category("playerBlockHealth",
                     new Option("-25%", true, "tri.preset.detail.playerBlockHealth.x1", r -> playerBlockHealth = 0.75f),
                     new Option("-50%", true, "tri.preset.detail.playerBlockHealth.x2", r -> playerBlockHealth = 0.5f),
                     new Option("-75%", true, "tri.preset.detail.playerBlockHealth.x3", r -> playerBlockHealth = 0.25f,
-                            -1, Req.is("difficulty", 2))),
+                            -1, Req.is("pads", 0))),
             new Category("playerUnitHealth",
                     new Option("-25%", true, "tri.preset.detail.playerUnitHealth.x1", r -> playerUnitHealth = 0.75f),
                     new Option("-50%", true, "tri.preset.detail.playerUnitHealth.x2", r -> playerUnitHealth = 0.5f),
                     new Option("-75%", true, "tri.preset.detail.playerUnitHealth.x3", r -> playerUnitHealth = 0.25f,
-                            -1, Req.is("difficulty", 2))),
-            // 单选项：禁用任何发射台/接收台。价值固定 3 分；排在单选项网格里（每列 3 个）
+                            -1, Req.is("pads", 0))),
+            // 单选项：亚轨道压制（禁用任何发射台/接收台）。价值固定 3 分；排在单选项网格里（每列 3 个）
             new Category("pads",
                     new Option("tri.preset.value.pads", false, "tri.preset.detail.pads.off",
-                            r -> launchPadsDisabled = true, 3))
+                            r -> launchPadsDisabled = true, 3)),
+            // 单选项：不完整数据库 —— 需要研究的配方重新变回“不能生产”（默认是全部放开）
+            new Category("database",
+                    new Option("tri.preset.value.database", false, "tri.preset.detail.database.off",
+                            r -> recipesLockedByResearch = true)),
+            // 单选项：砂石地质 —— 多配方工厂无法堆叠（默认可以叠满）
+            new Category("geology",
+                    new Option("tri.preset.value.geology", false, "tri.preset.detail.geology.off",
+                            r -> factoryStackingDisabled = true)),
+            // 单选项：人工智能 —— 打开原版地图设置里的“不可预测波次 AI”与敌方的“RTS 进攻 AI”
+            new Category("ai",
+                    new Option("tri.preset.value.ai", false, "tri.preset.detail.ai.on",
+                            TriPresetMode::applySmartAI))
     );
 
     private TriPresetMode(){}
@@ -790,6 +824,21 @@ public final class TriPresetMode{
             if(o.req != null && !o.req.satisfied()) continue;
             if(o.apply != null) o.apply.get(rules);
         }
+
+        syncFactorySwitches();
+    }
+
+    /**
+     * 把“多配方工厂”的两个开关同步到数据层：两者都是“默认放开、选中对应词条才恢复原版限制”，
+     * 所以这里统一按标记取反写入，而不依赖某个词条的 apply 是否跑过。
+     *
+     * <p>开关是静态的全局状态，因此离开本模式时必须由 {@link #resetEnemyBuff()} 复位，
+     * 否则会影响战役/其它自定义局里的配方与堆叠行为。
+     */
+    private static void syncFactorySwitches(){
+        MultiRecipeFactory.ignoreRecipeResearch = !recipesLockedByResearch;
+        MultiRecipeFactory.ignoreStackResearch = !factoryStackingDisabled;
+        MultiRecipeFactory.stackingDisabled = factoryStackingDisabled;
     }
 
     /**
@@ -882,6 +931,22 @@ public final class TriPresetMode{
             }
         }
         rules.hideBannedBlocks = true;
+    }
+
+    /**
+     * “人工智能”词条：打开原版地图设置里的两个 AI 开关。
+     *
+     * <p>{@code rules.randomWaveAI} 是全局的“不可预测波次 AI”（原版规则项 {@code rules.randomwaveai}）；
+     * 而“RTS 进攻 AI”是按队伍存的（{@code Rules.TeamRules#get(team).rtsAi}，原版规则项 {@code rules.rtsai}），
+     * 因此只打开波次敌方队伍 {@code rules.waveTeam} 的那一份，不动我方与中立队伍。
+     */
+    private static void applySmartAI(Rules rules){
+        if(rules == null) return;
+        rules.randomWaveAI = true;
+        if(rules.teams != null && rules.waveTeam != null){
+            Rules.TeamRule rule = rules.teams.get(rules.waveTeam);
+            if(rule != null) rule.rtsAi = true;
+        }
     }
 
     /**
@@ -1146,6 +1211,9 @@ public final class TriPresetMode{
         spawnScaled = false;
         reinforceEnabled = false;
         launchPadsDisabled = false;
+        recipesLockedByResearch = false;
+        factoryStackingDisabled = false;
+        syncFactorySwitches(); // 回到“全部放开 / 可堆叠”，不影响本模式之外的对局
         buffedUnits.clear();
         scaledBullets.clear();
         prevBuildingHealth.clear();

@@ -240,14 +240,14 @@ public class StackedMultiRecipeFactory extends MultiRecipeFactory{
     /** 该方块所属链当前允许的叠层上限；不可堆叠时返回 0。 */
     public static int stackLimitFor(Block block){
         MultiRecipeFactory base = baseOf(block);
-        if(base == null || !base.stackable) return 0;
+        if(base == null || !base.stackAllowed()) return 0;
         return base.stackLimitNow();
     }
 
     /** 该方块是否还能再叠一层（配置面板按钮用）。 */
     public static boolean canStackUp(Block block){
         MultiRecipeFactory base = baseOf(block);
-        if(base == null || !base.stackable) return false;
+        if(base == null || !base.stackAllowed()) return false;
         return layersOf(block) + 1 <= base.stackLimitNow();
     }
 
@@ -272,7 +272,7 @@ public class StackedMultiRecipeFactory extends MultiRecipeFactory{
         if(build == null || build.tile == null || Vars.player == null || Vars.player.unit() == null) return false;
         if(!Vars.player.isBuilder()) return false;
         MultiRecipeFactory base = baseOf(build.block);
-        if(base == null || !base.stackable) return false;
+        if(base == null || !base.stackAllowed()) return false;
         int next = layersOf(build.block) + 1;
         if(next > base.stackLimitNow()) return false;
         StackedMultiRecipeFactory target = variantOf(base, next);
@@ -481,6 +481,8 @@ public class StackedMultiRecipeFactory extends MultiRecipeFactory{
 
     @Override
     public boolean canPlaceOn(Tile tile, Team team, int rotation){
+        // 特殊模式“砂石地质”：堆叠被禁用时，变体本身也不再允许被放置（含蓝图粘贴）
+        if(MultiRecipeFactory.stackingDisabled) return false;
         if(tile != null && tile.build != null && sameChain(tile.build.block)
             && layersOf(tile.build.block) + 1 == layerCount
             && layerCount <= baseFactory.stackLimitNow()){
@@ -491,6 +493,7 @@ public class StackedMultiRecipeFactory extends MultiRecipeFactory{
 
     @Override
     public boolean canReplace(Block other){
+        if(MultiRecipeFactory.stackingDisabled) return false;
         if(other != null && sameChain(other)){
             // 只允许相邻层互相覆盖：上一层覆盖下一层（向上堆叠），
             // 下一层覆盖上一层（配置面板的降层按钮）。
