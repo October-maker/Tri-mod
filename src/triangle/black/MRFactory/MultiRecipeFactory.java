@@ -56,10 +56,13 @@ import mindustry.ui.Styles;
 import mindustry.world.Block;
 import mindustry.world.Build;
 import mindustry.world.Tile;
+import mindustry.world.blocks.ConstructBlock;
 import mindustry.world.blocks.heat.HeatBlock;
 import mindustry.world.blocks.heat.HeatConsumer;
 import mindustry.world.blocks.payloads.BuildPayload;
 import mindustry.world.blocks.production.GenericCrafter;
+import mindustry.world.draw.DrawBlock;
+import mindustry.world.draw.DrawMulti;
 import mindustry.world.meta.*;
 import triangle.black.TriDraw;
 import triangle.content.SerTriTechTree;
@@ -151,11 +154,162 @@ public class MultiRecipeFactory extends GenericCrafter{
         configurable = true; // 允许打开配置面板（手动选定配方 / 自动匹配开关）
         saveConfig = true;
         drawArrow = false;//是否显示箭头
+        invertFlip = true;
+        config(Integer.class, (MultiRecipeFactoryBuild build, Integer value) -> {});
+        config(String.class, (MultiRecipeFactoryBuild build, String value) -> {});
     }
 
     /** 当前是否真的允许堆叠：工厂自身的 {@link #stackable} 加上特殊模式的禁用开关。 */
     public boolean stackAllowed(){
         return stackable && !stackingDisabled;
+    }
+
+    /**
+     * 液体输出镜像位：bit0 = 左右镜像（左↔右），bit1 = 上下镜像（上↔下）。
+     * 镜像不占用 {@code rotation}（rotation 仍用于输出方向的 90° 旋转），
+     * 而是作为 {@code #f<mask>} 标记附加在配置字符串里，因此能随蓝图与存档一起保存。
+     */
+    public static final int mirrorHorizontal = 1, mirrorVertical = 2;
+
+    /**
+     * 输出预览用的液体列表：取建筑“当前展示配方”的输出液体（自动模式下为第一条配方）。
+     * 只给 {@link MirroredLiquidOutputs} 绘制用，不参与生产逻辑。
+     */
+    public Seq<LiquidStack> previewOutputLiquids(Building build){
+        if(build instanceof MultiRecipeFactoryBuild mr){
+            Recipe recipe = mr.getDisplayRecipe();
+            return recipe == null ? null : recipe.outputLiquid;
+        }
+        return null;
+    }
+
+    /** 蓝图预览用：从 {@code plan.config} 里解出配方编号，取对应配方的输出液体。 */
+    public Seq<LiquidStack> previewOutputLiquids(BuildPlan plan){
+        int index = previewRecipeIndex(plan == null ? null : plan.config);
+        if(recipes.size == 0) return null;
+        Recipe recipe = index >= 0 && index < recipes.size ? recipes.get(index) : recipes.first();
+        return recipe == null ? null : recipe.outputLiquid;
+    }
+
+    /** 从配置对象里解出配方编号；含超控偏移或自动模式时回退到 -1。 */
+    protected int previewRecipeIndex(Object config){
+        int value;
+        if(config instanceof Integer integer){
+            value = integer;
+        }else if(config instanceof String text){
+            int hash = text.indexOf('#');
+            String head = (hash >= 0 ? text.substring(0, hash) : text).trim();
+            try{
+                value = Integer.parseInt(head);
+            }catch(NumberFormatException ignored){
+                return -1;
+            }
+        }else{
+            return -1;
+        }
+        if(value < 0 || value >= MultiRecipeFactoryBuild.logicOverrideBase) return -1;
+        return value;
+    }
+
+    /** 输出面方向（相对朝向，未叠加 rotation）；没有配置时为 -1。 */
+    public int previewOutputDirection(int index){
+        return liquidOutputDirections != null && index < liquidOutputDirections.length
+                ? liquidOutputDirections[index]
+                : -1;
+    }
+
+    /** 临时诊断：把镜像链路的关键节点追加写入 %TEMP%\tri_mirror_debug.log。 */
+    public static void mirrorLog(String message){
+        try{
+            java.nio.file.Path path = java.nio.file.Paths.get(System.getProperty("java.io.tmpdir"), "tri_mirror_debug.log");
+            String line = "[" + arc.util.Time.time + "] " + message + System.lineSeparator();
+            java.nio.file.Files.write(path, line.getBytes(java.nio.charset.StandardCharsets.UTF_8),
+                java.nio.file.StandardOpenOption.CREATE, java.nio.file.StandardOpenOption.APPEND);
+        }catch(Throwable ignored){
+        }
+    }
+
+    /** 把 {@code dumpLiquid} 使用的相对方向按镜像位翻转；-1（四面随便倒）保持原样。 */
+    public static int mirrorDirection(int direction, int mask){
+        if(direction < 0 || mask == 0) return direction;
+        if((mask & mirrorHorizontal) != 0){
+            if(direction == 0) direction = 2;
+            else if(direction == 2) direction = 0;
+        }
+        if((mask & mirrorVertical) != 0){
+            if(direction == 1) direction = 3;
+            else if(direction == 3) direction = 1;
+        }
+        return direction;
+    }
+
+    /** 从配置对象里取出镜像位；不是字符串或没有 {@code #f} 标记时视为 0。 */
+    public static int mirrorMaskOf(Object config){
+        if(!(config instanceof String text)) return 0;
+        int hash = text.indexOf('#');
+        if(hash < 0) return 0;
+        int mask = 0;
+        for(String token : text.substring(hash + 1).split("#")){
+            String value = token.trim();
+            if(value.startsWith("f")){
+                try{
+                    mask |= Integer.parseInt(value.substring(1).trim());
+                }catch(NumberFormatException ignored){
+                }
+            }
+        }
+        return mask & 3;
+    }
+
+    /**
+     * 从被覆盖的 {@link ConstructBlock.ConstructBuild} 上取回蓝图翻转留下的镜像位。
+     * 原版建造完成时 {@code configured} 不一定会拿到 config（{@code lastConfig} 才是最可靠的副本），
+     * 所以换块时再兜底读一次，避免镜像位在完工环节丢失。
+     */
+    public static int mirrorMaskFromPrevious(Seq<Building> previous){
+        if(previous == null) return 0;
+        for(Building building : previous){
+            if(building instanceof ConstructBlock.ConstructBuild construct && construct.lastConfig instanceof String text){
+                int mask = mirrorMaskOf(text);
+                if(mask != 0) return mask;
+            }
+        }
+        return 0;
+    }
+
+    /** 去掉配置里的 {@code #f<mask>} 标记，其余标记（如堆叠体的 {@code #1}）原样保留。 */
+    public static String stripMirror(Object config){
+        String text = config == null ? "" : config.toString();
+        int hash = text.indexOf('#');
+        if(hash < 0) return text;
+        StringBuilder out = new StringBuilder(text.substring(0, hash));
+        for(String token : text.substring(hash + 1).split("#")){
+            String value = token.trim();
+            if(value.isEmpty() || value.startsWith("f")) continue;
+            out.append('#').append(value);
+        }
+        return out.toString();
+    }
+
+    /** 用新的镜像位重建配置对象；mask 为 0 时等同于 {@link #stripMirror(Object)}。 */
+    public static Object withMirror(Object config, int mask){
+        String base = stripMirror(config);
+        return (mask & 3) == 0 ? base : base + "#f" + (mask & 3);
+    }
+
+    /**
+     * 蓝图镜像翻转入口：原版只在 {@link mindustry.input.InputHandler#flipPlans} 里调用。
+     * 本工厂贴图不随 rotation 旋转，旋转值保留给输出方向的 90° 转向，
+     * 所以这里只翻转镜像位，让液体输出面跟着镜像，而不是把整机转 180°。
+     */
+    @Override
+    public void flipRotation(BuildPlan plan, boolean horizontal){
+        if(plan == null) return;
+        Object before = plan.config;
+        plan.config = withMirror(plan.config, mirrorMaskOf(plan.config) ^ (horizontal ? mirrorHorizontal : mirrorVertical));
+        mirrorLog("flipRotation block=" + name + " h=" + horizontal + " at=" + plan.x + "," + plan.y
+            + " before=" + before + " after=" + plan.config);
+        // 贴图旋转对称，rotation 保持原样（不调 super：原版会做 ±180° 旋转）
     }
 
     /** 放置计划实际建造的方块；堆叠工厂在这里切换为固定层数变体。 */
@@ -410,6 +564,24 @@ public class MultiRecipeFactory extends GenericCrafter{
                 description += "\n" + stackDesc;
             }
         }
+
+        attachLiquidOutputPreview();
+    }
+
+    /**
+     * 把镜像感知的输出面预览挂进 drawer：原版就是用 DrawBlock（DrawLiquidOutputs）画这组面图标，
+     * 这里保持同一机制，只让面的计算额外叠加镜像位。堆叠体共享 base 的 drawer 实例，因此按实例去重。
+     */
+    protected void attachLiquidOutputPreview(){
+        if(liquidOutputDirections == null || liquidOutputDirections.length == 0) return;
+        if(!(drawer instanceof DrawMulti multi)) return;
+        for(int i = 0; i < multi.drawers.length; i++){
+            if(multi.drawers[i] instanceof MirroredLiquidOutputs) return;
+        }
+        DrawBlock[] extended = new DrawBlock[multi.drawers.length + 1];
+        System.arraycopy(multi.drawers, 0, extended, 0, multi.drawers.length);
+        extended[extended.length - 1] = new MirroredLiquidOutputs();
+        multi.drawers = extended;
     }
 
     @Override
@@ -840,6 +1012,10 @@ public class MultiRecipeFactory extends GenericCrafter{
         public static final float logicControlWindow = 1.5f;
         /** true = 玩家启用了“超控”：本建筑忽略任何逻辑控制（control 等逻辑入口直接跳过）。随配置/蓝图/存档保存。 */
         public boolean logicOverride = false;
+        /** 液体输出镜像位：bit0 左右镜像、bit1 上下镜像；随配置字符串（{@code #f<mask>}）与存档保存。 */
+        public int liquidMirror = 0;
+        /** 临时诊断：液体倒向日志的剩余条数（避免每帧刷屏）。 */
+        public transient int mirrorDumpLogs = 2;
         /** 配置编码里“超控”的偏移基数；旧配置值（-1 与 0..n-1）都小于它，因此向后兼容。 */
         protected static final int logicOverrideBase = 10000;
         /** 控制面板刷新回调（面板打开时挂上，关闭后为 null）：逻辑控制指令到达时立刻重刷面板，避免下一帧才更新。 */
@@ -992,6 +1168,18 @@ public class MultiRecipeFactory extends GenericCrafter{
         @Override
         public void overwrote(Seq<Building> previous){
             super.overwrote(previous);
+            // 蓝图镜像兜底：ConstructBuild.lastConfig 保存着翻转后的完整配置，
+            // 即使完工时 configured 没被原版调用，也能在这里把镜像位补回来。
+            int previousMirror = mirrorMaskFromPrevious(previous);
+            if(previousMirror != 0) liquidMirror = previousMirror;
+            if(previous != null && previous.size > 0 && previous.first() instanceof ConstructBlock.ConstructBuild construct){
+                MultiRecipeFactory.mirrorLog("overwrote at=" + (tile == null ? "?" : tile.x + "," + tile.y)
+                    + " prevBuild=" + construct.previous + " lastConfig=" + construct.lastConfig
+                    + " mask=" + previousMirror + " mirror=" + liquidMirror);
+            }else{
+                MultiRecipeFactory.mirrorLog("overwrote at=" + (tile == null ? "?" : tile.x + "," + tile.y)
+                    + " prev=null mask=" + previousMirror + " mirror=" + liquidMirror);
+            }
             Building old = previousFactory(previous);
             if(old == null) return;
             migrateFrom(old);
@@ -1072,26 +1260,44 @@ public class MultiRecipeFactory extends GenericCrafter{
         /** 配置序列化：自动模式编码为 -1，手动模式编码为选中的配方索引，超控状态另加偏移（供蓝图复制/粘贴）。 */
         @Override
         public Object config() {
-            return encodeConfig();
+            int value = encodeConfig();
+            // 没有镜像时仍返回旧的整数配置，已有蓝图/逻辑读取旧格式不受影响；
+            // 有镜像时返回 "值#f<mask>"，蓝图与存档据此还原镜像面。
+            return liquidMirror == 0 ? value : value + "#f" + (liquidMirror & 3);
         }
 
         /**
          * 配置处理入口：蓝图粘贴（configureAny）与 UI 配置（configure）都会经 Call.tileConfig 触发本方法。
          * 负数表示切回自动模式，其余值作为手动配方索引，>= logicOverrideBase 表示“超控 + 对应配方状态”。
+         * 字符串形式额外携带 {@code #f<mask>} 镜像位（堆叠体还会带 {@code #1} 全局超控位）。
          */
         @Override
         public void configured(Unit unit, Object value) {
+            Object mirrorBefore = liquidMirror;
             if (value instanceof Integer v) {
+                // 纯整数配置不带镜像信息（面板选配方、旧蓝图都用这种），保留当前镜像位
                 decodeConfig(v);
+            } else if (value instanceof String text) {
+                liquidMirror = mirrorMaskOf(text);
+                int hash = text.indexOf('#');
+                String head = (hash >= 0 ? text.substring(0, hash) : text).trim();
+                try{
+                    decodeConfig(Integer.parseInt(head));
+                }catch(NumberFormatException ignored){
+                    // 降层时可能拿到堆叠体的逗号列表配置，配方状态由 Snapshot 迁移，这里只保留镜像位
+                }
             } else {
                 super.configured(unit, value);
             }
+            MultiRecipeFactory.mirrorLog("configured at=" + (tile == null ? "?" : tile.x + "," + tile.y)
+                + " class=" + (value == null ? "null" : value.getClass().getSimpleName())
+                + " value=" + value + " mirror " + mirrorBefore + " -> " + liquidMirror);
         }
 
-        /** 存档版本：1 起额外保存自动/手动配方状态。 */
+        /** 存档版本：1 起额外保存自动/手动配方状态；2 起额外保存液体输出镜像位。 */
         @Override
         public byte version() {
-            return 1;
+            return 2;
         }
 
         /** 写入自动/手动配方状态与超控状态（同一份编码，旧存档仍可解码）。 */
@@ -1099,11 +1305,21 @@ public class MultiRecipeFactory extends GenericCrafter{
         public void write(Writes write) {
             super.write(write);
             write.i(encodeConfig());
+            write.b((byte)(liquidMirror & 3));
         }
 
         /** 读取配方状态与超控状态；旧存档（revision < 1）保持默认的自动模式。 */
         @Override
         public void read(Reads read, byte revision) {
+            readBase(read, revision);
+            // 版本 2 起额外存在镜像位；旧存档没有该字节
+            if (revision >= 2) {
+                liquidMirror = read.b() & 3;
+            }
+        }
+
+        /** 只读音基状态（配方选择 + 超控），不含镜像位；供堆叠变体按自己的版本号复用时对齐字节。 */
+        protected void readBase(Reads read, byte revision) {
             super.read(read, revision);
             // 兼容旧存档：仅当版本 >= 1 时才存在额外 int，否则保持默认（自动模式）
             if (revision >= 1) {
@@ -1495,6 +1711,13 @@ public class MultiRecipeFactory extends GenericCrafter{
                     int direction = liquidOutputDirections != null && index < liquidOutputDirections.length
                             ? liquidOutputDirections[index]
                             : -1;
+                    // 镜像位只翻转方向面，随后 dumpLiquid 再叠加 rotation 的 90° 朝向
+                    direction = mirrorDirection(direction, liquidMirror);
+                    if(mirrorDumpLogs > 0){
+                        mirrorDumpLogs--;
+                        MultiRecipeFactory.mirrorLog("dump at=" + tile.x + "," + tile.y + " mirror=" + liquidMirror
+                            + " idx=" + index + " dir=" + direction + " rot=" + rotation);
+                    }
                     dumpLiquid(output.liquid, 2f, direction);
                     index++;
                 }

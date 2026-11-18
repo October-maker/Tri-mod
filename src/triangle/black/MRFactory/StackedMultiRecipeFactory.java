@@ -424,6 +424,7 @@ public class StackedMultiRecipeFactory extends MultiRecipeFactory{
         placeablePlayer = false;
         rotate = base.rotate;
         rotateDraw = base.rotateDraw;
+        invertFlip = base.invertFlip;
         drawer = base.drawer;
         update = base.update;
         hasItems = base.hasItems;
@@ -934,6 +935,8 @@ public class StackedMultiRecipeFactory extends MultiRecipeFactory{
             }
             // 全局（全部层）超控状态尾随在配置里（"各层选择#1"），使蓝图复制/粘贴也能带上
             if(logicOverride) out.append("#1");
+            // 液体输出镜像位（"#f<mask>"），蓝图翻转时由 MultiRecipeFactory#flipRotation 写入
+            if(liquidMirror != 0) out.append("#f").append(liquidMirror & 3);
             return out.toString();
         }
 
@@ -959,12 +962,25 @@ public class StackedMultiRecipeFactory extends MultiRecipeFactory{
         public void configured(Unit unit, Object value){
             if(value instanceof String text){
                 boolean override = false;
+                int mirror = 0;
                 int hash = text.indexOf('#');
                 if(hash >= 0){
-                    override = text.substring(hash + 1).trim().equals("1");
+                    // 尾部可带多个标记：旧格式 "#1" 表示全局超控，"#f<mask>" 表示液体输出镜像
+                    for(String token : text.substring(hash + 1).split("#")){
+                        String tag = token.trim();
+                        if(tag.equals("1")){
+                            override = true;
+                        }else if(tag.startsWith("f")){
+                            try{
+                                mirror |= Integer.parseInt(tag.substring(1).trim());
+                            }catch(NumberFormatException ignored){
+                            }
+                        }
+                    }
                     text = text.substring(0, hash);
                 }
                 logicOverride = override;
+                liquidMirror = mirror & 3;
                 String[] parts = text.isEmpty() ? new String[0] : text.split(",");
                 ensureLayers();
                 for(int i = 0; i < parts.length && i < layers.size; i++){
@@ -1005,7 +1021,7 @@ public class StackedMultiRecipeFactory extends MultiRecipeFactory{
 
         @Override
         public byte version(){
-            return 3;
+            return 4;
         }
 
         @Override
@@ -1023,7 +1039,10 @@ public class StackedMultiRecipeFactory extends MultiRecipeFactory{
 
         @Override
         public void read(Reads read, byte revision){
-            super.read(read, revision);
+            // 基类字段 + 配方选择（不含镜像位）：版本 3 的旧存档没有镜像字节，需按同一顺序跳读
+            readBase(read, revision);
+            // 版本 4 起在基类字段之后额外保存液体输出镜像位
+            if(revision >= 4) liquidMirror = read.b() & 3;
             if(revision >= 2){
                 int count = Math.max(1, read.i());
                 layers.clear();

@@ -3,6 +3,7 @@
     "researchCostMultiplier":1.2,
     "rotate":true,
     "size":3,
+    "invertFlip":true,
     "liquidCapacity": 80,
     "regionRotated1":3,
     "squareSprite": true,
@@ -15,16 +16,16 @@
     "consumes":{
         "power":4.4,
         "liquids":[
-            "water/0.6",
-        ],
+            "water/0.6"
+        ]
     },
     "outputLiquids":[
 		{ "liquid": "ozone", "amount": 0.3 },
-		{ "liquid": "hydrogen", "amount": 0.2 },
+		{ "liquid": "hydrogen", "amount": 0.2 }
     ],
     "category": "crafting",
     "research": {
-        "parent": "cultivator",
+        "parent": "cultivator"
         /*"objectives": [
             {
             "type": "onSector",
@@ -34,7 +35,7 @@
     },
     "requirements":[
         "copper/50",
-        "lead/20",
+        "lead/20"
     ],
     "drawer": {
         "type": "DrawMulti", // 使用多重绘图组件来渲染方块或实体。
@@ -46,7 +47,7 @@
             {
             "type": "DrawLiquidTile", // 绘制液体效果，通常用于显示方块中的液体。
             "drawLiquid": "water"// 液体类型，这里指定为水。
-            "padding": 2,//渲染液体范围
+            "padding": 2//渲染液体范围
             },
             {
             "type": "DrawBubbles", // 绘制气泡效果，通常用于液体表面。
@@ -65,8 +66,8 @@
             "alpha": 0.7, // 发光效果的透明度。
             "color": "c4bdf3", // 发光颜色，以十六进制颜色代码表示。
             "glowIntensity": 0.3, // 发光强度。
-            "glowScale": 6, // 发光范围或缩放比例。
-            },
-        ],
-    },
+            "glowScale": 6 // 发光范围或缩放比例。
+            }
+        ]
+    }
 }

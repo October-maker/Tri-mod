@@ -4,6 +4,7 @@
     "size": 5,
     "hasPower": true,
     "consumes": {
+        "remove": "all",
         "power": 3
     },
     "liquidCapacity": 0,
@@ -12,7 +13,6 @@
     "shownPlanets": [ "serpulo" ],
     "arrivalDuration": 120,
     "cooldownTime": 60,
-    "consumeLiquidAmount": 0,
     "coolingEffectChance": 0.2,
     /*"coolingEffect": {
                     "type": "WaveEffect",
