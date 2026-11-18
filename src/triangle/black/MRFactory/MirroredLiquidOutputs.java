@@ -15,17 +15,20 @@ import mindustry.world.draw.DrawBlock;
 import mindustry.world.draw.DrawLiquidOutputs;
 
 /**
- * 原版 {@link DrawLiquidOutputs} 的镜像感知版：完全沿用原版机制——
- * 作为 {@link DrawBlock} 挂在方块 drawer 里、按 {@code (方向 + rotation) % 4} 取面、
- * 用 {@link Draw#rect(TextureRegion, float, float, float)} 画输出面图标，
- * 唯一区别是方向先按建筑的镜像位（{@code #f<mask>}）翻转。
+ * 原版 {@link DrawLiquidOutputs} 的镜像感知版：沿用原版机制（DrawBlock 挂 drawer、按
+ * {@code (方向 + rotation) % 4} 取面、{@link Draw#rect(TextureRegion, float, float, float)} 画面图标），
+ * 但取的是这台 MRF **当前配方**的输出液体，并按建筑的镜像位翻转方向。
+ *
+ * <p>本体（{@link #draw(Building)}）与悬停/放置虚影（{@link #drawPlan(Block, BuildPlan, Eachable)}）
+ * 走同一份计算：虚影如果落在已放置的 MRF 上，直接读那台建筑的配方、rotation 与镜像位，
+ * 所以虚影显示的液体种类、方向与实际倒液完全一致；空地上放蓝图时才回落到 {@code plan.config}。
  *
  * <p>贴图仍按原版命名 {@code <block.name>-<liquid.name>-output1/2} 查找；
  * 找不到时回退成该液体的 {@code fullIcon}，贴在对应面中心，避免出现 ohno 贴图。
  */
 public class MirroredLiquidOutputs extends DrawLiquidOutputs{
 
-    /** 该面是否已经落到 error 贴图（mod 没有画 output 贴图时）。 */
+    /** 是否已经落到 error 贴图（mod 没有画 output 贴图时）。 */
     private boolean fallback;
 
     @Override
@@ -37,44 +40,33 @@ public class MirroredLiquidOutputs extends DrawLiquidOutputs{
             || !Core.atlas.isFound(liquidOutputRegions[0][0]);
     }
 
-    private static int maskOf(Building build){
-        return build instanceof MultiRecipeFactory.MultiRecipeFactoryBuild mr ? mr.liquidMirror : 0;
-    }
-
-    @Override
-    public void draw(Building build){
-        if(!(build.block instanceof MultiRecipeFactory factory)) return;
-        Seq<LiquidStack> outputs = factory.previewOutputLiquids(build);
-        if(outputs == null || outputs.size == 0) return;
-
-        int mask = maskOf(build);
-        for(int i = 0; i < outputs.size; i++){
-            int dir = factory.previewOutputDirection(i);
-            if(dir == -1) continue;
-            int side = Mathf.mod(MultiRecipeFactory.mirrorDirection(dir, mask) + build.rotation, 4);
-            drawFace(outputs.get(i), i, build.x, build.y, side, build.block.size);
-        }
-    }
-
     @Override
     public void drawPlan(Block block, BuildPlan plan, Eachable<BuildPlan> list){
         if(!(block instanceof MultiRecipeFactory factory)) return;
 
-        // 悬停已放置方块时的虚影：脚下降落点通常就是那台建筑本身，
-        // 优先读它真实的配方与镜像位（plan.config 在悬停预览里可能是 null 或不带 #f）。
+        // 虚影落在已放置的 MRF 上（悬停预览）：直接读那台建筑的对象状态，
+        // 这样显示的液体种类、方向、镜像位与实际倒液完全一致。
         Building hovered = Vars.world == null ? null : Vars.world.build(plan.x, plan.y);
-        MultiRecipeFactory.MultiRecipeFactoryBuild target =
-            hovered instanceof MultiRecipeFactory.MultiRecipeFactoryBuild mr && hovered.block == block ? mr : null;
+        if(hovered instanceof MultiRecipeFactory.MultiRecipeFactoryBuild mr && hovered.block == block){
+            drawOutputs(factory, factory.previewOutputLiquids(mr), mr.liquidMirror,
+                mr.rotation, plan.drawx(), plan.drawy(), block.size);
+            return;
+        }
 
-        Seq<LiquidStack> outputs = target != null ? factory.previewOutputLiquids(target) : factory.previewOutputLiquids(plan);
+        // 空地上的蓝图：配方与镜像位只能从 config 里解。
+        drawOutputs(factory, factory.previewOutputLiquids(plan), MultiRecipeFactory.mirrorMaskOf(plan.config),
+            plan.rotation, plan.drawx(), plan.drawy(), block.size);
+    }
+
+    /** 按“输出液体 + 方向数组 + 镜像位 + 朝向”统一绘制一组输出面。 */
+    private void drawOutputs(MultiRecipeFactory factory, Seq<LiquidStack> outputs, int mask,
+                             int rotation, float x, float y, int size){
         if(outputs == null || outputs.size == 0) return;
-
-        int mask = target != null ? target.liquidMirror : MultiRecipeFactory.mirrorMaskOf(plan.config);
         for(int i = 0; i < outputs.size; i++){
             int dir = factory.previewOutputDirection(i);
             if(dir == -1) continue;
-            int side = Mathf.mod(MultiRecipeFactory.mirrorDirection(dir, mask) + plan.rotation, 4);
-            drawFace(outputs.get(i), i, plan.drawx(), plan.drawy(), side, block.size);
+            int side = Mathf.mod(MultiRecipeFactory.mirrorDirection(dir, mask) + rotation, 4);
+            drawFace(outputs.get(i), i, x, y, side, size);
         }
     }
 
