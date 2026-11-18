@@ -6,6 +6,7 @@ import arc.graphics.g2d.TextureRegion;
 import arc.math.Mathf;
 import arc.struct.Seq;
 import arc.util.Eachable;
+import mindustry.Vars;
 import mindustry.entities.units.BuildPlan;
 import mindustry.gen.Building;
 import mindustry.type.LiquidStack;
@@ -58,10 +59,17 @@ public class MirroredLiquidOutputs extends DrawLiquidOutputs{
     @Override
     public void drawPlan(Block block, BuildPlan plan, Eachable<BuildPlan> list){
         if(!(block instanceof MultiRecipeFactory factory)) return;
-        Seq<LiquidStack> outputs = factory.previewOutputLiquids(plan);
+
+        // 悬停已放置方块时的虚影：脚下降落点通常就是那台建筑本身，
+        // 优先读它真实的配方与镜像位（plan.config 在悬停预览里可能是 null 或不带 #f）。
+        Building hovered = Vars.world == null ? null : Vars.world.build(plan.x, plan.y);
+        MultiRecipeFactory.MultiRecipeFactoryBuild target =
+            hovered instanceof MultiRecipeFactory.MultiRecipeFactoryBuild mr && hovered.block == block ? mr : null;
+
+        Seq<LiquidStack> outputs = target != null ? factory.previewOutputLiquids(target) : factory.previewOutputLiquids(plan);
         if(outputs == null || outputs.size == 0) return;
 
-        int mask = MultiRecipeFactory.mirrorMaskOf(plan.config);
+        int mask = target != null ? target.liquidMirror : MultiRecipeFactory.mirrorMaskOf(plan.config);
         for(int i = 0; i < outputs.size; i++){
             int dir = factory.previewOutputDirection(i);
             if(dir == -1) continue;
@@ -71,7 +79,8 @@ public class MirroredLiquidOutputs extends DrawLiquidOutputs{
     }
 
     /** 有原版 output 贴图就按原版方式画；没有就用液体图标贴到面中心。 */
-    private void drawFace(LiquidStack output, int index, float x, float y, int side, int size){        if(output == null || output.liquid == null) return;
+    private void drawFace(LiquidStack output, int index, float x, float y, int side, int size){
+        if(output == null || output.liquid == null) return;
         if(!fallback && liquidOutputRegions != null
             && liquidOutputRegions[side > 1 ? 1 : 0].length > index
             && liquidOutputRegions[side > 1 ? 1 : 0][index] != null){
