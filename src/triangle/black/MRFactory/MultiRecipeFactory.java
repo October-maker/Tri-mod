@@ -9,6 +9,7 @@ import arc.graphics.g2d.Draw;
 import arc.graphics.g2d.Lines;
 import arc.graphics.g2d.TextureRegion;
 import arc.math.Mathf;
+import arc.math.geom.Geometry;
 import arc.scene.style.Drawable;
 import arc.scene.Element;
 import arc.scene.event.ClickListener;
@@ -61,8 +62,6 @@ import mindustry.world.blocks.heat.HeatBlock;
 import mindustry.world.blocks.heat.HeatConsumer;
 import mindustry.world.blocks.payloads.BuildPayload;
 import mindustry.world.blocks.production.GenericCrafter;
-import mindustry.world.draw.DrawBlock;
-import mindustry.world.draw.DrawMulti;
 import mindustry.world.meta.*;
 import triangle.black.TriDraw;
 import triangle.content.SerTriTechTree;
@@ -173,7 +172,7 @@ public class MultiRecipeFactory extends GenericCrafter{
 
     /**
      * 输出预览用的液体列表：取建筑“当前展示配方”的输出液体（自动模式下为第一条配方）。
-     * 只给 {@link MirroredLiquidOutputs} 绘制用，不参与生产逻辑。
+     * 只给 {@link #drawOverlay(float, float, int)} 的悬停/放置虚影用，不参与生产逻辑。
      */
     public Seq<LiquidStack> previewOutputLiquids(Building build){
         if(build instanceof MultiRecipeFactoryBuild mr){
@@ -191,7 +190,7 @@ public class MultiRecipeFactory extends GenericCrafter{
         return recipe == null ? null : recipe.outputLiquid;
     }
 
-    /** 从配置对象里解出配方编号；含超控偏移或自动模式时回退到 -1。 */
+    /** 从配置对象里解出配方编号；自动模式返回 -1。兼容超控偏移与堆叠体的逗号多层配置（取第一层）。 */
     protected int previewRecipeIndex(Object config){
         int value;
         if(config instanceof Integer integer){
@@ -199,6 +198,8 @@ public class MultiRecipeFactory extends GenericCrafter{
         }else if(config instanceof String text){
             int hash = text.indexOf('#');
             String head = (hash >= 0 ? text.substring(0, hash) : text).trim();
+            int comma = head.indexOf(',');
+            if(comma >= 0) head = head.substring(0, comma).trim();
             try{
                 value = Integer.parseInt(head);
             }catch(NumberFormatException ignored){
@@ -207,7 +208,12 @@ public class MultiRecipeFactory extends GenericCrafter{
         }else{
             return -1;
         }
-        if(value < 0 || value >= MultiRecipeFactoryBuild.logicOverrideBase) return -1;
+        if(value >= MultiRecipeFactoryBuild.logicOverrideBase){
+            // 超控态的编码：base + (0=自动, n=配方 n-1)
+            int layer = value - MultiRecipeFactoryBuild.logicOverrideBase;
+            return layer == 0 ? -1 : layer - 1;
+        }
+        if(value < 0) return -1;
         return value;
     }
 
@@ -564,24 +570,50 @@ public class MultiRecipeFactory extends GenericCrafter{
                 description += "\n" + stackDesc;
             }
         }
-
-        attachLiquidOutputPreview();
     }
 
     /**
-     * 把镜像感知的输出面预览挂进 drawer：原版就是用 DrawBlock（DrawLiquidOutputs）画这组面图标，
-     * 这里保持同一机制，只让面的计算额外叠加镜像位。堆叠体共享 base 的 drawer 实例，因此按实例去重。
+     * 悬停 / 放置虚影里的液体输出图标。
+     *
+     * <p>原版这套图标就在 {@link GenericCrafter#drawOverlay(float, float, int)} 里：
+     * 调用链是 {@code Block.drawPlace → drawOverlay}，对每个输出按
+     * {@code liquidOutputDirections[i]}（再叠加 rotation）把该液体的 {@code fullIcon} 画在对应的面上，
+     * 尺寸 8×8。这里保持完全一样的画法，只把数据换成本 mod 的“当前配方输出液体 + 镜像位”：
+     * 悬停落点上如果是 MRF 建筑，就取它自己的配方/mask/朝向，这样虚影的液体种类与方向与实际倒液一致。
      */
-    protected void attachLiquidOutputPreview(){
-        if(liquidOutputDirections == null || liquidOutputDirections.length == 0) return;
-        if(!(drawer instanceof DrawMulti multi)) return;
-        for(int i = 0; i < multi.drawers.length; i++){
-            if(multi.drawers[i] instanceof MirroredLiquidOutputs) return;
+    @Override
+    public void drawOverlay(float x, float y, int rotation){
+        Seq<LiquidStack> outputs = null;
+        MultiRecipeFactory factory = this;
+        int mask = 0;
+
+        if(Vars.world != null){
+            Tile tile = Vars.world.tileWorld(x, y);
+            Building build = tile == null ? null : tile.build;
+            if(build instanceof MultiRecipeFactoryBuild mr && build.block instanceof MultiRecipeFactory hoveredFactory){
+                outputs = hoveredFactory.previewOutputLiquids(mr);
+                mask = mr.liquidMirror;
+                factory = hoveredFactory;
+            }
         }
-        DrawBlock[] extended = new DrawBlock[multi.drawers.length + 1];
-        System.arraycopy(multi.drawers, 0, extended, 0, multi.drawers.length);
-        extended[extended.length - 1] = new MirroredLiquidOutputs();
-        multi.drawers = extended;
+
+        if(outputs == null || outputs.size == 0){
+            super.drawOverlay(x, y, rotation);
+            return;
+        }
+
+        float off = size * 4f + 4f;
+        for(int i = 0; i < outputs.size; i++){
+            LiquidStack output = outputs.get(i);
+            if(output == null || output.liquid == null) continue;
+            int dir = factory.previewOutputDirection(i);
+            if(dir == -1) continue;
+            int side = Mathf.mod(mirrorDirection(dir, mask) + rotation, 4);
+            Draw.rect(output.liquid.fullIcon,
+                x + Geometry.d4x(side) * off,
+                y + Geometry.d4y(side) * off,
+                8f, 8f);
+        }
     }
 
     @Override
