@@ -74,7 +74,7 @@ public class TriPresetDialog extends BaseDialog{
     private static final float ARROW_SIZE = 32f, ARROW_ALPHA = 0.75f;
     /** 地图缩略图边长 = min(组宽, 组高) × 该值；调小即缩小缩略图（1 表示铺满信息区）。 */
     private static final float THUMB_SIZE_RATIO = 0.65f;
-    /** 每列最多容纳的单选项词条按钮数；网格 table 的高度据此固定。 */
+    /** 右侧网格每列最多容纳的单选项词条按钮数；网格 table 的高度据此固定。 */
     private static final int SINGLE_ROWS = 3;
     /** 网格里相邻两行之间的空隙：与左侧大词条组“按钮 + 向下箭头”的行距保持一致（32 + 上下各 2）。 */
     private static final float SINGLE_ROW_GAP = ARROW_SIZE + 4f;
@@ -164,38 +164,47 @@ public class TriPresetDialog extends BaseDialog{
         float leftW = sw * LEFT_W_RATIO;
 
         // ---- 左侧词条区：按类别分列、列内自上而下；正方形；同类互斥；上下两条分割线夹住列表 ----
-        // 只有单个选项的词条组（迷雾、增援……）不单独占列，统一收进最右侧的定高网格 table。
+        // 布局由数据层决定：TriPresetMode 里登记过的单选项合并成同一列（列内不画向下箭头，因为它们不是同一组），
+        // 其余单选项不占列，统一收进最右侧的定高网格 table。
         Table buttonBox = new Table();
         boolean first = true;
         for(int c = 0; c < TriPresetMode.categoryCount(); c++){
-            if(TriPresetMode.isSingleCategory(c)) continue;
+            int group = TriPresetMode.mergedGroupOf(c);
+            if(group >= 0 && !TriPresetMode.isMergedHead(c)) continue;   // 合并列的非列首成员随列首一起渲染
+            if(group < 0 && TriPresetMode.isGridSingle(c)) continue;     // 进右侧网格的单选项不占列
 
             if(!first) buttonBox.add(separator()).width(SEP_WIDTH).growY().padTop(6f).padBottom(6f);
             first = false;
 
             Table column = new Table();
-            int count = TriPresetMode.optionCount(c);
-            optionButtons[c] = new TextButton[count];
-            for(int o = 0; o < count; o++){
-                // 同组两个词条之间插入向下的箭头，表示二者为同一组的纵向排列
-                if(o > 0){
-                    Image arrow = new Image(Icon.down);
-                    arrow.setColor(1f, 1f, 1f, ARROW_ALPHA);
-                    column.add(arrow).size(ARROW_SIZE).pad(2f).row();
+            int[] members = group >= 0 ? TriPresetMode.mergedGroupMembers(group) : new int[]{c};
+            for(int m = 0; m < members.length; m++){
+                // 合并列里两个不同词条组之间只留和箭头等高的空档，保持各行与旁边三选项列对齐
+                if(m > 0) column.add().height(ARROW_SIZE).pad(2f).row();
+
+                int category = members[m];
+                int count = TriPresetMode.optionCount(category);
+                optionButtons[category] = new TextButton[count];
+                for(int o = 0; o < count; o++){
+                    // 同组两个词条之间插入向下的箭头，表示二者为同一组的纵向排列
+                    if(o > 0){
+                        Image arrow = new Image(Icon.down);
+                        arrow.setColor(1f, 1f, 1f, ARROW_ALPHA);
+                        column.add(arrow).size(ARROW_SIZE).pad(2f).row();
+                    }
+                    TextButton button = optionButton(category, o);
+                    optionButtons[category][o] = button;
+                    orderedButtons.add(button);
+                    column.add(button).size(SQUARE, SQUARE).pad(4f).row();
                 }
-                TextButton button = optionButton(c, o);
-                optionButtons[c][o] = button;
-                orderedButtons.add(button);
-                column.add(button).size(SQUARE, SQUARE).pad(4f).row();
             }
 
             buttonBox.add(column).top().pad(6f);
         }
 
-        // 单选项词组：定高网格 table，按坐标排布（每列最多 SINGLE_ROWS 个，先竖后横）。
-        // 第 i 个单选项组（i 从 0 起算）位于第 i / SINGLE_ROWS 列、第 i % SINGLE_ROWS 行，
-        // 即“从左往右数第几列、从上往下数第几个”；表高固定，不随词条数量增长。
-        int singles = TriPresetMode.singleCategoryCount();
+        // 未被指定位置的单选项：定高网格 table，按坐标排布（每列最多 SINGLE_ROWS 个，先竖后横）。
+        // 第 i 个位于第 i / SINGLE_ROWS 列、第 i % SINGLE_ROWS 行。
+        int singles = TriPresetMode.gridSingleCount();
         if(singles > 0){
             buttonBox.add(separator()).width(SEP_WIDTH).growY().padTop(6f).padBottom(6f);
 
@@ -205,7 +214,7 @@ public class TriPresetDialog extends BaseDialog{
                 Table column = new Table();
                 column.top();
                 for(int r = 0; r < SINGLE_ROWS && i + r < singles; r++){
-                    int category = TriPresetMode.singleCategory(i + r);
+                    int category = TriPresetMode.gridSingle(i + r);
                     // 行间补上和左侧列箭头同等高的空隙，让网格的行与左侧各行横向对齐
                     if(r > 0) column.add().size(SQUARE, SINGLE_ROW_GAP).row();
                     optionButtons[category] = new TextButton[1];
@@ -214,8 +223,7 @@ public class TriPresetDialog extends BaseDialog{
                     orderedButtons.add(button);
                     column.add(button).size(SQUARE, SQUARE).pad(4f).row();
                 }
-                // 内层子列只留左右间距：上下不再加 pad，否则按钮上方会叠出“外层 6 + 内层 6 + 按钮 4”，
-                // 比左侧大列多出一层内边距，整组就会整体下移
+                // 内层子列只留左右间距：上下不再加 pad，否则按钮上方会叠出“外层 6 + 内层 6 + 按钮 4”
                 grid.add(column).top().padLeft(6f).padRight(6f);
             }
             buttonBox.add(grid).top().height(SINGLE_TABLE_H).pad(6f);

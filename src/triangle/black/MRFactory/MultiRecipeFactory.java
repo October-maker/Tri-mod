@@ -150,6 +150,8 @@ public class MultiRecipeFactory extends GenericCrafter{
         consumesPower = true;
         rotate = true;
         rotateDraw = false;
+        regionRotated1 = -2;
+        regionRotated2 = -2;
         configurable = true; // 允许打开配置面板（手动选定配方 / 自动匹配开关）
         saveConfig = true;
         drawArrow = false;//是否显示箭头

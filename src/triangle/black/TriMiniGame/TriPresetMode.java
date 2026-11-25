@@ -9,6 +9,8 @@ import arc.func.Cons;
 import arc.struct.Seq;
 import mindustry.Vars;
 import mindustry.content.Blocks;
+import mindustry.content.Items;
+import mindustry.content.StatusEffects;
 import mindustry.core.GameState.State;
 import mindustry.entities.bullet.BulletType;
 import mindustry.entities.bullet.LaserBulletType;
@@ -30,11 +32,17 @@ import mindustry.gen.Bullet;
 import mindustry.gen.Groups;
 import mindustry.gen.Unit;
 import mindustry.maps.Map;
+import mindustry.type.ItemStack;
 import mindustry.world.Block;
 import mindustry.world.Tile;
 import mindustry.world.blocks.campaign.LandingPad;
 import mindustry.world.blocks.campaign.LaunchPad;
+import mindustry.world.blocks.storage.CoreBlock;
+import mindustry.world.blocks.storage.CoreBlock.CoreBuild;
+import mindustry.world.blocks.storage.StorageBlock;
+import mindustry.world.modules.ItemModule;
 import triangle.content.TriUnits;
+import triangle.black.TriMoreCore;
 import triangle.black.MRFactory.MultiRecipeFactory;
 
 /**
@@ -132,12 +140,50 @@ public final class TriPresetMode{
     private static boolean recipesLockedByResearch = false;
 
     /**
-     * “砂石地质”词条是否被选中。
+     * “砂石地貌”词条是否被选中。
      *
      * <p>默认（未选中）时多配方工厂可以堆叠，且叠层上限无视堆叠研究节点（直接到 {@code stackLimit}）；
      * 选中后所有堆叠入口一并关闭。
      */
     private static boolean factoryStackingDisabled = false;
+
+    /**
+     * “精兵强将”词条是否被选中：波次敌方单位常驻超频（{@code StatusEffects.overclock}）。
+     *
+     * <p>状态效果本身只有一条计时，所谓“永续”是靠逐帧检查：剩余时间低于
+     * {@link #STATUS_REFRESH_BELOW} 就补满到 {@link #STATUS_DURATION}，任何一帧都不会缺状态。
+     */
+    private static boolean enemyOverclock = false;
+
+    /** “特攻队配装”词条是否被选中：波次敌方单位出生时携带满的爆炸混合物（坠落时按易燃物起火的逻辑照旧生效）。 */
+    private static boolean enemyBlastPayload = false;
+
+    /** “应急生产”词条是否被选中：我方单位常驻弱化（{@code StatusEffects.sapped}）。 */
+    private static boolean playerSapped = false;
+
+    /**
+     * “先锋军”档位：{@code -1} = 未选（初始资源铺满）、{@code 0} = 一半、{@code 1} = 清零、
+     * {@code 2} = 储备上限降到 1/4。真正改写核心物品与容量要在第一帧（地图载入 + 原版 loadout
+     * 结算之后）做一次，见 {@link #applyStartingSetup()}。
+     */
+    private static int vanguardTier = -1;
+
+    /** “轻步兵”档位：{@code -1} = 未选、{@code 0} = 次代核心 core-foundation、{@code 1} = 初代核心 core-shard。 */
+    private static int coreSwapTier = -1;
+
+    /** 初始资源 / 核心替换是否已在本局结算过（第一帧做一次，之后不再覆盖玩家自己的存取）。 */
+    private static boolean startingSetupDone;
+
+    /**
+     * 状态效果每次补给时给的持续时间（秒）。
+     *
+     * <p>取远大于一帧的值：即使帧率极低、{@code Time.delta} 很大，也不会在两帧之间耗尽。
+     * 补充时机由 {@link #refreshStatusBuffs(Unit)} 逐帧判断，而不是按固定秒数重给。
+     */
+    private static final float STATUS_DURATION = 90f;
+
+    /** 状态剩余时间低于该值就补满；保证状态图标/染色不会走到空，也就不会闪。 */
+    private static final float STATUS_REFRESH_BELOW = 30f;
 
     /** 基础设置里默认放开的原版发射台/接收台（不含旧版 3x3 发射台）。 */
     private static final String[] PAD_NAMES = {"advanced-launch-pad", "landing-pad"};
@@ -150,12 +196,17 @@ public final class TriPresetMode{
      */
     private static final boolean BUFF_NON_PLAYER_BUILDS = true;
 
+    /** “先锋军 · 上限 1/4”档的资源储备上限系数；口径是核心的单件上限（storageCapacity）。 */
+    private static final float CORE_CAP_SCALE = 0.25f;
+
     /** 本模式启动的对局标记：进入对局后调用 saves.resetSave()，让退出菜单只剩“不保存退出”。 */
     private static boolean presetSession, enteredPlaying;
     /** 接收台 Build 实现的覆写是否已经打过补丁（内容加载后只能成功一次，之后幂等跳过）。 */
     private static boolean padPatched;
     /** 已强化过的敌方单位 id，保证同一只单位只乘一次（创建钩子与兜底扫描都走它）。 */
     private static final arc.struct.IntSet buffedUnits = new arc.struct.IntSet();
+    /** 已经发过“爆炸混合物”载荷的单位 id，避免每秒兜底扫描反复往同一个单位背包里加物品。 */
+    private static final arc.struct.IntSet payloadUnits = new arc.struct.IntSet();
     /** 已经乘过伤害的“这一次生成”的子弹（子弹池化复用，需要按生成周期区分）。 */
     private static final java.util.IdentityHashMap<Bullet, Boolean> scaledBullets = new java.util.IdentityHashMap<>();
     /** 玩家方建筑的上一帧血量，用于给“生成即结算”的弹种做受击端补差额。 */
@@ -179,6 +230,13 @@ public final class TriPresetMode{
         final int option;
         /** 仅当 {@code option < 0} 时有效：true = 该组全部选项都必须选中。 */
         final boolean all;
+        /**
+         * 白名单：除 {@link #option} 之外，这些选项也算满足。
+         *
+         * <p>只影响“是否解锁”，不改变主选项在提示里的地位；典型用途是“轻步兵”这种
+         * “零储量能开、但上限档也不能把它锁回去”的互斥组（见 {@link #or(int...)}）。
+         */
+        final arc.struct.IntSeq allowed = new arc.struct.IntSeq();
 
         private Req(String category, int option, boolean all){
             this.category = category;
@@ -201,6 +259,12 @@ public final class TriPresetMode{
             return new Req(category, option, false);
         }
 
+        /** 追加白名单选项：这些档位被选中时同样算作满足（只对 {@link #option} 形式生效）。 */
+        Req or(int... options){
+            for(int o : options) allowed.add(o);
+            return this;
+        }
+
         boolean satisfied(){
             Category c = byKey(category);
             // 配置了不存在的前置：按“不锁”处理，避免一处笔误让整片词条永久不可用
@@ -212,7 +276,24 @@ public final class TriPresetMode{
                 }
                 return true;
             }
-            return option < 0 ? c.selected >= 0 : c.selected == option;
+            if(option < 0) return c.selected >= 0;
+            return c.selected == option || (c.selected >= 0 && allowed.contains(c.selected));
+        }
+
+        /** 供“需要先选择：X”提示使用的文案（白名单存在时写成“A 或 B”）。 */
+        String requirementText(){
+            if(option < 0) return Core.bundle.get("tri.preset.lock.anyOption", "该组任意一项");
+            Category c = byKey(category);
+            if(c == null || option >= c.options.size) return "";
+
+            StringBuilder sb = new StringBuilder(c.options.get(option).text());
+            for(int i = 0; i < allowed.size; i++){
+                int idx = allowed.get(i);
+                if(idx < 0 || idx >= c.options.size || idx == option) continue;
+                sb.append(' ').append(Core.bundle.get("tri.preset.lock.or", "或")).append(' ')
+                        .append(c.options.get(idx).text());
+            }
+            return sb.toString();
         }
     }
 
@@ -315,23 +396,32 @@ public final class TriPresetMode{
         return null;
     }
 
-    /** 词条类别。顺序即界面上的列顺序；只有<b>一个</b>选项的类别不会单独占一列，
-     * 而是统一收进右侧那个定高网格 table（坐标见 {@link #singleCategory(int)}）。
+    /** 词条类别。顺序即界面上的列顺序与右侧详情列表的先后；只有<b>一个</b>选项的类别同样占一列（列里只有一格）。
      *
      * - 出怪间隔：0.8x / 0.66x / 0.5x（waveSpacing 乘以对应倍率；都不选为原版默认间隔）；
+     * - 精兵强将 / 特攻队配装 / 人工智能：三者并成同一列（第一个未选位置就在“出怪间隔”右边）——
+     *   精兵强将让波次敌方单位常驻超频；特攻队配装让敌方单位出生携带爆炸混合物且坠落伤害 +200%；
+     *   人工智能打开原版“不可预测波次 AI”与波次敌方的“RTS 进攻 AI”；
      * - 游戏难度：正常 / 困难 / 毁灭（对应原版战役难度：单位生命 ×1/×1.25/×1.5、
      *   每波敌军数量 ×1/×1.5/×2、波次间隔 ×1/×0.8/×0.6；与本模式其它词条相乘叠加）；
      *   一个都不选 = 原版“休闲”（×0.5 / ×0.5 / ×2，见 {@link #DEFAULT_DIFFICULTY_HEALTH}）；
-     * - 战争迷雾：fog/staticFog（单选项）；
+     * - 观测阻断（原“迷雾”）：fog/staticFog（单选项，收进最右网格）；
      * - 敌方单位生命 / 敌方单位伤害：各三段式 ×2 / ×3 / ×5（实例级，互相独立）；
      * - 敌方建筑生命：+100% / +200% / +400%（实例级耐久）；
      * - 敌方炮台伤害：+100% / +200% / +400%（敌方建筑发射的子弹实例级）；
-     * - 波次增援：第 1~10 波每波额外 5 个 triangle-coreUnit（单选项）；
+     * - 不完整数据库 / 应急生产 / 亚轨道压制：三者并成同一列——需要研究的配方重新变回不可生产
+     *   （默认全部放开）；我方单位常驻弱化；亚轨道压制禁用发射台/接收台（价值固定 3 分，
+     *   {@link Option#customValue}）；
+     * - 三面受击（原“增援”）：第 1~10 波每波额外 5 个 triangle-coreUnit（单选项，收进最右网格）；
      * - 我方单位伤害 / 我方炮台伤害 / 我方建筑生命 / 我方单位生命：各三段式 -25% / -50% / -75%；
-     * - 亚轨道压制（原“禁发射台/接收台”）：单选项，价值固定 3 分（{@link Option#customValue}）；
-     * - 不完整数据库：单选项——需要研究的配方重新变回不可生产（默认全部放开）；
-     * - 砂石地质：单选项——多配方工厂无法堆叠（默认可以叠满，且无视堆叠研究节点）；
-     * - 人工智能：单选项——打开原版“不可预测波次 AI”与波次敌方的“RTS 进攻 AI”。
+     * - 砂石地貌：单选项——多配方工厂无法堆叠（默认可以叠满，且无视堆叠研究节点；收进最右网格）；
+     * - 先锋军：一半储量 / 零储量 / 上限 1/4——初始核心的每种资源铺成 13000（都不选）、
+     *   6500（一半）、0（零）；“上限 1/4”把 {@code storageCapacity} 压到 1/4 并清空所有携带资源
+     *   （第一帧结算，见 {@link #applyStartingSetup()}）；
+     *   “上限 1/4”只有在轻步兵选中“初代核心”后才能选（零储量 → 初代核心 → 上限 1/4 的链）；
+     * - 轻步兵：次代核心 core-foundation / 初代核心 core-shard——第一帧把初始核心原地换掉；
+     *   两档都要求先选“零储量”，白名单里另放“上限 1/4”（{@link Req#or}）；
+     * - 不稳定地质：支链核心（{@link TriMoreCore}）无法被部署。
      *
      * <p>前置（{@link Req}）：各三段式数值词条的<b>第三档</b>（+400% / -75%）按方向分两组——
      * 敌方提升类（敌方单位生命/伤害、敌方建筑生命、敌方炮台伤害）要求先选中“毁灭”难度；
@@ -343,6 +433,22 @@ public final class TriPresetMode{
                     new Option("0.8x", true, "tri.preset.detail.waveInterval.x08", r -> r.waveSpacing *= 0.8f),
                     new Option("0.66x", true, "tri.preset.detail.waveInterval.x066", r -> r.waveSpacing *= 0.66f),
                     new Option("0.5x", true, "tri.preset.detail.waveInterval.x05", r -> r.waveSpacing *= 0.5f)),
+            // ---- 单选项：位置由 SINGLE_COLUMN_GROUPS 决定（并成列的随列首渲染，其余收进最右网格）----
+            // 精兵强将 —— 波次敌方单位常驻超频（速度×1.15 / 伤害×1.15 / 装填×1.25）
+            new Category("overclock",
+                    new Option("tri.preset.value.overclock", false, "tri.preset.detail.overclock.on",
+                            r -> enemyOverclock = true)),
+            // 特攻队配装 —— 敌方单位出生携带满的爆炸混合物 + 该阵营坠落伤害 ×3
+            new Category("blastPayload",
+                    new Option("tri.preset.value.blastPayload", false, "tri.preset.detail.blastPayload.on",
+                            r -> {
+                                enemyBlastPayload = true;
+                                applyCrashBoost(r);
+                            })),
+            // 人工智能 —— 只打开原版地图设置里的“不可预测波次 AI”（不再开启敌方的“RTS 进攻 AI”）
+            new Category("ai",
+                    new Option("tri.preset.value.ai", false, "tri.preset.detail.ai.on",
+                            TriPresetMode::applySmartAI)),
             new Category("difficulty",
                     new Option("tri.preset.value.difficulty.normal", false, "tri.preset.detail.difficulty.normal",
                             r -> applyDifficulty(r, 1f, 1f, 1f)),
@@ -375,6 +481,14 @@ public final class TriPresetMode{
                     new Option("+200%", true, "tri.preset.detail.turret.x2", r -> enemyTurretDamage = 3f),
                     new Option("+400%", true, "tri.preset.detail.turret.x3", r -> enemyTurretDamage = 5f,
                             -1, Req.is("difficulty", 2))),
+            // 不完整数据库 —— 需要研究的配方重新变回“不能生产”（默认是全部放开）
+            new Category("database",
+                    new Option("tri.preset.value.database", false, "tri.preset.detail.database.off",
+                            r -> recipesLockedByResearch = true)),
+            // 应急生产 —— 我方单位常驻弱化（速度×0.7 / 生命×0.8）
+            new Category("sapped",
+                    new Option("tri.preset.value.sapped", false, "tri.preset.detail.sapped.on",
+                            r -> playerSapped = true)),
             new Category("reinforce",
                     new Option("tri.preset.value.reinforce", false, "tri.preset.detail.reinforce.on",
                             TriPresetMode::applyReinforce)),
@@ -398,22 +512,37 @@ public final class TriPresetMode{
                     new Option("-50%", true, "tri.preset.detail.playerUnitHealth.x2", r -> playerUnitHealth = 0.5f),
                     new Option("-75%", true, "tri.preset.detail.playerUnitHealth.x3", r -> playerUnitHealth = 0.25f,
                             -1, Req.is("pads", 0))),
-            // 单选项：亚轨道压制（禁用任何发射台/接收台）。价值固定 3 分；排在单选项网格里（每列 3 个）
+            // 亚轨道压制（禁用任何发射台/接收台）。价值固定 3 分
             new Category("pads",
                     new Option("tri.preset.value.pads", false, "tri.preset.detail.pads.off",
                             r -> launchPadsDisabled = true, 3)),
-            // 单选项：不完整数据库 —— 需要研究的配方重新变回“不能生产”（默认是全部放开）
-            new Category("database",
-                    new Option("tri.preset.value.database", false, "tri.preset.detail.database.off",
-                            r -> recipesLockedByResearch = true)),
-            // 单选项：砂石地质 —— 多配方工厂无法堆叠（默认可以叠满）
+            // 砂石地貌 —— 多配方工厂无法堆叠（默认可以叠满）
             new Category("geology",
                     new Option("tri.preset.value.geology", false, "tri.preset.detail.geology.off",
                             r -> factoryStackingDisabled = true)),
-            // 单选项：人工智能 —— 打开原版地图设置里的“不可预测波次 AI”与敌方的“RTS 进攻 AI”
-            new Category("ai",
-                    new Option("tri.preset.value.ai", false, "tri.preset.detail.ai.on",
-                            TriPresetMode::applySmartAI))
+            // ---- 先锋军：初始核心里的资源（都不选 = 按终代核心单件上限铺满）----
+            new Category("vanguard",
+                    new Option("tri.preset.value.vanguard.half", false, "tri.preset.detail.vanguard.half",
+                            r -> vanguardTier = 0),
+                    new Option("tri.preset.value.vanguard.zero", false, "tri.preset.detail.vanguard.zero",
+                            r -> vanguardTier = 1),
+                    // “上限 1/4”只和“初代核心”搭配：必须先选轻步兵的 core-shard 才放行
+                    new Option("tri.preset.value.vanguard.quarter", false, "tri.preset.detail.vanguard.quarter",
+                            r -> vanguardTier = 2, -1, Req.is("lightInfantry", 1))),
+            // ---- 轻步兵：把初始核心换成低代核心。两档都要求“零储量”，并把“上限降低”列入白名单，
+            //      这样选上限档时不会把本组锁死、也就不会反过来把上限档拖回锁定状态 ----
+            new Category("lightInfantry",
+                    new Option("tri.preset.value.lightInfantry.foundation", false,
+                            "tri.preset.detail.lightInfantry.foundation",
+                            r -> coreSwapTier = 0, -1, Req.is("vanguard", 1).or(2)),
+                    new Option("tri.preset.value.lightInfantry.shard", false,
+                            "tri.preset.detail.lightInfantry.shard",
+                            r -> coreSwapTier = 1, -1, Req.is("vanguard", 1).or(2))),
+            // ---- 不稳定地质：支链核心（TriMoreCore）无法被部署 ----
+            new Category("unstableGeology",
+                    new Option("tri.preset.value.unstableGeology", false,
+                            "tri.preset.detail.unstableGeology.off",
+                            r -> TriMoreCore.deploymentDisabled = true))
     );
 
     private TriPresetMode(){}
@@ -424,8 +553,12 @@ public final class TriPresetMode{
         patchLandingPad();
 
         // 单位（双方）：创建瞬间改写实例数值。maxHealth/health 是字段（不会随倍率自动重算），
-        // damageMultiplier 会在其武器的伤害结算中被读取。
-        Events.on(UnitCreateEvent.class, e -> applyUnitBuff(e.unit));
+        // damageMultiplier 会在其武器的伤害结算中被读取。状态类词条也在创建瞬间补一次，
+        // 单位出场的第一个渲染帧就带着状态。
+        Events.on(UnitCreateEvent.class, e -> {
+            applyUnitBuff(e.unit);
+            refreshStatusBuffs(e.unit);
+        });
 
         // 首帧即结算的弹种（激光/轨道/榴霰）对“单位”的受击补偿：
         // Damage 在命中每个单位后都会 fire UnitDamageEvent，带上被击单位与那颗子弹，
@@ -443,12 +576,42 @@ public final class TriPresetMode{
         // 兜底：每秒扫一遍实体组，把“没走创建事件”的单位（引擎内部生成 / 换队后的单位）补上
         Timer.schedule(() -> {
             if(Vars.state == null || !Vars.state.isGame()) return;
-            if(!unitBuffActive()) return;
 
-            for(Unit u : Groups.unit){
-                applyUnitBuff(u);
+            if(unitBuffActive()){
+                for(Unit u : Groups.unit){
+                    applyUnitBuff(u);
+                }
+            }
+            // “特攻队配装”的载荷只发一次，按 payloadUnits 去重，放在每秒扫描里即可
+            if(enemyBlastPayload){
+                for(Unit u : Groups.unit){
+                    applyPayloadBuff(u);
+                }
+            }
+            // “上限 1/4”档：原版在邻近方块变化时会重算 storageCapacity，这里每秒压回 1/4
+            if(vanguardTier == 2 && Vars.state.rules != null){
+                applyCoreCapacity();
             }
         }, 1f, 1f);
+
+        // 状态类词条：逐帧检查剩余时间，低于 STATUS_REFRESH_BELOW 就补满。
+        // 不按固定秒数重给，因此无论帧率高低、时间步进多大，状态在每一帧都存在，
+        // 不会出现“时长为零、一闪一闪”的断档。
+        Events.run(Trigger.update, () -> {
+            if(!statusBuffActive()) return;
+            if(Vars.state == null || !Vars.state.isGame() || Vars.state.rules == null) return;
+            for(Unit u : Groups.unit){
+                refreshStatusBuffs(u);
+            }
+        });
+
+        // 初始资源 / 初始核心：原版 Logic.play() 会在载入后清空核心物品、再按地图自带的
+        // rules.loadout 发货，所以这一步必须晚于它 —— 放在第一帧做一次，之后不再覆盖玩家自己的存取。
+        Events.run(Trigger.update, () -> {
+            if(!presetSession || startingSetupDone) return;
+            if(Vars.state == null || !Vars.state.isGame() || Vars.state.rules == null) return;
+            if(applyStartingSetup()) startingSetupDone = true;
+        });
 
         // 子弹（双方）：BulletCreateEvent 在炮台/单位的开火路径上不会触发（只有 BulletType.createBullet 这个
         // 逻辑/网络专用工具方法才 fire），所以改为逐帧扫描 Groups.bullet，按“阵营 + owner 类型”取倍率：
@@ -498,6 +661,8 @@ public final class TriPresetMode{
         Events.on(BlockBuildEndEvent.class, e -> {
             if(e.breaking || e.tile == null || e.tile.build == null) return;
             scaleBuilding(e.tile.build);
+            // “上限 1/4”档：新造出来的核心也要立刻压回 1/4（否则会有一秒的满容量空档）
+            if(vanguardTier == 2 && e.tile.build instanceof CoreBuild) applyCoreCapacity();
         });
 
         // 波次增援：这个事件在 Control.playMap 里“state.rules = rules”之后才 fire，
@@ -507,6 +672,9 @@ public final class TriPresetMode{
             applySpawnMultiplier(e.rules);
             applyReinforceGroups(e.rules);
             applyLaunchPads(e.rules);
+            // 坠落伤害是队伍级规则项，和 spawns/bannedBlocks 一样会被地图载入整份替换，
+            // 所以放到这里再写一次（applyCrashBoost 是幂等的，重复调用不会叠乘）。
+            applyCrashBoost(e.rules);
         });
 
         // 建筑（双方）：地图自带的存量建筑，世界加载完成后遍历一次。
@@ -540,6 +708,11 @@ public final class TriPresetMode{
             // 地图预置的单位在加载时就存在，创建钩子那一刻静态配置可能还是 1f，这里补一次
             for(Unit u : Groups.unit){
                 applyUnitBuff(u);
+            }
+            if(statusBuffActive()){
+                for(Unit u : Groups.unit){
+                    refreshStatusBuffs(u);
+                }
             }
         });
 
@@ -627,6 +800,77 @@ public final class TriPresetMode{
 
     public static int optionCount(int category){
         return categories.get(category).options.size;
+    }
+
+    /**
+     * 单选项“合并列”的布局表：每组里的单选项类别在界面上合并成同一列，列内按这里给的顺序从上往下排，
+     * 整列渲染在该组<b>首个成员</b>在 {@link #categories} 里的位置。不属于任何组的单选项
+     * 仍收进最右侧的定高网格 table。
+     */
+    private static final Seq<Seq<String>> SINGLE_COLUMN_GROUPS = new Seq<Seq<String>>()
+            // 精兵强将 / 特攻队配装 / 人工智能 —— 放在“出怪间隔”与“游戏难度”之间
+            .add(Seq.with("overclock", "blastPayload", "ai"))
+            // 不完整数据库 / 应急生产 / 亚轨道压制 —— 放在“敌方炮台伤害”与“三面受击”之间
+            .add(Seq.with("database", "sapped", "pads"));
+
+    /** 该类别属于哪个合并列；-1 表示不属于任何合并列。 */
+    public static int mergedGroupOf(int category){
+        if(category < 0 || category >= categories.size) return -1;
+        String key = categories.get(category).key;
+        for(int g = 0; g < SINGLE_COLUMN_GROUPS.size; g++){
+            if(SINGLE_COLUMN_GROUPS.get(g).contains(key)) return g;
+        }
+        return -1;
+    }
+
+    /**
+     * 某个合并列的成员类别下标，按 {@link #categories} 里的顺序排列；
+     * 首个元素就是“列首”，由它负责在列流里渲染整列。
+     */
+    public static int[] mergedGroupMembers(int group){
+        if(group < 0 || group >= SINGLE_COLUMN_GROUPS.size) return new int[0];
+        Seq<String> keys = SINGLE_COLUMN_GROUPS.get(group);
+        arc.struct.IntSeq out = new arc.struct.IntSeq();
+        for(int c = 0; c < categories.size; c++){
+            if(keys.contains(categories.get(c).key)) out.add(c);
+        }
+        return out.toArray();
+    }
+
+    /** 该类别是否是其所在合并列的列首（只有列首在列流里占位，其余成员随它一起渲染）。 */
+    public static boolean isMergedHead(int category){
+        int group = mergedGroupOf(category);
+        if(group < 0) return false;
+        int[] members = mergedGroupMembers(group);
+        return members.length > 0 && members[0] == category;
+    }
+
+    /** 该类别是否只有一个选项。 */
+    public static boolean isSingleCategory(int category){
+        return optionCount(category) == 1;
+    }
+
+    /** 是否收进右侧网格的单选项：单选项且没有并进某个合并列。 */
+    public static boolean isGridSingle(int category){
+        return isSingleCategory(category) && mergedGroupOf(category) < 0;
+    }
+
+    /** 右侧网格里的单选项类别个数。 */
+    public static int gridSingleCount(){
+        int n = 0;
+        for(int c = 0; c < categories.size; c++){
+            if(isGridSingle(c)) n++;
+        }
+        return n;
+    }
+
+    /** 右侧网格里第 {@code index} 个单选项类别在 {@link #categories} 里的下标（先竖后横编号）。 */
+    public static int gridSingle(int index){
+        int n = 0;
+        for(int c = 0; c < categories.size; c++){
+            if(isGridSingle(c) && n++ == index) return c;
+        }
+        throw new IndexOutOfBoundsException("grid single index " + index);
     }
 
     public static String optionLabel(int category, int option){
@@ -745,40 +989,8 @@ public final class TriPresetMode{
         Category pre = byKey(req.category);
         if(pre == null) return null;
 
-        String label = req.option >= 0
-                ? pre.options.get(req.option).text()
-                : Core.bundle.get("tri.preset.lock.anyOption", "该组任意一项");
+        String label = req.requirementText();
         return Core.bundle.format("tri.preset.lock.requires", label);
-    }
-
-    /**
-     * 该类别是否只有一个选项（如战争迷雾、波次增援）。
-     * 这类词条不单独占一列，统一收在界面最右侧的定高网格 table 里。
-     */
-    public static boolean isSingleCategory(int category){
-        return optionCount(category) == 1;
-    }
-
-    /** 单选项词条组的个数，即网格 table 里按钮的总数。 */
-    public static int singleCategoryCount(){
-        int n = 0;
-        for(int c = 0; c < categories.size; c++){
-            if(isSingleCategory(c)) n++;
-        }
-        return n;
-    }
-
-    /**
-     * 第 {@code index} 个单选项词条组在 {@link #categories} 里的下标。
-     * 网格坐标由调用方按“每列最多 3 个、先竖后横”换算：第 index 个位于
-     * 第 {@code index / 3} 列（从 0 起算、从左往右）、第 {@code index % 3} 行（从上往下）。
-     */
-    public static int singleCategory(int index){
-        int n = 0;
-        for(int c = 0; c < categories.size; c++){
-            if(isSingleCategory(c) && n++ == index) return c;
-        }
-        throw new IndexOutOfBoundsException("single category index " + index);
     }
 
     /** 是否有任一词条被选中；全未选中时界面回到地图缩略图。 */
@@ -826,6 +1038,98 @@ public final class TriPresetMode{
         }
 
         syncFactorySwitches();
+    }
+
+    /**
+     * 开局第一帧结算“先锋军 / 轻步兵”：换初始核心、写初始物品、压资源储备上限。
+     *
+     * <p>时机必须是原版 {@code Logic.play()} 之后：那一步会先 {@code core.items.clear()}、
+     * 再按地图自带的 {@code rules.loadout} 发放初始资源（见 {@code Logic.play()} 的 loadout 分支），
+     * 提前写会被整份覆盖，所以实际调用点在第一帧的 {@code Trigger.update}。
+     *
+     * <p>口径（用户确认）：以终代核心 {@code core-nucleus} 的单件上限为准——都不选 = 每件 13000（铺满）、
+     * 一半 = 每件 6500、零 = 0、上限档 = 把容量压到 1/4（13000 → 3250）并<b>清空所有携带资源</b>。
+     *
+     * @return 核心是否已经就绪并完成结算（未就绪时返回 false，下一帧再试）
+     */
+    private static boolean applyStartingSetup(){
+        Team team = Vars.state.rules.defaultTeam;
+        CoreBuild core = team == null ? null : team.core();
+        if(core == null) return false;
+
+        // 1) 轻步兵：原地换成低代核心（保留朝向与已有物品，随后统一改写）
+        if(coreSwapTier >= 0){
+            Block target = coreSwapTier == 0 ? Blocks.coreFoundation : Blocks.coreShard;
+            if(core.block != target){
+                ItemModule carried = core.items == null ? null : core.items.copy();
+                // 先把旧核心的资源清空：CoreBuild.onRemoved() 会把 items 分给邻近仓储（detachStorage），
+                // 留着只会把这份初始资源漏进旁边的容器里
+                if(core.items != null) core.items.clear();
+                Tile tile = core.tile;
+                tile.setBlock(target, team, core.rotation);
+                core = (CoreBuild)tile.build;
+                if(core == null) return false;
+                if(carried != null && core.items != null) core.items.set(carried);
+                if(core.storageCapacity <= 0) core.storageCapacity = core.block.itemCapacity;
+                // Tile.setBlock 不调 placed()，队伍的核心清单得自己补登记（否则 team.core() 仍指向旧核心）
+                if(!Vars.state.teams.cores(team).contains(core)) core.placed();
+                // created() 同样不会被 setBlock 调用，补一次以 fire CoreChangeEvent（原版建核心时会走这里）
+                core.created();
+            }
+        }
+
+        // 2) 先锋军：初始资源 + 储备上限
+        int perItemFull = Blocks.coreNucleus.itemCapacity;  // 终代核心的单件上限 13000
+        int cap = core.block.itemCapacity;
+        if(vanguardTier == 2) cap = Math.max(1, (int)(cap * CORE_CAP_SCALE));
+
+        Seq<ItemStack> loadout = Vars.state.rules.loadout;
+        if(core.items != null){
+            if(vanguardTier == 1 || vanguardTier == 2){
+                // 零储量 / 上限 1/4：都清空携带资源（上限档随后再把容量压到 1/4）
+                core.items.clear();
+            }else{
+                // 一半 = 每件 6500；都不选 = 每件 13000（铺满）
+                int amount = Math.min(vanguardTier == 0 ? perItemFull / 2 : perItemFull, cap);
+                core.items.clear();
+                if(loadout != null){
+                    for(int i = 0; i < loadout.size; i++){
+                        ItemStack stack = loadout.get(i);
+                        if(stack == null || stack.item == null) continue;
+                        core.items.set(stack.item, amount);
+                    }
+                }
+            }
+        }
+        if(vanguardTier == 2) core.storageCapacity = cap;
+        return true;
+    }
+
+    /**
+     * “上限 1/4”档的持续生效：{@code CoreBuild.onProximityUpdate()} 在邻近方块变化时会重算
+     * {@code storageCapacity}，所以每秒按“方块自身单件上限 + 已挂到它身上的仓储”压回 1/4。
+     */
+    private static void applyCoreCapacity(){
+        Team team = Vars.state.rules.defaultTeam;
+        if(team == null || Vars.state.teams == null) return;
+
+        for(CoreBuild core : Vars.state.teams.cores(team)){
+            if(core == null) continue;
+            core.storageCapacity = Math.max(1, (int)(coreBaseCapacity(core) * CORE_CAP_SCALE));
+        }
+    }
+
+    /** 核心的“原始”容量：方块自身的单件上限 + 挂在它身上的仓储方块（与原版 onProximityUpdate 同口径）。 */
+    private static int coreBaseCapacity(CoreBuild core){
+        int cap = core.block.itemCapacity;
+        if(core.proximity != null){
+            for(Building b : core.proximity){
+                if(!(b instanceof StorageBlock.StorageBuild)) continue;
+                if(((StorageBlock.StorageBuild)b).linkedCore != core) continue;
+                cap += b.block.itemCapacity;
+            }
+        }
+        return cap;
     }
 
     /**
@@ -889,6 +1193,12 @@ public final class TriPresetMode{
     private static void applyEnemyConfig(){
         resetEnemyBuff();
         applyModifiers(new Rules());
+        // 新词条的状态只属于“特殊模式”的局：普通自定义局载入时不要继承初始核心/支链核心的开关
+        if(!presetSession){
+            vanguardTier = -1;
+            coreSwapTier = -1;
+            TriMoreCore.deploymentDisabled = false;
+        }
     }
 
     /**
@@ -934,19 +1244,20 @@ public final class TriPresetMode{
     }
 
     /**
-     * “人工智能”词条：打开原版地图设置里的两个 AI 开关。
+     * “人工智能”词条：只打开原版地图设置里的“不可预测波次 AI”（{@code rules.randomWaveAI}，
+     * 原版规则项 {@code rules.randomwaveai}）。
      *
-     * <p>{@code rules.randomWaveAI} 是全局的“不可预测波次 AI”（原版规则项 {@code rules.randomwaveai}）；
-     * 而“RTS 进攻 AI”是按队伍存的（{@code Rules.TeamRules#get(team).rtsAi}，原版规则项 {@code rules.rtsai}），
-     * 因此只打开波次敌方队伍 {@code rules.waveTeam} 的那一份，不动我方与中立队伍。
+     * <p>“RTS 进攻 AI”（按队伍存的 {@code Rules.TeamRules#get(team).rtsAi}，原版规则项 {@code rules.rtsai}）
+     * 的开启代码已按要求注释掉：本词条不再让波次敌方队伍走 RTS 进攻 AI。
      */
     private static void applySmartAI(Rules rules){
         if(rules == null) return;
         rules.randomWaveAI = true;
-        if(rules.teams != null && rules.waveTeam != null){
-            Rules.TeamRule rule = rules.teams.get(rules.waveTeam);
-            if(rule != null) rule.rtsAi = true;
-        }
+        // 不再开启“RTS 进攻 AI”：波次敌方单位保持原版波次 AI 的进攻方式（仅受上面的不可预测波次 AI 影响）。
+        // if(rules.teams != null && rules.waveTeam != null){
+        //     Rules.TeamRule rule = rules.teams.get(rules.waveTeam);
+        //     if(rule != null) rule.rtsAi = true;
+        // }
     }
 
     /**
@@ -1010,6 +1321,69 @@ public final class TriPresetMode{
         unit.health(max);
         if(damage != 1f) unit.damageMultiplier(unit.damageMultiplier() * damage);
         if(armor != 0f) unit.armor(unit.armor() + armor);
+    }
+
+    /** 状态类 / 载荷类词条是否有任何一项被选中（决定逐帧状态检查与每秒载荷扫描要不要扫）。 */
+    private static boolean statusBuffActive(){
+        return enemyOverclock || enemyBlastPayload || playerSapped;
+    }
+
+    /**
+     * 状态类词条的<b>逐帧</b>检查。
+     *
+     * <p>引擎的状态里只有一条计时，靠“给足了再补”的方式维持常驻：每次检查剩余时间，
+     * 低于 {@link #STATUS_REFRESH_BELOW} 就补满到 {@link #STATUS_DURATION}。相比“每秒定时重给一次”，
+     * 它不依赖刷新间隔与游戏时间步进的比例，任何一帧都不会出现状态已经掉光、界面上闪一下的情况。
+     *
+     * <p>调用点：{@link #init()} 里的 {@code Trigger.update}（逐帧）与 {@code UnitCreateEvent}（出场瞬间），
+     * 以及地图载入完成时对存量单位补一次。
+     *
+     * <ul>
+     *   <li>“精兵强将”：敌方单位 {@code overclock}（速度×1.15 / 伤害×1.15 / 装填×1.25）；</li>
+     *   <li>“应急生产”：我方单位 {@code sapped}（速度×0.8）。</li>
+     * </ul>
+     */
+    private static void refreshStatusBuffs(Unit unit){
+        if(unit == null || Vars.state == null || Vars.state.rules == null) return;
+        boolean enemy = unit.team == Vars.state.rules.waveTeam;
+        boolean ours = unit.team == Vars.state.rules.defaultTeam;
+
+        if(enemy && enemyOverclock) refreshStatus(unit, StatusEffects.overclock);
+        if(ours && playerSapped) refreshStatus(unit, StatusEffects.sapped);
+    }
+
+    /** 剩余时间不足（或根本不在状态里）时重新给满，避免任何情况下状态断档。 */
+    private static void refreshStatus(Unit unit, mindustry.type.StatusEffect effect){
+        if(!unit.hasEffect(effect) || unit.getDuration(effect) < STATUS_REFRESH_BELOW){
+            unit.apply(effect, STATUS_DURATION);
+        }
+    }
+
+    /** 载荷类词条：敌方单位只发一次满的爆炸混合物（{@link #payloadUnits} 去重，避免反复往背包里叠加）。 */
+    private static void applyPayloadBuff(Unit unit){
+        if(unit == null || Vars.state == null || Vars.state.rules == null) return;
+        if(!enemyBlastPayload || unit.team != Vars.state.rules.waveTeam) return;
+        if(!payloadUnits.add(unit.id)) return;
+        // 战斗单位的 UnitType.itemCapacity 多为 0；"满"至少给 1，hasItem() 与坠落起火的判定才成立。
+        unit.addItem(Items.blastCompound, Math.max(1, unit.type.itemCapacity));
+    }
+
+    /**
+     * “特攻队配装”的坠落伤害部分。
+     *
+     * <p>原版坠落伤害 =
+     * {@code hitSize^0.75 * UnitType.crashDamageMultiplier * 2.5 * Rules.unitCrashDamage(team)}，
+     * 最后一项读的是<b>按队伍</b>存的 {@code TeamRule.unitCrashDamageMultiplier}，
+     * 所以把波次敌方队伍的那一份抬到 3（= 额外 +200%），我方与中立队伍完全不受影响。
+     *
+     * <p>用赋值而不是乘法：这个函数会在 {@code start()}（写入待用 Rules）与
+     * {@link RulesLoadEvent}（地图载入后真正生效的那份 Rules）各跑一次，
+     * 前者若恰好就是后者同一对象，乘法会把 3 叠成 9。
+     */
+    private static void applyCrashBoost(Rules rules){
+        if(!enemyBlastPayload || rules == null || rules.teams == null || rules.waveTeam == null) return;
+        Rules.TeamRule rule = rules.teams.get(rules.waveTeam);
+        if(rule != null && rule.unitCrashDamageMultiplier < 3f) rule.unitCrashDamageMultiplier = 3f;
     }
 
     /** 按该建筑所属阵营的倍率改写耐久上限并补满；倍率为 1 时不动。 */
@@ -1213,8 +1587,17 @@ public final class TriPresetMode{
         launchPadsDisabled = false;
         recipesLockedByResearch = false;
         factoryStackingDisabled = false;
+        enemyOverclock = false;
+        enemyBlastPayload = false;
+        playerSapped = false;
+        vanguardTier = -1;
+        coreSwapTier = -1;
+        startingSetupDone = false;
+        // 支链核心的部署开关是方块上的静态标记，离开本模式必须放开，否则会影响其它对局
+        TriMoreCore.deploymentDisabled = false;
         syncFactorySwitches(); // 回到“全部放开 / 可堆叠”，不影响本模式之外的对局
         buffedUnits.clear();
+        payloadUnits.clear();
         scaledBullets.clear();
         prevBuildingHealth.clear();
         prevUnitHealth.clear();

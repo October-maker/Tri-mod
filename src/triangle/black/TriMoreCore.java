@@ -18,6 +18,15 @@ import mindustry.world.blocks.storage.CoreBlock;
  */
 public class TriMoreCore extends CoreBlock {
 
+    /**
+     * 是否禁止部署（“不稳定地质”词条）。
+     *
+     * <p>放在方块类型上而不是某个界面里，是因为放置判定只有 {@link #canPlaceOn} 这一个入口：
+     * 无论从建造菜单、蓝图还是逻辑方块放置，都会走这里；已有的支链核心不受影响，
+     * 只是不能再新建。离开特殊模式时由 {@code TriPresetMode.resetEnemyBuff()} 复位。
+     */
+    public static boolean deploymentDisabled = false;
+
     public TriMoreCore(String name) {
         super(name);
     }
@@ -34,9 +43,10 @@ public class TriMoreCore extends CoreBlock {
         return other.alwaysReplace;
     }
 
-    /** 每队核心数量上限为 8 个。 */
+    /** 每队核心数量上限为 8 个；“不稳定地质”期间直接禁止部署。 */
     @Override
     public boolean canPlaceOn(Tile tile, Team team, int rotation){
+        if(deploymentDisabled) return false;
         return Vars.state.teams.cores(team).size < 8;
     }
 }
