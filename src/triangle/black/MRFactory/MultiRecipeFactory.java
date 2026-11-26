@@ -156,8 +156,11 @@ public class MultiRecipeFactory extends GenericCrafter{
         saveConfig = true;
         drawArrow = false;//是否显示箭头
         invertFlip = true;
+        // 配置类型登记：configured() 由本类自己解析，这里只需要把类型登记进 Block.configurations，
+        // 让原版按 value.getClass() 查表时不会走到默认实现。int[] 是本类的新格式载荷。
         config(Integer.class, (MultiRecipeFactoryBuild build, Integer value) -> {});
         config(String.class, (MultiRecipeFactoryBuild build, String value) -> {});
+        config(int[].class, (MultiRecipeFactoryBuild build, int[] value) -> {});
     }
 
     /** 当前是否真的允许堆叠：工厂自身的 {@link #stackable} 加上特殊模式的禁用开关。 */
@@ -168,7 +171,7 @@ public class MultiRecipeFactory extends GenericCrafter{
     /**
      * 液体输出镜像位：bit0 = 左右镜像（左↔右），bit1 = 上下镜像（上↔下）。
      * 镜像不占用 {@code rotation}（rotation 仍用于输出方向的 90° 旋转），
-     * 而是作为 {@code #f<mask>} 标记附加在配置字符串里，因此能随蓝图与存档一起保存。
+     * 而是作为配置载荷里的独立位（{@link MrfConfig} 的第 3 个 int），因此能随蓝图与存档一起保存。
      */
     public static final int mirrorHorizontal = 1, mirrorVertical = 2;
 
@@ -192,8 +195,13 @@ public class MultiRecipeFactory extends GenericCrafter{
         return recipe == null ? null : recipe.outputLiquid;
     }
 
-    /** 从配置对象里解出配方编号；自动模式返回 -1。兼容超控偏移与堆叠体的逗号多层配置（取第一层）。 */
+    /** 从配置对象里解出配方编号；自动模式返回 -1。兼容新载荷、超控偏移与堆叠体的逗号多层配置（取第一层）。 */
     protected int previewRecipeIndex(Object config){
+        if(config instanceof int[] payload){
+            if(!MrfConfig.valid(payload)) return -1;
+            int index = MrfConfig.stacked(payload) ? MrfConfig.layerRecipe(payload, 0) : MrfConfig.recipe(payload);
+            return index < 0 ? -1 : index;
+        }
         int value;
         if(config instanceof Integer integer){
             value = integer;
@@ -226,17 +234,6 @@ public class MultiRecipeFactory extends GenericCrafter{
                 : -1;
     }
 
-    /** 临时诊断：把镜像链路的关键节点追加写入 %TEMP%\tri_mirror_debug.log。 */
-    public static void mirrorLog(String message){
-        try{
-            java.nio.file.Path path = java.nio.file.Paths.get(System.getProperty("java.io.tmpdir"), "tri_mirror_debug.log");
-            String line = "[" + arc.util.Time.time + "] " + message + System.lineSeparator();
-            java.nio.file.Files.write(path, line.getBytes(java.nio.charset.StandardCharsets.UTF_8),
-                java.nio.file.StandardOpenOption.CREATE, java.nio.file.StandardOpenOption.APPEND);
-        }catch(Throwable ignored){
-        }
-    }
-
     /** 把 {@code dumpLiquid} 使用的相对方向按镜像位翻转；-1（四面随便倒）保持原样。 */
     public static int mirrorDirection(int direction, int mask){
         if(direction < 0 || mask == 0) return direction;
@@ -251,8 +248,11 @@ public class MultiRecipeFactory extends GenericCrafter{
         return direction;
     }
 
-    /** 从配置对象里取出镜像位；不是字符串或没有 {@code #f} 标记时视为 0。 */
+    /** 从配置对象里取出镜像位；新载荷直接读，旧字符串读 {@code #f} 标记，其余视为 0。 */
     public static int mirrorMaskOf(Object config){
+        if(config instanceof int[] payload){
+            return MrfConfig.valid(payload) ? MrfConfig.mirror(payload) : 0;
+        }
         if(!(config instanceof String text)) return 0;
         int hash = text.indexOf('#');
         if(hash < 0) return 0;
@@ -277,10 +277,10 @@ public class MultiRecipeFactory extends GenericCrafter{
     public static int mirrorMaskFromPrevious(Seq<Building> previous){
         if(previous == null) return 0;
         for(Building building : previous){
-            if(building instanceof ConstructBlock.ConstructBuild construct && construct.lastConfig instanceof String text){
-                int mask = mirrorMaskOf(text);
-                if(mask != 0) return mask;
-            }
+            if(!(building instanceof ConstructBlock.ConstructBuild construct)) continue;
+            Object config = construct.lastConfig;
+            int mask = mirrorMaskOf(config);
+            if(mask != 0) return mask;
         }
         return 0;
     }
@@ -299,8 +299,19 @@ public class MultiRecipeFactory extends GenericCrafter{
         return out.toString();
     }
 
-    /** 用新的镜像位重建配置对象；mask 为 0 时等同于 {@link #stripMirror(Object)}。 */
+    /** 用新的镜像位重建配置对象，保持原类型：新载荷返回克隆的 int[]，旧字符串返回 {@code #f} 串。 */
     public static Object withMirror(Object config, int mask){
+        if(config instanceof int[] payload){
+            if(!MrfConfig.valid(payload)) return config;   // 不认识的版本不动，避免退化成 "[I@..." 字符串
+            int[] copy = payload.clone();
+            MrfConfig.setMirror(copy, mask);
+            return copy;
+        }
+        if(config == null){
+            // 空配置（全新计划）没有旧字符串可拆：直接给一份自动模式的基座载荷，
+            // 避免把 "#f1" 这种旧格式字符串塞进新蓝图。
+            return MrfConfig.encode(-1, true, false, mask, null, null);
+        }
         String base = stripMirror(config);
         return (mask & 3) == 0 ? base : base + "#f" + (mask & 3);
     }
@@ -313,10 +324,7 @@ public class MultiRecipeFactory extends GenericCrafter{
     @Override
     public void flipRotation(BuildPlan plan, boolean horizontal){
         if(plan == null) return;
-        Object before = plan.config;
         plan.config = withMirror(plan.config, mirrorMaskOf(plan.config) ^ (horizontal ? mirrorHorizontal : mirrorVertical));
-        mirrorLog("flipRotation block=" + name + " h=" + horizontal + " at=" + plan.x + "," + plan.y
-            + " before=" + before + " after=" + plan.config);
         // 贴图旋转对称，rotation 保持原样（不调 super：原版会做 ±180° 旋转）
     }
 
@@ -1046,10 +1054,8 @@ public class MultiRecipeFactory extends GenericCrafter{
         public static final float logicControlWindow = 1.5f;
         /** true = 玩家启用了“超控”：本建筑忽略任何逻辑控制（control 等逻辑入口直接跳过）。随配置/蓝图/存档保存。 */
         public boolean logicOverride = false;
-        /** 液体输出镜像位：bit0 左右镜像、bit1 上下镜像；随配置字符串（{@code #f<mask>}）与存档保存。 */
+        /** 液体输出镜像位：bit0 左右镜像、bit1 上下镜像；随配置载荷（int[]）与存档保存。 */
         public int liquidMirror = 0;
-        /** 临时诊断：液体倒向日志的剩余条数（避免每帧刷屏）。 */
-        public transient int mirrorDumpLogs = 2;
         /** 配置编码里“超控”的偏移基数；旧配置值（-1 与 0..n-1）都小于它，因此向后兼容。 */
         protected static final int logicOverrideBase = 10000;
         /** 控制面板刷新回调（面板打开时挂上，关闭后为 null）：逻辑控制指令到达时立刻重刷面板，避免下一帧才更新。 */
@@ -1078,8 +1084,8 @@ public class MultiRecipeFactory extends GenericCrafter{
         }
 
         /**
-         * 把“自动/手动配方 + 超控状态”编码成一个 int（配置、蓝图、存档共用同一份编码）。
-         * 普通状态保持旧编码（自动 -1 / 手动为索引）；超控状态加 {@link #logicOverrideBase} 偏移。
+         * 旧的单 int 编码（自动 -1 / 手动为索引，超控加 {@link #logicOverrideBase} 偏移）。
+         * 新流程改用 {@link #configPayload()}；这里保留给旧存档/旧蓝图解码与逻辑指令语义对照。
          */
         protected int encodeConfig(){
             if(logicOverride) return logicOverrideBase + (auto ? 0 : selectedIndex + 1);
@@ -1206,14 +1212,6 @@ public class MultiRecipeFactory extends GenericCrafter{
             // 即使完工时 configured 没被原版调用，也能在这里把镜像位补回来。
             int previousMirror = mirrorMaskFromPrevious(previous);
             if(previousMirror != 0) liquidMirror = previousMirror;
-            if(previous != null && previous.size > 0 && previous.first() instanceof ConstructBlock.ConstructBuild construct){
-                MultiRecipeFactory.mirrorLog("overwrote at=" + (tile == null ? "?" : tile.x + "," + tile.y)
-                    + " prevBuild=" + construct.previous + " lastConfig=" + construct.lastConfig
-                    + " mask=" + previousMirror + " mirror=" + liquidMirror);
-            }else{
-                MultiRecipeFactory.mirrorLog("overwrote at=" + (tile == null ? "?" : tile.x + "," + tile.y)
-                    + " prev=null mask=" + previousMirror + " mirror=" + liquidMirror);
-            }
             Building old = previousFactory(previous);
             if(old == null) return;
             migrateFrom(old);
@@ -1291,27 +1289,63 @@ public class MultiRecipeFactory extends GenericCrafter{
             return getRecipe();
         }
 
-        /** 配置序列化：自动模式编码为 -1，手动模式编码为选中的配方索引，超控状态另加偏移（供蓝图复制/粘贴）。 */
+        /**
+         * 新配置载荷：{@link MrfConfig} 的定长头 int[]，蓝图、网络与存档共用同一份结构。
+         * 每次返回新数组，避免被 BuildPlan / ConstructBuild.lastConfig 持有后被后续状态改动污染。
+         */
+        public int[] configPayload(){
+            return MrfConfig.encode(selectedIndex, auto, logicOverride, liquidMirror, null, null);
+        }
+
         @Override
         public Object config() {
-            int value = encodeConfig();
-            // 没有镜像时仍返回旧的整数配置，已有蓝图/逻辑读取旧格式不受影响；
-            // 有镜像时返回 "值#f<mask>"，蓝图与存档据此还原镜像面。
-            return liquidMirror == 0 ? value : value + "#f" + (liquidMirror & 3);
+            return configPayload();
         }
 
         /**
          * 配置处理入口：蓝图粘贴（configureAny）与 UI 配置（configure）都会经 Call.tileConfig 触发本方法。
-         * 负数表示切回自动模式，其余值作为手动配方索引，>= logicOverrideBase 表示“超控 + 对应配方状态”。
-         * 字符串形式额外携带 {@code #f<mask>} 镜像位（堆叠体还会带 {@code #1} 全局超控位）。
+         * int[] 是新格式，走 {@link #applyPayload(int[])}；Integer/String 只在旧蓝图、旧逻辑指令上出现，
+         * 统一收进 {@link #applyLegacyConfig(Unit, Object)}，正常流程不会进入字符串解析分支。
          */
         @Override
         public void configured(Unit unit, Object value) {
-            Object mirrorBefore = liquidMirror;
-            if (value instanceof Integer v) {
-                // 纯整数配置不带镜像信息（面板选配方、旧蓝图都用这种），保留当前镜像位
+            if(value instanceof int[] payload){
+                applyPayload(payload);
+                return;
+            }
+            applyLegacyConfig(unit, value);
+        }
+
+        /** 新载荷解码：越界索引一律退回自动模式，不做异常驱动的解析。 */
+        protected void applyPayload(int[] payload){
+            if(!MrfConfig.valid(payload)) return;
+            int recipe = MrfConfig.recipe(payload);
+            boolean payloadAuto = MrfConfig.auto(payload);
+            if(MrfConfig.stacked(payload)){
+                // 堆叠载荷贴到单层方块：取第一层
+                recipe = MrfConfig.layerRecipe(payload, 0);
+                payloadAuto = MrfConfig.layerAuto(payload, 0);
+            }
+            logicOverride = MrfConfig.override(payload);
+            liquidMirror = MrfConfig.mirror(payload);
+            if(payloadAuto || recipe < 0 || recipe >= recipes.size){
+                auto = true;
+                selectedIndex = -1;
+            }else{
+                auto = false;
+                selectedIndex = recipe;
+            }
+        }
+
+        /**
+         * 旧格式兼容的唯一入口：只在 value 不是 int[] 时调用。
+         * - Integer：面板旧指令 / 旧蓝图，纯整数，保留当前镜像位；
+         * - String：旧蓝图 {@code "值#f<mask>"}（堆叠体另有 {@code "a,b#1#f<mask>"}）。
+         */
+        protected void applyLegacyConfig(Unit unit, Object value){
+            if(value instanceof Integer v){
                 decodeConfig(v);
-            } else if (value instanceof String text) {
+            }else if(value instanceof String text){
                 liquidMirror = mirrorMaskOf(text);
                 int hash = text.indexOf('#');
                 String head = (hash >= 0 ? text.substring(0, hash) : text).trim();
@@ -1320,40 +1354,64 @@ public class MultiRecipeFactory extends GenericCrafter{
                 }catch(NumberFormatException ignored){
                     // 降层时可能拿到堆叠体的逗号列表配置，配方状态由 Snapshot 迁移，这里只保留镜像位
                 }
-            } else {
+            }else{
                 super.configured(unit, value);
             }
-            MultiRecipeFactory.mirrorLog("configured at=" + (tile == null ? "?" : tile.x + "," + tile.y)
-                + " class=" + (value == null ? "null" : value.getClass().getSimpleName())
-                + " value=" + value + " mirror " + mirrorBefore + " -> " + liquidMirror);
         }
 
-        /** 存档版本：1 起额外保存自动/手动配方状态；2 起额外保存液体输出镜像位。 */
+        /** 存档版本：3 起改为 int[] 载荷；旧版本（1 配方状态 / 2 镜像字节）仍可读。 */
         @Override
         public byte version() {
-            return 2;
+            return 3;
         }
 
-        /** 写入自动/手动配方状态与超控状态（同一份编码，旧存档仍可解码）。 */
+        /** 写入配方状态 + 超控 + 镜像位（同一份载荷；堆叠体覆写它追加层表）。 */
         @Override
         public void write(Writes write) {
             super.write(write);
-            write.i(encodeConfig());
-            write.b((byte)(liquidMirror & 3));
+            writePayload(write, configPayload());
         }
 
-        /** 读取配方状态与超控状态；旧存档（revision < 1）保持默认的自动模式。 */
+        /** 读取配方状态；revision >= 3 走载荷，更早的存档走旧的“int + 镜像字节”布局。 */
         @Override
         public void read(Reads read, byte revision) {
-            readBase(read, revision);
-            // 版本 2 起额外存在镜像位；旧存档没有该字节
-            if (revision >= 2) {
-                liquidMirror = read.b() & 3;
+            if(revision >= 3){
+                super.read(read, revision);
+                applyPayload(readPayload(read));
+            }else{
+                readLegacyBase(read, revision);
+                if(revision >= 2){
+                    liquidMirror = read.b() & 3;
+                }
             }
         }
 
-        /** 只读音基状态（配方选择 + 超控），不含镜像位；供堆叠变体按自己的版本号复用时对齐字节。 */
-        protected void readBase(Reads read, byte revision) {
+        /** 载荷落盘：长度 + 逐元素 int。读回时按长度分配，未来版本追加的尾字段不会错位。 */
+        protected void writePayload(Writes write, int[] payload){
+            write.i(payload.length);
+            for(int i = 0; i < payload.length; i++){
+                write.i(payload[i]);
+            }
+        }
+
+        /** 读回载荷；长度不在合法区间时返回空数组，由 {@link #applyPayload(int[])} 直接忽略。 */
+        protected int[] readPayload(Reads read){
+            int length = read.i();
+            if(length < MrfConfig.baseLength || length > MrfConfig.maxLength){
+                return new int[0];
+            }
+            int[] payload = new int[length];
+            for(int i = 0; i < length; i++){
+                payload[i] = read.i();
+            }
+            return payload;
+        }
+
+        /**
+         * 旧存档基座字段：原版建筑字段（{@code super.read}）+ 版本 1 起的一个配方状态 int。
+         * 不含版本 2 的镜像字节，堆叠体复用它按自己的版本号对齐。
+         */
+        protected void readLegacyBase(Reads read, byte revision) {
             super.read(read, revision);
             // 兼容旧存档：仅当版本 >= 1 时才存在额外 int，否则保持默认（自动模式）
             if (revision >= 1) {
@@ -1747,11 +1805,6 @@ public class MultiRecipeFactory extends GenericCrafter{
                             : -1;
                     // 镜像位只翻转方向面，随后 dumpLiquid 再叠加 rotation 的 90° 朝向
                     direction = mirrorDirection(direction, liquidMirror);
-                    if(mirrorDumpLogs > 0){
-                        mirrorDumpLogs--;
-                        MultiRecipeFactory.mirrorLog("dump at=" + tile.x + "," + tile.y + " mirror=" + liquidMirror
-                            + " idx=" + index + " dir=" + direction + " rot=" + rotation);
-                    }
                     dumpLiquid(output.liquid, 2f, direction);
                     index++;
                 }
@@ -2069,7 +2122,7 @@ public class MultiRecipeFactory extends GenericCrafter{
                     if (!logicHint.hasParent()) return;
                     logicOverride = !logicOverride;
                     // 编码里带上超控位：这一份编码同时用于 UI 配置、蓝图复制与存档
-                    configure(encodeConfig());
+                    configure(configPayload());
                     applyHintText.run();
                     refresh.run();
                     // 若 tooltip 正在显示，就地换成切换后的描述（不重新显示、不影响布局）
@@ -2082,7 +2135,7 @@ public class MultiRecipeFactory extends GenericCrafter{
                 auto = true;
                 selectedIndex = -1;
                 // 用带超控位的编码下发布局：直接 configure(-1) 会把超控状态清掉
-                configure(encodeConfig());
+                configure(configPayload());
                 refresh.run(); // 点击后立即反映黄底/指示灯
             });
             table.add(autoBtn).size(240f, 46f).padBottom(8f).row();
@@ -2143,7 +2196,7 @@ public class MultiRecipeFactory extends GenericCrafter{
                             selectedIndex = finalI;
                         }
                         // 用带超控位的编码下发：直接 configure(index) 会把超控状态清掉
-                        configure(encodeConfig());
+                        configure(configPayload());
                         refresh.run(); // 点击后立即同步指示灯与黄底
                     });
                     // 未解锁的配方保持置灰；逻辑控制时由 refresh 统一再置灰

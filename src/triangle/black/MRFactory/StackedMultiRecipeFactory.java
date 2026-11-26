@@ -926,24 +926,27 @@ public class StackedMultiRecipeFactory extends MultiRecipeFactory{
             }
         }
 
+        /** 堆叠载荷：基座 5 个字段 + 每层 2 个 int（层标志 + 选择索引）。 */
         @Override
-        public Object config(){
-            StringBuilder out = new StringBuilder();
-            for(int i = 0; i < layers.size; i++){
-                if(i > 0) out.append(',');
-                out.append(encodeLayer(layers.get(i)));
+        public int[] configPayload(){
+            ensureLayers();
+            int count = layers.size;
+            int[] modes = new int[count];
+            int[] selections = new int[count];
+            for(int i = 0; i < count; i++){
+                LayerState layer = layers.get(i);
+                modes[i] = (layer.auto ? MrfConfig.layerAuto : 0)
+                    | (layer.logicOverride ? MrfConfig.layerOverride : 0);
+                selections[i] = layer.selectedIndex;
             }
-            // 全局（全部层）超控状态尾随在配置里（"各层选择#1"），使蓝图复制/粘贴也能带上
-            if(logicOverride) out.append("#1");
-            // 液体输出镜像位（"#f<mask>"），蓝图翻转时由 MultiRecipeFactory#flipRotation 写入
-            if(liquidMirror != 0) out.append("#f").append(liquidMirror & 3);
-            return out.toString();
-        }
-
-        /** 单层选择 + 该层超控位的编码：普通态沿用旧值（-1 或索引），超控态加 logicOverrideBase 偏移。 */
-        private int encodeLayer(LayerState layer){
-            if(layer.logicOverride) return logicOverrideBase + (layer.auto ? 0 : layer.selectedIndex + 1);
-            return layer.auto ? -1 : layer.selectedIndex;
+            LayerState first = layers.isEmpty() ? null : layers.first();
+            return MrfConfig.encode(
+                first == null ? -1 : first.selectedIndex,
+                first == null || first.auto,
+                logicOverride,
+                liquidMirror,
+                modes,
+                selections);
         }
 
         /** 解码单层：兼容旧值（< logicOverrideBase）、新值（带该层超控位）。 */
@@ -960,6 +963,49 @@ public class StackedMultiRecipeFactory extends MultiRecipeFactory{
 
         @Override
         public void configured(Unit unit, Object value){
+            if(value instanceof int[] payload){
+                applyPayload(payload);
+                return;
+            }
+            applyLegacyConfig(unit, value);
+        }
+
+        /** 新载荷：整机超控 + 镜像位 + 每层选择/超控；层数不足的层回到自动。 */
+        @Override
+        protected void applyPayload(int[] payload){
+            if(!MrfConfig.valid(payload)) return;
+            ensureLayers();
+            logicOverride = MrfConfig.override(payload);
+            liquidMirror = MrfConfig.mirror(payload);
+            if(MrfConfig.stacked(payload)){
+                int count = Math.min(MrfConfig.layerCount(payload), layers.size);
+                for(int i = 0; i < count; i++){
+                    LayerState layer = layers.get(i);
+                    layer.logicOverride = MrfConfig.layerOverride(payload, i);
+                    setSelection(layer, MrfConfig.layerRecipe(payload, i));
+                }
+                for(int i = count; i < layers.size; i++){
+                    setSelection(layers.get(i), -1);
+                }
+            }else{
+                // 基座载荷贴到堆叠体：第一层承接，其余层回到自动
+                setSelection(layers.first(), MrfConfig.recipe(payload));
+                for(int i = 1; i < layers.size; i++){
+                    setSelection(layers.get(i), -1);
+                }
+            }
+            if(!layers.isEmpty()){
+                auto = layers.first().auto;
+                selectedIndex = layers.first().selectedIndex;
+            }
+        }
+
+        /**
+         * 旧格式兼容的唯一入口（只在 value 不是 int[] 时进入）：
+         * String 是旧蓝图 {@code "a,b#1#f<mask>"}，Integer 是基座整数编码。
+         */
+        @Override
+        protected void applyLegacyConfig(Unit unit, Object value){
             if(value instanceof String text){
                 boolean override = false;
                 int mirror = 0;
@@ -1002,10 +1048,8 @@ public class StackedMultiRecipeFactory extends MultiRecipeFactory{
                     logicOverride = false;
                     setSelection(layers.first(), raw);
                 }
-            }else if(value instanceof int[] arr){
-                for(int i = 0; i < arr.length && i < layers.size; i++) setSelection(layers.get(i), arr[i]);
             }else{
-                super.configured(unit, value);
+                super.applyLegacyConfig(unit, value);
             }
         }
 
@@ -1019,51 +1063,56 @@ public class StackedMultiRecipeFactory extends MultiRecipeFactory{
             }
         }
 
+        /** 存档版本：5 起基座字段 + 完整 int[] 载荷（层表在内），再逐层写生产进度。 */
         @Override
         public byte version(){
-            return 4;
+            return 5;
         }
 
         @Override
         public void write(Writes write){
-            super.write(write);
             ensureLayers();
-            write.i(layers.size);
+            super.write(write);   // 通用字段 + 覆写后的完整载荷（含每层选择与超控）
             for(LayerState layer : layers){
-                write.i(encodeLayer(layer));
                 write.f(layer.progress);
-                // 版本 3 起每层额外保存该层的超控位（旧的全局超控位仍在 super.write 里）
-                write.bool(layer.logicOverride);
             }
         }
 
         @Override
         public void read(Reads read, byte revision){
-            // 基类字段 + 配方选择（不含镜像位）：版本 3 的旧存档没有镜像字节，需按同一顺序跳读
-            readBase(read, revision);
-            // 版本 4 起在基类字段之后额外保存液体输出镜像位
-            if(revision >= 4) liquidMirror = read.b() & 3;
-            if(revision >= 2){
-                int count = Math.max(1, read.i());
-                layers.clear();
+            if(revision >= 5){
+                super.read(read, revision);   // 通用字段 + 载荷（applyPayload 会重建层状态）
+                int count = layers.size;
                 for(int i = 0; i < count; i++){
+                    layers.get(i).progress = read.f();
+                }
+                ensureLayers();
+            }else{
+                // 旧存档（版本 <= 4）沿用原字节布局，保证老存档能继续读
+                readLegacyBase(read, revision);
+                if(revision >= 4) liquidMirror = read.b() & 3;
+                if(revision >= 2){
+                    int count = Math.max(1, read.i());
+                    layers.clear();
+                    for(int i = 0; i < count; i++){
+                        LayerState layer = new LayerState();
+                        int value = read.i();
+                        layer.progress = read.f();
+                        // 版本 2 的条目没有该层超控位，保持默认 false
+                        if(revision >= 3) layer.logicOverride = read.bool();
+                        decodeLayer(layer, value);
+                        layers.add(layer);
+                    }
+                }else{
+                    layers.clear();
                     LayerState layer = new LayerState();
-                    int value = read.i();
-                    layer.progress = read.f();
-                    // 版本 2 的条目没有该层超控位，保持默认 false
-                    if(revision >= 3) layer.logicOverride = read.bool();
-                    decodeLayer(layer, value);
+                    layer.auto = auto;
+                    layer.selectedIndex = selectedIndex;
+                    layer.progress = progress;
                     layers.add(layer);
                 }
-            }else{
-                layers.clear();
-                LayerState layer = new LayerState();
-                layer.auto = auto;
-                layer.selectedIndex = selectedIndex;
-                layer.progress = progress;
-                layers.add(layer);
+                ensureLayers();
             }
-            ensureLayers();
             // 读档发生在 created() 之后；created() 里的 clampStorage 看不到
             // 存档中恢复的液体。若旧容量下的存档液体总量超过当前容量，
             // 不在这里收缩会让 acceptLiquid 的 liquidTotal() < capacity 永远为 false。
