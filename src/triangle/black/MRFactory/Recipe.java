@@ -4,6 +4,7 @@ import arc.func.Boolp;
 import arc.struct.Seq;
 import arc.util.Log;
 import mindustry.ctype.UnlockableContent;
+import mindustry.gen.Building;
 import mindustry.type.*;
 import triangle.black.TMail.TriInbox;
 
@@ -142,6 +143,77 @@ public class Recipe {
                 }
             }
         }
+    }
+
+    /**
+     * 该配方的输入（物品 / 液体 / 载荷）在当前建筑里是否都够。
+     *
+     * <p>只回答“输入够不够”这一个问题：不含热量/电力的“即停”门槛，也不看输出仓是否已满。
+     * 严格检索、宽松检索、当前配方校验、状态栏“可生产”判定都走这里，避免各写一份循环后口径漂移。
+     */
+    public boolean inputsAvailable(Building build){
+        if(build == null) return false;
+
+        if(!inputItem.isEmpty()){
+            if(build.items == null) return false;
+            for(int i = 0; i < inputItem.size; i++){
+                ItemStack stack = inputItem.get(i);
+                if(build.items.get(stack.item) < stack.amount) return false;
+            }
+        }
+
+        if(!inputLiquid.isEmpty()){
+            if(build.liquids == null) return false;
+            for(int i = 0; i < inputLiquid.size; i++){
+                LiquidStack stack = inputLiquid.get(i);
+                if(build.liquids.get(stack.liquid) < stack.amount) return false;
+            }
+        }
+
+        if(!inputPayload.isEmpty()){
+            if(build.getPayloads() == null) return false;
+            for(int i = 0; i < inputPayload.size; i++){
+                PayloadStack stack = inputPayload.get(i);
+                if(build.getPayloads().get(stack.item) < stack.amount) return false;
+            }
+        }
+
+        return true;
+    }
+
+    /**
+     * 运行门槛：物品/载荷按“整周期用量”判定（它们在 craft() 里一次性扣除），
+     * 液体只要求还有存量（液体是逐帧扣除、由效率曲线降速的，不能按整周期量卡死）。
+     * 用于堆叠体逐层判断“这一层现在能不能产”，不是配方检索口径。
+     */
+    public boolean inputsPresent(Building build){
+        if(build == null) return false;
+
+        if(!inputItem.isEmpty()){
+            if(build.items == null) return false;
+            for(int i = 0; i < inputItem.size; i++){
+                ItemStack stack = inputItem.get(i);
+                if(build.items.get(stack.item) < stack.amount) return false;
+            }
+        }
+
+        if(!inputPayload.isEmpty()){
+            if(build.getPayloads() == null) return false;
+            for(int i = 0; i < inputPayload.size; i++){
+                PayloadStack stack = inputPayload.get(i);
+                if(build.getPayloads().get(stack.item) < stack.amount) return false;
+            }
+        }
+
+        if(!inputLiquid.isEmpty()){
+            if(build.liquids == null) return false;
+            for(int i = 0; i < inputLiquid.size; i++){
+                LiquidStack stack = inputLiquid.get(i);
+                if(build.liquids.get(stack.liquid) <= 0.0001f) return false;
+            }
+        }
+
+        return true;
     }
 
     /** 科技树节点已解锁。 */

@@ -758,15 +758,8 @@ public class StackedMultiRecipeFactory extends MultiRecipeFactory{
         @Override
         public void onProximityUpdate(){
             super.onProximityUpdate();
-            refreshPowerGraph();
-        }
-
-        private void refreshPowerGraph(){
-            if(power == null || power.graph == null) return;
-            if(!power.graph.all.contains(this)){
-                power.graph.add(this);
-            }
-            power.graph.update();
+            // 邻近方块变化后重新登记电网；这里只做 add/update，不能再调 updateProximity（会递归）
+            syncPowerGraph(false);
         }
 
         /** 所有层当前实际运行配方的电力需求总和。 */
@@ -795,8 +788,15 @@ public class StackedMultiRecipeFactory extends MultiRecipeFactory{
             return false;
         }
 
+        private boolean lockUpdatedThisTick;
+
         @Override
         protected void updateUndervoltageLock(){
+            // 基类会在每层 super.updateTile() 里各调一次；这里保证一帧只结算一次，
+            // 否则锁计时会按层数成倍衰减，跳闸持续时间被缩短。
+            if(lockUpdatedThisTick) return;
+            lockUpdatedThisTick = true;
+
             if(hasUndervoltageLayer()){
                 undervoltageLock = UNDERVOLTAGE_LOCK_TIME;
             }else if(undervoltageLock > 0f){
@@ -807,19 +807,115 @@ public class StackedMultiRecipeFactory extends MultiRecipeFactory{
         @Override
         public void updateTile(){
             ensureLayers();
+            // 欠压跳闸计时必须先更新：某一层被门槛拦住、不再走 super.updateTile() 时，
+            // 锁计时不能因此冻结，否则电力恢复后仍会永久卡在锁上。
+            lockUpdatedThisTick = false;
+            updateUndervoltageLock();
+            // 本帧的真实热量先算一次：逐层门槛要用它判断低温跳闸，
+            // 不能等每层 super.updateTile() 里再算（第一层会读到上一帧的旧值）。
+            rawHeat = calculateHeat(sideHeat);
+
+            boolean anyLayerUpdated = false;
             for(LayerState layer : layers){
                 recipeIndex = layer.recipeIndex;
                 selectedIndex = layer.selectedIndex;
                 auto = layer.auto;
                 progress = layer.progress;
 
+                Recipe layerRecipe = getRecipe();
+
+                // 逐层门槛：引擎每帧只算一次整栋的 efficiency(shouldConsume)，
+                // 没法表达“这一层停了、那一层还在产”。这里按本层自己的配方判定：
+                // 缺输入 / 低温跳闸 / 欠压 / 输出满 时不推进、不消耗，其他层继续。
+                if(layerRecipe != null && !canProduceLayer(layerRecipe)){
+                    if(auto){
+                        // 输出满/缺输入不该把这一层锁在死配方上：先换一条还能产的；
+                        // 换不到时保留原配方，等条件恢复（与单层自动模式同一套重选逻辑）
+                        if(reselectRecipe()) progress = 0f;
+                    }
+                    // 仍然把已有产出往外倒，腾出空间后本层会自动恢复
+                    dumpOutputs();
+
+                    layer.recipeIndex = recipeIndex;
+                    layer.selectedIndex = selectedIndex;
+                    layer.auto = auto;
+                    layer.progress = progress;
+                    continue;
+                }
+
                 super.updateTile();
+                anyLayerUpdated = true;
 
                 layer.recipeIndex = recipeIndex;
                 layer.selectedIndex = selectedIndex;
                 layer.auto = auto;
                 layer.progress = progress;
             }
+
+            // 所有层都被门槛拦下时，原版 updateTile 的 else 分支（warmup 衰减）不会执行；
+            // 共享的 warmup 会冻结在最后一次生产值，DrawFlame 等会永久保持生产态。
+            // 这里补一次衰减，保证满输出/全停工时预热值能正常归零。
+            if(!anyLayerUpdated){
+                fadeVanillaWarmup();
+            }
+        }
+
+        /**
+         * 单层是否允许生产：输入、热量/电力门槛与输出空间都满足才返回 true。
+         * 口径与 {@link MultiRecipeFactoryBuild#validRecipe()} 一致，只是把“当前配方”换成指定配方、
+         * 热量用真实热量 rawHeat 判定（stopLowTemperature=false 的低速工作由 heat 抬升另行处理）。
+         */
+        protected boolean canProduceLayer(Recipe recipe){
+            if(recipe == null) return false;
+            if(MultiRecipeFactory.isLocked(recipe)) return false;
+            if(!recipe.inputsPresent(this)) return false;
+
+            if(recipe.heatEnabled && recipe.heatRequirement > 0 && recipe.stopLowTemperature
+                && rawHeat < recipe.heatRequirement){
+                return false;
+            }
+
+            if(recipe.powerUse > 0 && (power.status <= 0 || (recipe.stopUndervoltage && power.status < 1f))){
+                return false;
+            }
+
+            return canOutputForRecipe(recipe);
+        }
+
+        /**
+         * 引擎每帧只问一次“整栋要不要消耗”。堆叠体有多条独立生产线程，
+         * 只要还有任意一层可生产就返回 true，否则某一层输出满会把其他层一起停掉。
+         * （逐层的“可不可以产”由 {@link #canProduceLayer(Recipe)} 在 updateTile 里落实。）
+         */
+        @Override
+        public boolean shouldConsume(){
+            if(!enabled) return false;
+            if(undervoltageLock > 0f) return false;
+            ensureLayers();
+            for(LayerState layer : layers){
+                if(canProduceLayer(layerRecipe(layer))) return true;
+            }
+            return false;
+        }
+
+        /** 该层当前所选配方（自动模式取实际运行配方，手动模式取选定配方）。 */
+        private Recipe layerRecipe(LayerState layer){
+            int index = layer.auto ? layer.recipeIndex : layer.selectedIndex;
+            return index >= 0 && index < recipes.size ? recipes.get(index) : null;
+        }
+
+        /**
+         * 每层当前配方的输出满状态（true = 这一层因输出放不下而停）。
+         * 供之后在配置面板按层标注“输出满”，索引与 {@link #layers} 对齐。
+         */
+        public boolean[] layerOutputFullStates(){
+            ensureLayers();
+            boolean[] states = new boolean[layers.size];
+            for(int i = 0; i < layers.size; i++){
+                Recipe recipe = layerRecipe(layers.get(i));
+                states[i] = recipe != null && !canOutputForRecipe(recipe);
+            }
+            return states;
         }
 
         @Override
@@ -847,55 +943,6 @@ public class StackedMultiRecipeFactory extends MultiRecipeFactory{
                 total += liquids.get(liquid);
             }
             return total;
-        }
-
-        @Override
-        public boolean canOutputForRecipe(Recipe recipe){
-            // 与原版及 MultiRecipeFactory 一致：所有同类输出都满才停止。
-            if(checkItemOutputFullness && !recipe.outputItem.isEmpty()){
-                boolean allFull = true;
-                for(ItemStack output : recipe.outputItem){
-                    if(items.get(output.item) < itemCapacity){
-                        allFull = false;
-                        break;
-                    }
-                }
-                if(allFull) return false;
-            }
-            if(checkLiquidOutputFullness && !recipe.outputLiquid.isEmpty()){
-                boolean allFull = true;
-                for(LiquidStack output : recipe.outputLiquid){
-                    if(liquids.get(output.liquid) < liquidCapacity - 0.001f){
-                        allFull = false;
-                        break;
-                    }
-                }
-                if(allFull) return false;
-            }
-            return true;
-        }
-
-        @Override
-        public boolean shouldConsume(){
-            if(getRecipe() == null) return false;
-            if(undervoltageLock > 0f) return false;
-            Recipe currentRecipe = getRecipe();
-            if(power.status <= 0 || powerConsumer.isUndervoltage(this)) return false;
-            if(currentRecipe.heatEnabled && currentRecipe.heatRequirement > 0
-                && heat < currentRecipe.heatRequirement) return false;
-
-            if(!ignoreLiquidFullness){
-                if(currentRecipe.outputLiquid.isEmpty()) return true;
-                boolean allFull = true;
-                for(LiquidStack output : currentRecipe.outputLiquid){
-                    if(liquids.get(output.liquid) < liquidCapacity - 0.001f){
-                        allFull = false;
-                        break;
-                    }
-                }
-                if(allFull) return false;
-            }
-            return enabled;
         }
 
         /** 缩容/替换时销毁超出容量的部分；物品按每种独立计算。 */

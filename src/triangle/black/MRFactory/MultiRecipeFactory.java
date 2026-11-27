@@ -1192,11 +1192,21 @@ public class MultiRecipeFactory extends GenericCrafter{
          */
         public void refreshNetworks(){
             updateProximity();
-            if(power != null && power.graph != null){
-                if(!power.graph.all.contains(this)) power.graph.add(this);
-                updatePowerGraph();
-                power.graph.update();
-            }
+            syncPowerGraph(true);
+        }
+
+        /**
+         * 重新向电网登记自己：缺失时加入，并刷新整体需求。
+         *
+         * @param rebind true = 同时重建本建筑的电网引用（换块后需要）；
+         *               false = 只在已有电网上做一次 add/update。onProximityUpdate 里必须传 false：
+         *               那里再调 updateProximity 会把自己重新触发一遍，形成递归。
+         */
+        protected void syncPowerGraph(boolean rebind){
+            if(power == null || power.graph == null) return;
+            if(!power.graph.all.contains(this)) power.graph.add(this);
+            if(rebind) updatePowerGraph();
+            if(power.graph != null) power.graph.update();
         }
 
         /**
@@ -1548,60 +1558,46 @@ public class MultiRecipeFactory extends GenericCrafter{
         }
 
         /**
+         * 让原版 {@code GenericCrafterBuild.warmup} 向 0 衰减一次。
+         * 本类声明了同名字段 {@code warmup} 遮蔽了父类字段，而 DrawFlame 读取的是父类字段，
+         * 因此这里必须通过 super 访问，不能写 {@code this.warmup}。
+         */
+        protected void fadeVanillaWarmup(){
+            float speed = block instanceof GenericCrafter crafter ? crafter.warmupSpeed : 0.019f;
+            super.warmup = Mathf.approachDelta(super.warmup, 0f, speed);
+        }
+
+        /**
          * 严格配方检索：从后往前寻找输入（物品/液体/载荷）、热量、电力均满足且输出未满的配方。
          * 热量/电力只要低于需求即排除；找不到时 recipeIndex 置 -1。
          */
         public void updateRecipe() {
             // 首次选择还没有当前配方，不能先用热量过滤，否则热网需求为 0，永远选不中热配方。
             for (int i = recipes.size - 1; i >= 0; i--) {
-                if (isLocked(recipes.get(i))) continue; // 跳过未解锁（需研究未研究）配方
-                boolean valid = true;
+                Recipe candidate = recipes.get(i);
+                if (isLocked(candidate)) continue; // 跳过未解锁（需研究未研究）配方
 
-                // 检查物品输入
-                for (ItemStack input : recipes.get(i).inputItem) {
-                    if (items.get(input.item) < input.amount) {
-                        valid = false;
-                        break;
-                    }
-                }
-
-                // 检查液体输入
-                for (LiquidStack input : recipes.get(i).inputLiquid) {
-                    if (liquids.get(input.liquid) < input.amount) {
-                        valid = false;
-                        break;
-                    }
-                }
-
-                // 检查载荷输入
-                for (PayloadStack input : recipes.get(i).inputPayload) {
-                    if (getPayloads().get(input.item) < input.amount) {
-                        valid = false;
-                        break;
-                    }
-                }
+                // 输入（物品 / 液体 / 载荷）是否够：统一走 Recipe.inputsAvailable
+                boolean valid = candidate.inputsAvailable(this);
 
                 // 检查热量输入：统一用真实热量 rawHeat 与配方布尔值判定，避免“有/无当前配方”
-                // 两套标准导致热配方在边界反复“选中—排除”。stopLowTemperature=false 时允许低热选中（低速工作），
-                // 与 validRecipe()/shouldConsume() 的 heat(已抬升)/stopLowTemperature 判定保持一致。
-                if (valid && recipes.get(i).heatEnabled && recipes.get(i).heatRequirement > 0
-                        && recipes.get(i).stopLowTemperature && rawHeat < recipes.get(i).heatRequirement) {
+                // 两套标准导致热配方在边界反复“选中—排除”。stopLowTemperature=false 时允许低热选中（低速工作）。
+                if (valid && candidate.heatEnabled && candidate.heatRequirement > 0
+                        && candidate.stopLowTemperature && rawHeat < candidate.heatRequirement) {
                     valid = false;
                 }
 
                 // 检查电力输入：完全没电时排除；设置“欠压即停”的配方还必须在
                 // power.status >= 1 时才允许被严格检索选中。
-                if(valid && recipes.get(i).powerUse > 0){
-                    if(power.status <= 0 || powerConsumer.isUndervoltage(this, recipes.get(i))){
+                if(valid && candidate.powerUse > 0){
+                    if(power.status <= 0 || powerConsumer.isUndervoltage(this, candidate)){
                         valid = false;
                     }
                 }
 
                 // 检查输出容量
-                if (valid) {
-                    if (!canOutputForRecipe(recipes.get(i))) {
-                        continue; // 如果输出满，则跳过此配方，继续寻找其他配方
-                    }
+                if (valid && !canOutputForRecipe(candidate)) {
+                    continue; // 如果输出满，则跳过此配方，继续寻找其他配方
                 }
 
                 if (valid) {
@@ -1620,35 +1616,9 @@ public class MultiRecipeFactory extends GenericCrafter{
             for (int i = recipes.size - 1; i >= 0; i--) {
                 Recipe recipe = recipes.get(i);
                 if (isLocked(recipe)) continue; // 跳过未解锁（需研究未研究）配方
-                boolean valid = true;
 
-                // 检查物品输入
-                for (ItemStack input : recipe.inputItem) {
-                    if (items.get(input.item) < input.amount) {
-                        valid = false;
-                        break;
-                    }
-                }
-
-                // 检查液体输入
-                if (valid) {
-                    for (LiquidStack input : recipe.inputLiquid) {
-                        if (liquids.get(input.liquid) < input.amount) {
-                            valid = false;
-                            break;
-                        }
-                    }
-                }
-
-                // 检查载荷输入
-                if (valid) {
-                    for (PayloadStack input : recipe.inputPayload) {
-                        if (getPayloads().get(input.item) < input.amount) {
-                            valid = false;
-                            break;
-                        }
-                    }
-                }
+                // 输入（物品 / 液体 / 载荷）是否够：与严格检索共用同一判定
+                boolean valid = recipe.inputsAvailable(this);
 
                 // 热量不足：配方“低温即停”(stopLowTemperature=true) 且真实热量不足时排除；
                 // =false 时允许低速工作，统一用 rawHeat 判定，与严格检索/validRecipe 保持一致。
@@ -1674,37 +1644,71 @@ public class MultiRecipeFactory extends GenericCrafter{
             // 无可用配方时不改动 recipeIndex（保持 -1）
         }
 
+        /**
+         * 自动模式重选：严格检索 → 无结果再按布尔放宽 → 仍无结果时保留原配方。
+         *
+         * <p>保留原配方是有意的：缺输入、低温、欠压、输出满都是**可恢复状态**，
+         * 若把 recipeIndex 清成 -1，面板和状态会丢掉“当前在等什么配方”的上下文，
+         * 而下一帧又会在 progress<=0 的边界反复检索。
+         *
+         * @return 是否换到了不同的配方（调用方据此决定是否重置 progress）
+         */
+        protected boolean reselectRecipe(){
+            int previous = recipeIndex;
+
+            updateRecipe();
+            if(getRecipe() == null){
+                trySelectRelaxed();
+                // 两条检索都没结果：回到原配方，等它的条件自己恢复
+                if(getRecipe() == null && previous >= 0 && previous < recipes.size
+                        && !isLocked(recipes.get(previous))){
+                    recipeIndex = previous;
+                }
+            }
+
+            return recipeIndex != previous;
+        }
+
         /** 检查该配方的物品/液体输出是否还有足够容量。 */
         public boolean canOutputForRecipe(Recipe recipe) {
             return MultiRecipeOutput.canOutput(this, recipe, checkItemOutputFullness, checkLiquidOutputFullness);
+        }
+
+        /**
+         * 该配方在当前库存下是否已“输出满”（按下一周期是否会溢出判定）。
+         * 供配置面板/状态图标标注“这条配方现在产不出来”使用。
+         */
+        public boolean isOutputFull(Recipe recipe) {
+            return recipe != null && !canOutputForRecipe(recipe);
+        }
+
+        /**
+         * 全部配方的输出满状态，索引与 {@code recipes} 对齐。
+         * 供 UI 在切换配方/刷新面板时一次性取快照，避免逐条重复计算。
+         */
+        public boolean[] outputFullStates() {
+            boolean[] states = new boolean[recipes.size];
+            for (int i = 0; i < recipes.size; i++) {
+                states[i] = !canOutputForRecipe(recipes.get(i));
+            }
+            return states;
         }
 
         /** 当前配方是否仍可用：输入充足、未锁定，且未触发低温/欠压跳闸。 */
         public boolean validRecipe() {
             if (recipeIndex < 0) return false;
             if (undervoltageLock > 0f) return false;
-            if (isLocked(recipes.get(recipeIndex))) return false; // 未解锁配方视为无效
 
-            for (ItemStack input : recipes.get(recipeIndex).inputItem) {
-                if (items.get(input.item) < input.amount) {
-                    return false;
-                }
-            }
+            Recipe current = recipes.get(recipeIndex);
+            if (isLocked(current)) return false; // 未解锁配方视为无效
 
-            for (LiquidStack input : recipes.get(recipeIndex).inputLiquid) {
-                if (liquids.get(input.liquid) < input.amount) {
-                    return false;
-                }
-            }
+            // 输入（物品 / 液体 / 载荷）统一判定
+            if (!current.inputsAvailable(this)) return false;
 
-            for (PayloadStack input : recipes.get(recipeIndex).inputPayload) {
-                if (getPayloads().get(input.item) < input.amount) {
-                    return false;
-                }
-            }
-
-            // 当热量和电力消耗不足时立刻拉闸
-            if (recipes.get(recipeIndex).heatEnabled && recipes.get(recipeIndex).heatRequirement > 0 && heat < recipes.get(recipeIndex).heatRequirement && recipes.get(recipeIndex).stopLowTemperature) {
+            // 热量门槛用真实热量判定：stopLowTemperature=false 的配方允许低热低速生产，
+            // 不受这里影响；用 rawHeat 而不是 heat，避免读到上一帧抬升后的值。
+            if (current.heatEnabled && current.heatRequirement > 0 && current.stopLowTemperature
+                    && rawHeat < current.heatRequirement) {
                 return false;
             }
 
@@ -1713,11 +1717,7 @@ public class MultiRecipeFactory extends GenericCrafter{
             }
 
             // 输出仓满：当前配方无法继续产出
-            if (!canOutputForRecipe(recipes.get(recipeIndex))) {
-                return false;
-            }
-
-            return true;
+            return canOutputForRecipe(current);
         }
 
         /**
@@ -1727,14 +1727,23 @@ public class MultiRecipeFactory extends GenericCrafter{
         @Override
         public void updateTile() {
             updateUndervoltageLock();
+
+            // 真实热量只依赖周围供热方块，先算出来：配方检索（validRecipe）与 heat 抬升都以本帧值为准。
+            // 不能沿用上一帧被抬升过的 heat，否则“当前配方已失效”会被误判成仍可用，自动重选不触发。
+            rawHeat = calculateHeat(sideHeat);
+
             if (auto) {
                 // === 自动匹配模式 ===
-                // 仅在“周期边界(progress<=0)”或“当前无配方”时检索配方：
-                // 生产中途(progress>0)不重选，避免不同 craftTime 的配方共用 progress 造成
-                // “生产一帧、搜索一帧”的进度断档；输入/热量/电力边界抖动时由 efficiency 归零自然暂停，恢复即续。
-                boolean boundary = progress <= 0f || getRecipe() == null;
-                if (undervoltageLock <= 0f && boundary && !validRecipe()) updateRecipe();
-                if (boundary && getRecipe() == null) trySelectRelaxed();
+                // 只在“周期边界(progress<=0)”重选是不够的：当前配方一旦失效（缺输入/低温跳闸/欠压/输出满），
+                // 引擎会在 Building.updateConsumption() 里把 efficiency 置 0，progress 就永远停在半截，
+                // 边界条件再也满足不了 —— 自动模式会锁死在这条配方上（如石油化工的热/无热配方切换、
+                // 碱电解池水配方满仓后切纯碱）。因此“当前配方不可用”本身也是重选时机。
+                // 当前配方仍可用时不检索，避免每帧换配方造成的进度断档。
+                if (undervoltageLock <= 0f && !validRecipe()) {
+                    // 换配方才重置进度：不同配方 craftTime 不同，沿用别的配方的半截进度会串味；
+                    // 没换（包括“没有任何可产配方、保留原配方等待恢复”）时保持进度。
+                    if (reselectRecipe()) progress = 0f;
+                }
             } else {
                 // === 手动选定模式：锁定 selectedIndex 配方制作 ===
                 // 输入不足时由 ConsumeRecipe.efficiency() 使效率归零，super.updateTile() 不会推进生产
@@ -1751,9 +1760,6 @@ public class MultiRecipeFactory extends GenericCrafter{
 
             Recipe current = getRecipe();
 
-            // 调用父类的 calculateHeat 方法来接收周围热量方块的热量（原始热量）
-            rawHeat = calculateHeat(sideHeat);
-
             // 有效热量：配方设定“低温不停机”(stopLowTemperature=false)时，
             // 将 heat 抬升到需求值，使原可用性/消耗检查(updateRecipe、shouldConsume)视为热量已满足；
             // 真实效率仍按 rawHeat 计算（见 efficiencyScale），因此低热时是低速工作而非满速。
@@ -1766,11 +1772,16 @@ public class MultiRecipeFactory extends GenericCrafter{
             // 调用父类更新逻辑
             super.updateTile();
 
+            // craft() 可能在本帧内完成一个周期并切换了配方，这里必须重新取：
+            // 否则会用旧配方的产物表写一帧（液体写错配方、物品钳制错条目）。
+            current = getRecipe();
             if (current == null) return;
 
-            boolean outputFull = !canOutputForRecipe(current);
-            if (outputFull) {
-                return; // 如果输出满了，停止生产
+            // 先钳制：无论下面哪个分支提前返回，库存都不会留下超过 itemCapacity 的数值
+            MultiRecipeOutput.clampItems(this, current);
+
+            if (!canOutputForRecipe(current)) {
+                return; // 输出已被填满（下一周期放不下），停止生产
             }
 
             // 处理液体输出
@@ -1779,9 +1790,6 @@ public class MultiRecipeFactory extends GenericCrafter{
                 if (!Float.isFinite(inc) || inc <= 0f) return;
                 MultiRecipeOutput.outputLiquids(this, current, inc);
             }
-
-            // 处理物品输出
-            MultiRecipeOutput.clampItems(this, current);
         }
 
         /** 输出物品、载荷与液体；物品/载荷按统一计时器投放。 */
@@ -1830,19 +1838,18 @@ public class MultiRecipeFactory extends GenericCrafter{
                 }
             }
 
-            // 检查热量供应（配方需要热量且有效热量不足时停止；
-            // stopLowTemperature=false 时 heat 已被抬升到需求，不触发；=true 时 heat=rawHeat，不足则触发）
-            if (currentRecipe != null && currentRecipe.heatEnabled && currentRecipe.heatRequirement > 0) {
-                if (heat < currentRecipe.heatRequirement) {
-                    return false;
-                }
+            // 检查热量供应（配方“低温即停”且真实热量不足时停止；
+            // stopLowTemperature=false 的配方允许低热低速工作，不在这里拦）
+            if (currentRecipe != null && currentRecipe.heatEnabled && currentRecipe.heatRequirement > 0
+                    && currentRecipe.stopLowTemperature && rawHeat < currentRecipe.heatRequirement) {
+                return false;
             }
 
             if (!ignoreLiquidFullness) {
                 if (getRecipe().outputLiquid.isEmpty()) return true;
                 boolean allFull = true;
                 for (var output : getRecipe().outputLiquid) {
-                    if (liquids.get(output.liquid) < liquidCapacity - 0.001f) {
+                    if (!MultiRecipeOutput.liquidFull(this, output.liquid)) {
                         allFull = false;
                         break;
                     }
@@ -1873,6 +1880,8 @@ public class MultiRecipeFactory extends GenericCrafter{
         @Override
         public void craft() {
             if (getRecipe() == null) return;
+            // 输出已满（下一周期放不下）时不结算：否则 offload 会把物品累加到 itemCapacity 之上
+            if (!canOutputForRecipe(getRecipe())) return;
 
             consume(); // 消耗输入
 
@@ -1887,8 +1896,8 @@ public class MultiRecipeFactory extends GenericCrafter{
 
             if (wasVisible) craftEffect.at(x, y);
             if (auto) {
-                updateRecipe(); // 自动模式：尝试更新配方（严格检索，保持原逻辑）
-                if (getRecipe() == null) trySelectRelaxed(); // 严格检索无结果时按配方布尔值放宽
+                // 自动模式：周期结束重选；找不到别的可产配方时保留原配方，等条件恢复
+                reselectRecipe();
             }
             // 手动模式：保持锁定 selectedIndex，不重新选择配方
         }
@@ -2243,21 +2252,8 @@ public class MultiRecipeFactory extends GenericCrafter{
                 Recipe recipe = recipes.get(i);
                 if (isLocked(recipe)) continue;
 
-                boolean inputs = true;
-                for (ItemStack s : recipe.inputItem) {
-                    if (items.get(s.item) < s.amount) { inputs = false; break; }
-                }
-                if (inputs) {
-                    for (LiquidStack s : recipe.inputLiquid) {
-                        if (liquids.get(s.liquid) < s.amount) { inputs = false; break; }
-                    }
-                }
-                if (inputs) {
-                    for (PayloadStack s : recipe.inputPayload) {
-                        if (getPayloads().get(s.item) < s.amount) { inputs = false; break; }
-                    }
-                }
-                if (!inputs) continue;
+                // 输入（物品 / 液体 / 载荷）统一判定
+                if (!recipe.inputsAvailable(this)) continue;
 
                 // 与严格检索一致：热量/电力门槛不满足时，该配方不算“现在能够生产”
                 if (recipe.heatEnabled && recipe.heatRequirement > 0

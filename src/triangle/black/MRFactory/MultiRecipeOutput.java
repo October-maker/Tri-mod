@@ -2,6 +2,7 @@ package triangle.black.MRFactory;
 
 import mindustry.gen.Building;
 import mindustry.type.ItemStack;
+import mindustry.type.Liquid;
 import mindustry.type.LiquidStack;
 
 /**
@@ -18,27 +19,32 @@ import mindustry.type.LiquidStack;
  */
 final class MultiRecipeOutput{
 
+    /** 液体“已满”的判定容差：浮点累加永远到不了容量上限，留一点余量避免永远判不满。 */
+    static final float liquidFullEpsilon = 0.001f;
+
     private MultiRecipeOutput(){}
 
-    /** 当前配方是否仍有输出空间；物品与液体分别按“全部同类输出都满”判定。 */
+    /** 该液体在本建筑里是否已经存满（容差口径的唯一出处）。 */
+    static boolean liquidFull(Building build, Liquid liquid){
+        return build.liquids != null && build.liquids.get(liquid) >= build.block.liquidCapacity - liquidFullEpsilon;
+    }
+
+    /** 当前配方是否仍有输出空间；物品按“下一周期会溢出就停”，液体按“全部同类输出都满才停”。 */
     static boolean canOutput(Building build, Recipe recipe, boolean checkItems, boolean checkLiquids){
         if(checkItems && !recipe.outputItem.isEmpty()){
-            boolean allFull = true;
             for(int i = 0; i < recipe.outputItem.size; i++){
                 ItemStack stack = recipe.outputItem.get(i);
-                if(build.items.get(stack.item) < build.block.itemCapacity){
-                    allFull = false;
-                    break;
-                }
+                // 与原版 GenericCrafter.shouldConsume 口径一致：不是“已经满”，而是“这一周期放不下就停”。
+                // 否则剩余空间小于单次产出量时仍会写超 itemCapacity。
+                if(build.items.get(stack.item) + stack.amount > build.block.itemCapacity) return false;
             }
-            if(allFull) return false;
         }
 
         if(checkLiquids && !recipe.outputLiquid.isEmpty()){
             boolean allFull = true;
             for(int i = 0; i < recipe.outputLiquid.size; i++){
                 LiquidStack stack = recipe.outputLiquid.get(i);
-                if(build.liquids.get(stack.liquid) < build.block.liquidCapacity - 0.001f){
+                if(!liquidFull(build, stack.liquid)){
                     allFull = false;
                     break;
                 }
