@@ -1268,14 +1268,16 @@ public class MultiRecipeFactory extends GenericCrafter{
             return recipes.get(recipeIndex);
         }
 
-        /** 手动模式在 recipeIndex 尚未同步时，用 selectedIndex 提供热量需求。 */
+        /**
+         * 当前应按哪条配方报热量需求。
+         * 手动模式下 selectedIndex 才是玩家选中的目标，recipeIndex 可能还是上一帧的配方；
+         * 这里必须优先用 selectedIndex，否则切换配方的第一帧仍按旧配方报热量。
+         */
         private Recipe heatRecipe() {
-            Recipe current = getRecipe();
-            if (current != null) return current;
-            if (!auto && selectedIndex >= 0 && selectedIndex < recipes.size) {
+            if(!auto && selectedIndex >= 0 && selectedIndex < recipes.size){
                 return recipes.get(selectedIndex);
             }
-            return null;
+            return getRecipe();
         }
 
         /** 自动模式首次选择前，用第一条热配方向热网报出需求，避免启动时完全无需求。 */
@@ -1537,7 +1539,11 @@ public class MultiRecipeFactory extends GenericCrafter{
          * 该结果只在 updateEfficiencyMultiplier() 中应用一次，并供热量条显示。
          */
         public float heatEfficiencyScale() {
-            Recipe recipe = heatRecipe();
+            return heatEfficiencyScale(heatRecipe());
+        }
+
+        /** 指定配方的热量效率曲线；堆叠体逐层调用，避免读取最后一层配方。 */
+        public float heatEfficiencyScale(Recipe recipe) {
             if (recipe == null || !recipe.heatEnabled || recipe.heatRequirement <= 0) {
                 return 1f;
             }
@@ -1585,6 +1591,78 @@ public class MultiRecipeFactory extends GenericCrafter{
         protected void fadeVanillaWarmup(){
             float speed = block instanceof GenericCrafter crafter ? crafter.warmupSpeed : 0.019f;
             super.warmup = Mathf.approachDelta(super.warmup, 0f, speed);
+        }
+
+        /** 读取原版 GenericCrafterBuild.warmup；StackedBuild 的 super 只到本类，不能直接越过本类字段。 */
+        protected float vanillaWarmup(){
+            return super.warmup;
+        }
+
+        /** 写回原版 GenericCrafterBuild.warmup，供堆叠体隔离空闲层对共享预热值的影响。 */
+        protected void setVanillaWarmup(float value){
+            super.warmup = value;
+        }
+
+        /**
+         * 单条配方的输入满足度（0~1）：物品/载荷按整周期用量，液体按本帧需求量折算。
+         * 用 delta() 而不是 edelta()，避免读取上一帧的全局 efficiency 形成反馈。
+         */
+        protected float inputEfficiency(Recipe recipe){
+            if(recipe == null) return 0f;
+
+            for(int i = 0; i < recipe.inputItem.size; i++){
+                ItemStack stack = recipe.inputItem.get(i);
+                if(items == null || items.get(stack.item) < stack.amount) return 0f;
+            }
+            for(int i = 0; i < recipe.inputPayload.size; i++){
+                PayloadStack stack = recipe.inputPayload.get(i);
+                if(getPayloads() == null || getPayloads().get(stack.item) < stack.amount) return 0f;
+            }
+
+            float delta = delta();
+            if(delta <= 0.00000001f){
+                return recipe.inputLiquid.isEmpty() ? 1f : 0f;
+            }
+            if(recipe.inputLiquid.isEmpty()) return 1f;
+            if(liquids == null) return 0f;
+
+            float eff = 1f;
+            for(int i = 0; i < recipe.inputLiquid.size; i++){
+                LiquidStack stack = recipe.inputLiquid.get(i);
+                float req = stack.amount * delta;
+                if(req <= 0.00000001f) return 0f;
+                eff = Math.min(eff, liquids.get(stack.liquid) / req);
+            }
+            return eff;
+        }
+
+        /**
+         * 单层实际生产效率：输入满足度 × 供电比例 × 该配方的热量曲线。
+         * 堆叠体每层用自己的配方调用，避免共享字段 efficiency 被最后一层决定。
+         */
+        protected float layerEfficiency(Recipe recipe){
+            if(recipe == null) return 0f;
+
+            float eff = inputEfficiency(recipe);
+            if(eff <= 0f) return 0f;
+
+            if(recipe.powerUse > 0 && power != null){
+                if(recipe.stopUndervoltage && power.status < 1f) return 0f;
+                eff = Math.min(eff, power.status);
+            }
+
+            eff *= heatEfficiencyScale(recipe);
+            return Math.max(eff, 0f);
+        }
+
+        /** 堆叠体覆写为 true：液体输入由 StackedBuild 逐层扣除，ConsumeRecipe.update 不再按单一配方扣。 */
+        protected boolean handlesOwnLiquidInput(){
+            return false;
+        }
+
+        /** 堆叠体覆写为所有具备运行条件的层的最大输入效率；-1 表示非堆叠，走原消费器逻辑。 */
+        protected float stackedInputEfficiency(){
+            return -1f;
         }
 
         /**

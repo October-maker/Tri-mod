@@ -53,6 +53,10 @@ class ConsumeRecipe extends Consume {
     /** 每帧按效率倍率扣除当前配方的液体输入。 */
     @Override
     public void update(Building build) {
+        // 堆叠体有多条独立生产线程，液体输入由 StackedBuild 在逐层循环里按各自配方扣除；
+        // 这里若再按“当前 recipeIndex（通常是最后一层）”扣一次会重复/扣错。
+        if (build instanceof MultiRecipeFactory.MultiRecipeFactoryBuild mrf && mrf.handlesOwnLiquidInput()) return;
+
         Recipe r = recipe.get(build);
         if (r == null) return;
         float m = multiplier.get(build);
@@ -81,6 +85,13 @@ class ConsumeRecipe extends Consume {
      */
     @Override
     public float efficiency(Building build) {
+        // 堆叠体不能按“最后一层配方”给整栋定效率：只要还有任意一层可生产，
+        // 整栋效率就应非零，否则引擎会把所有层的生产一起停掉（电力请求也会被判定为 0）。
+        if (build instanceof MultiRecipeFactory.MultiRecipeFactoryBuild mrf) {
+            float stacked = mrf.stackedInputEfficiency();
+            if (stacked >= 0f) return stacked;
+        }
+
         // Building.updateEfficiencyMultiplier() 会统一应用一次热量曲线；
         // 这里再乘 efficiencyScale() 会造成双重缩放。
         float ed = build.edelta();
