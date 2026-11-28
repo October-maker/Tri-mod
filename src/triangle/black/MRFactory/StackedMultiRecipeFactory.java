@@ -426,6 +426,7 @@ public class StackedMultiRecipeFactory extends MultiRecipeFactory{
         rotateDraw = base.rotateDraw;
         invertFlip = base.invertFlip;
         drawer = base.drawer;
+        useStateOverlay = base.useStateOverlay;
         update = base.update;
         hasItems = base.hasItems;
         hasLiquids = base.hasLiquids;
@@ -456,6 +457,11 @@ public class StackedMultiRecipeFactory extends MultiRecipeFactory{
             // 单层建造时间 × 层数；基础工厂尚未初始化时用变体自己算出的单层时间。
             float single = baseFactory.buildTime >= 0f ? baseFactory.buildTime : buildTime;
             buildTime = single * layerCount;
+            // 兜底：若基础工厂在变体之后才 load()，这里补取它包装后的相位链，
+            // 避免变体停留在包装前的旧 DrawMulti 上。
+            if(baseFactory.drawer instanceof triangle.black.draw.TriDrawChain){
+                drawer = baseFactory.drawer;
+            }
         }
     }
 
@@ -466,7 +472,9 @@ public class StackedMultiRecipeFactory extends MultiRecipeFactory{
         DrawBlock baseDrawer = baseFactory == null ? null : baseFactory.drawer;
         drawer = new DrawDefault();
         super.load();
-        drawer = baseDrawer;
+        // 基础工厂的 drawer 此时可能已经被包装成相位链；优先取它的最新引用，
+        // 否则变体会停留在包装前的旧 DrawMulti 上，状态叠加层对堆叠体失效。
+        drawer = baseFactory != null ? baseFactory.drawer : baseDrawer;
         if(baseFactory != null){
             region = baseFactory.region;
             fullIcon = baseFactory.fullIcon;

@@ -64,6 +64,7 @@ import mindustry.world.blocks.payloads.BuildPayload;
 import mindustry.world.blocks.production.GenericCrafter;
 import mindustry.world.meta.*;
 import triangle.black.TriDraw;
+import triangle.black.draw.TriDrawChain;
 import triangle.content.SerTriTechTree;
 
 /**
@@ -111,6 +112,11 @@ public class MultiRecipeFactory extends GenericCrafter{
     public boolean verticalStackPanels = false;
     /** 是否创建配方研究节点；堆叠变体复用基础工厂的节点。 */
     public boolean registerResearch = true;
+    /**
+     * 是否在绘制链末尾挂 {@link RecipeStateLayer}（输出满/低温/欠压/缺输入的小色块）。
+     * 默认开启；设为 false 时方块保持原版外观。
+     */
+    public boolean useStateOverlay = true;
 
     /** 全部物品输出种类（用于统一物流输出）。 */
     public Seq<Item> itemOutput = new Seq<>();
@@ -502,6 +508,20 @@ public class MultiRecipeFactory extends GenericCrafter{
             }
         }
         return Math.min(stackLimit, limit);
+    }
+
+    /**
+     * 把现有 drawer 包装成相位链，并挂上状态叠加层。
+     *
+     * <p>只处理非堆叠体：堆叠变体在 {@link StackedMultiRecipeFactory#load()} 里
+     * 直接复用基础工厂的链，避免用变体名重新加载贴图。
+     */
+    @Override
+    public void load(){
+        if(useStateOverlay && !(this instanceof StackedMultiRecipeFactory) && !(drawer instanceof TriDrawChain)){
+            drawer = TriDrawChain.of(drawer).add(new RecipeStateLayer());
+        }
+        super.load();
     }
 
     /**
